@@ -116,6 +116,7 @@ export function stopCommunicationLayer(): void {
   unsubscribers = [];
   unsubActiveServer?.();
   unsubActiveServer = null;
+  stopIntelligence();
   commandQueue.stop();
   discoveryEngine.stop();
   deviceManager.stop();
