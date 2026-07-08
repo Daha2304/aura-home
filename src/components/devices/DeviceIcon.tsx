@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
-const map: Record<DeviceType, LucideIcon> = {
+const map: Partial<Record<DeviceType, LucideIcon>> = {
   light: Lightbulb,
   rgb: Palette,
   dimmer: SlidersHorizontal,
