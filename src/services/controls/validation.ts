@@ -11,7 +11,7 @@ export function validateAgainstDescriptor(
   descriptor: CapabilityDescriptor,
 ): unknown {
   if (descriptor.readOnly) {
-    throw new AppError("validation", `Capability ${descriptor.name} ist readOnly`);
+    throw new AppError("parse", `Capability ${descriptor.name} ist readOnly`);
   }
   switch (descriptor.dataType) {
     case "boolean":
@@ -19,7 +19,7 @@ export function validateAgainstDescriptor(
     case "number": {
       const n = typeof value === "number" ? value : Number(value);
       if (!Number.isFinite(n)) {
-        throw new AppError("validation", `Ungültige Zahl für ${descriptor.name}`);
+        throw new AppError("parse", `Ungültige Zahl für ${descriptor.name}`);
       }
       return clampAndStep(n, descriptor);
     }
@@ -27,7 +27,7 @@ export function validateAgainstDescriptor(
       const s = String(value);
       const opts = descriptor.validation?.enum;
       if (opts && !opts.includes(s)) {
-        throw new AppError("validation", `Wert '${s}' nicht in Enum`);
+        throw new AppError("parse", `Wert '${s}' nicht in Enum`);
       }
       return s;
     }
@@ -69,5 +69,5 @@ function sanitizeColor(v: unknown): { r: number; g: number; b: number } {
     const clamp = (x: number) => Math.max(0, Math.min(255, Math.round(x)));
     return { r: clamp(o.r), g: clamp(o.g), b: clamp(o.b) };
   }
-  throw new AppError("validation", "Ungültige Farbe");
+  throw new AppError("parse", "Ungültige Farbe");
 }
