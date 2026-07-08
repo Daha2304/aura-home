@@ -54,6 +54,10 @@ export function startCommunicationLayer(): void {
   started = true;
   log.info("starting communication layer");
 
+  // Protokoll-Adapter: ioBroker appsocket. Muss vor jedem connect() gesetzt sein,
+  // damit die allererste Nachricht ein "hello" ist.
+  wsManager.setProtocol(appsocketProtocol);
+
   unsubscribers.push(
     wsManager.on("status", (status) => useConnectionStore.getState().setStatus(status)),
     wsManager.on("connected", () => useConnectionStore.getState().markConnected()),
@@ -62,7 +66,10 @@ export function startCommunicationLayer(): void {
       useConnectionStore.getState().setAuthenticated(false);
       useConnectionStore.getState().setError(reason ?? "Auth fehlgeschlagen");
     }),
-    wsManager.on("disconnected", () => useConnectionStore.getState().setAuthenticated(false)),
+    wsManager.on("disconnected", () => {
+      useConnectionStore.getState().setAuthenticated(false);
+      appsocketResetIndex();
+    }),
     wsManager.on("heartbeat", ({ latencyMs }) =>
       useConnectionStore.getState().setLatency(latencyMs),
     ),
@@ -75,6 +82,14 @@ export function startCommunicationLayer(): void {
     wsManager.dispatcher.on("notification", (ev) =>
       useNotificationsStore.getState().push(ev.notification),
     ),
+    // Snapshot / discover_result: Geräte in Discovery importieren und
+    // anschließend alle bekannten stateIds abonnieren.
+    wsManager.dispatcher.on("snapshot", (ev) => {
+      discoveryEngine.ingestFull(ev.devices);
+      const ids = appsocketCollectStateIds();
+      for (const id of ids) wsManager.subscribe(id);
+      log.info("snapshot ingested", ev.devices.length, "devices,", ids.length, "states subscribed");
+    }),
     errorBus.on("error", (payload) => {
       log.debug("error bus:", payload.kind, payload.code ?? "-", payload.message);
       useDiscoveryStore.getState().pushError(payload);
