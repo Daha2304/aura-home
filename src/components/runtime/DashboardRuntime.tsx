@@ -11,6 +11,15 @@ interface Props {
   dashboard: Dashboard;
 }
 
+// Modul-scoped Bootstrap: einmal je Client-Session.
+let bootstrapped = false;
+function bootstrapRuntimeOnce() {
+  if (bootstrapped) return;
+  bootstrapped = true;
+  registerSystemWidgets();
+  runtimeController.start();
+}
+
 /**
  * Wurzelkomponente der Runtime — read-only Dashboard-Ansicht.
  * Verwendet ausschließlich Runtime-Komponenten, keine Editor-Bausteine.
@@ -19,8 +28,10 @@ export function DashboardRuntime({ dashboard }: Props) {
   useRuntimeTheme();
 
   useEffect(() => {
-    registerSystemWidgets();
-    runtimeController.start();
+    bootstrapRuntimeOnce();
+  }, []);
+
+  useEffect(() => {
     runtimeController.setActiveDashboard(dashboard.id);
   }, [dashboard.id]);
 
@@ -34,3 +45,4 @@ export function DashboardRuntime({ dashboard }: Props) {
     </div>
   );
 }
+
