@@ -88,6 +88,8 @@ export function startCommunicationLayer(): void {
   // Intelligence Layer nach Registry / Rooms / DeviceManager starten.
   bootstrapIntelligence();
   bootstrapDevicePresentation();
+  bootstrapCapabilityRegistry();
+  registerBuiltinControls();
 
 
   // Aktiven Server beobachten und Manager entsprechend (neu) konfigurieren.
