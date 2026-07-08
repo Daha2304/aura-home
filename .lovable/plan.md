@@ -1,201 +1,108 @@
 ## Ziel
 
-Teil 3/15: Aufbau einer vollständigen Device-Registry, Discovery-Engine, Lifecycle-, Relationship-, Cache- und Command-Queue-Architektur. Rein architektonisch — **keine UI-Änderungen, keine sichtbaren Geräte**. Bestehende Services (`wsManager`, `MessageDispatcher`, `deviceManager`, `errorBus`, `Logger`, Stores) werden **erweitert, nicht ersetzt**.
+Vollständige First-Run-Experience: Willkommen → Server anlegen/wählen → Verbindungstest → Auth → Discovery → Sync → Weiterleitung zum Dashboard. Zusätzlich hochwertige Serververwaltung (CRUD, Duplizieren, Import/Export, Favorit, Autoconnect). Keine Geräte-, Raum- oder Dashboard-Inhalte.
 
-## Neue Ordnerstruktur
+Aufbauend auf bestehender Architektur (`useSettingsStore`, `WebSocketManager`, `DiscoveryEngine`, `wsManager.dispatcher`, `connectionStore`, `discoveryStore`, `useCommunicationLayer`, `GlassCard`/`GlassButton`, `themes/motion`). Nichts wird entfernt.
 
-```text
-src/models/
-  deviceType.ts          # DeviceTypeId (Union der 36 Typen)
-  deviceCategory.ts      # Kategorien (lighting, climate, security, ...)
-  deviceCapability.ts    # CapabilityFlag Union (supportsPower, ...)
-  deviceLifecycle.ts     # LifecycleState + Transitions
-  deviceProfile.ts       # DeviceProfile (Hersteller, MAC, UUID, ...)
-  deviceRelationship.ts  # RelationshipKind + DeviceRelationship
-  command.ts             # Command, CommandState, CommandResult
-  discoveryEvents.ts     # Discovery-Event-Union
+## Model-Erweiterungen (additiv, backward-compatible)
 
-src/services/registry/
-  DeviceRegistry.ts      # zentrale Registry (Map<DeviceTypeId, Descriptor>)
-  DeviceTypeDescriptor.ts# Beschreibungsobjekt eines Gerätetyps
-  builtin/index.ts       # Registrierung aller 36 Built-in-Typen
-  builtin/lighting.ts    # light, rgb, dimmer
-  builtin/covers.ts      # blinds, jalousie, awning, garage
-  builtin/openings.ts    # door, window, doorContact, windowContact
-  builtin/sensors.ts     # motion, presence, temp, humidity, pressure, co2, voc, smoke, water
-  builtin/climate.ts     # thermostat, heating, ac, fan
-  builtin/media.ts       # tv, avr, speaker, mediaPlayer
-  builtin/security.ts    # camera, doorbell, alarm
-  builtin/energy.ts      # energyMeter, pv, battery, wallbox
-  builtin/misc.ts        # outlet, vacuum, custom
+`src/models/server.ts`:
+- `ServerAuth.type` erweitern um `"token" | "basic"` bleibt, zusätzlich Felder `description?`, `notes?`, `color?`, `icon?`, `image?`, `favorite?`, `lastConnectedAt?`, `createdAt`, `updatedAt` in `ServerConfig`.
+- Alle neuen Felder optional → keine Bruchänderungen.
+- Neue Helper: `createServerConfig(partial)` → generiert `id`, Timestamps.
+- `validateServerConfig(cfg)` → strukturiertes `{ ok, errors: Record<field,string> }` für Live-Validierung (Host/Port/Path/Auth-Pflichtfelder).
 
-src/services/discovery/
-  DiscoveryEngine.ts     # ersetzt Stub, nutzt wsManager.dispatcher
-  DiscoveryEvents.ts     # typisierter TypedEmitter<DiscoveryEventMap>
-  DeviceSync.ts          # Full/Delta/Partial-Sync + Konflikte + Versionen
-  LifecycleMachine.ts    # deterministischer FSM pro Gerät
-  RelationshipGraph.ts   # bidirektionaler Graph (parent/child, group, bridge)
-  DeviceCache.ts         # localStorage-Cache, versioniert, mit Migrationen
-  Validators.ts          # ID/Type/Firmware/Capabilities-Prüfungen
-  index.ts
+## Neue Stores/Slices
 
-src/services/commands/
-  CommandQueue.ts        # persistent + in-memory, State-Machine pro Command
-  CommandTracker.ts      # optimistic updates + Rollback-Snapshots
-  index.ts
+`src/store/slices/onboardingStore.ts`:
+- `completed: boolean` (persist), `currentStep`, `flow: "first-run" | "add-server" | null`, `draftServer?: Partial<ServerConfig>`, `lastError?`, Actions `start/next/prev/setDraft/complete/reset`.
+- Persistiert nur `completed` in `localStorage` (Key `smarthome.onboarding`).
 
-src/store/slices/
-  registryStore.ts       # veröffentlicht Registry-Snapshot reaktiv (read-only)
-  discoveryStore.ts      # discoveryState, letzte Events, Sync-Info
-  commandsStore.ts       # laufende/erledigte Commands
-  devicesStore.ts        # erweitert um O(1)-Index-Map, Selektoren, Version
-```
+`useSettingsStore` erweitern: `duplicateServer(id)`, `toggleFavorite(id)`, `exportServers()`, `importServers(json, mode)`. Bestehende Actions bleiben.
 
-## Device Registry (Plugin-Prinzip)
+## Services
 
-`DeviceTypeDescriptor`:
+`src/services/onboarding/OnboardingController.ts`:
+- Orchestriert Test-Verbindung als asynchronen Zustandsautomaten:
+  `idle → connecting → authenticating → discovery-prep → syncing → done | error`.
+- Nutzt ausschließlich existierende Bausteine: `wsManager.setConfig()`, `wsManager.connect()`, subscribed auf `dispatcher` Events (`connected`, `authenticated`, `disconnected`, `error`) und auf `discoveryEvents` (`discoveryStarted`, `syncCompleted`).
+- `runConnectionTest(cfg, { signal })` liefert Promise mit Phasenupdates via Callback / EventEmitter.
+- Trennt "Test-Modus" (temporäre Config, kein Persist) von "Aktivierung" (Store-Commit → `setActiveServer`).
+- Keine hardcodierten Credentials.
 
-```ts
-{
-  id: DeviceTypeId;              // "light", "rgb", "wallbox", ...
-  name: string;                  // "Licht"
-  category: DeviceCategory;      // "lighting"
-  icon: IconName;                // Lucide-Name als String
-  color: HexColor;
-  capabilities: CapabilityFlag[];// deklarative Fähigkeiten
-  functions: DeviceFunctionKind[];
-  defaultWidgets: WidgetType[];  // vorbereitet, noch nicht sichtbar
-  control?: string;              // Slug, später von einer Control-Registry aufgelöst
-  detail?: string;               // Slug für Detailview
-  charts?: ChartKind[];          // vorbereitet
-}
-```
+`src/services/onboarding/serverImportExport.ts`:
+- `exportServers(list) → File-Blob (application/json)`, `parseImport(text)` mit Zod-artigem manuellen Validator (keine neue Dep, wenn zod schon vorhanden — sonst leichter Guard-basierter Parser via `utils/guards`).
 
-`DeviceRegistry` (Singleton):
-- `register(desc)` / `unregister(id)` / `get(id)` / `all()` / `byCategory(cat)`
-- `getCapabilities(id)`, `hasCapability(id, flag)` — O(1) via `Map`
-- Built-ins werden in `builtin/index.ts` einmalig registriert (Side-Effect-Import), sind aber vollständig plugin-fähig: neue Typen kommen via `deviceRegistry.register(...)` dazu, **ohne bestehende Komponenten anzufassen**.
-- Doppelregistrierung → `errorBus.report({ kind: "invalid_message" })`, kein Throw.
+## Routen (neu)
 
-## Capabilities-System
+Neue Top-Level-Layout-Route außerhalb `_app`, damit kein `AppShell`/BottomNav sichtbar ist:
 
-`CapabilityFlag`-Union enthält die vom User genannten Flags (`supportsPower`, `supportsBrightness`, `supportsRGB`, `supportsColorTemperature`, `supportsPosition`, `supportsTilt`, `supportsEnergy`, `supportsBattery`, `supportsSignal`, `supportsHistory`, `supportsNotifications`, `supportsOTA`, `supportsGroups`, `supportsTimers`, `supportsScenes`, `supportsAutomation`, `supportsStatistics`, `supportsFirmware`, `supportsChildDevices`, `supportsMultipleFunctions`).
+- `src/routes/onboarding.tsx` — Pathless Layout mit `<Outlet />`, Framer-Motion `AnimatePresence`, Gradient-/Blur-Hintergrund, Progress-Indicator (Steps).
+- `src/routes/onboarding.index.tsx` → Redirect auf `/onboarding/welcome`.
+- `src/routes/onboarding.welcome.tsx` — Hero + Logo + Buttons „Einrichtung starten" / „Konfiguration importieren".
+- `src/routes/onboarding.intro.tsx` — 3 Slides (Geräte, Automationen, Privatsphäre).
+- `src/routes/onboarding.server.tsx` — Serverliste (nutzt existing Servers) oder Auswahl „Neuen Server anlegen".
+- `src/routes/onboarding.configure.tsx` — Mehrstufiges Formular mit Live-Validierung (Name/Host/Port/SSL/Path/Auth-Typ/Credentials/Optionen).
+- `src/routes/onboarding.test.tsx` — Verbindungstest (nutzt `OnboardingController`), Live-Phasen mit Icons + Animation.
+- `src/routes/onboarding.discovery.tsx` — Discovery-/Sync-Progress mit Statuskarten (Server erreichbar, authentifiziert, Discovery gestartet, Geräte erkannt, Sync abgeschlossen).
+- `src/routes/onboarding.done.tsx` — Erfolgsscreen, CTA „Zum Dashboard".
 
-Helper:
-- `hasCapability(device, flag)` — kombiniert Registry-Default + geräteseitiges Override (`device.capabilityFlags?`).
-- Existierende strukturierte `Capability`-Union (`onOff`, `dimmer`, ...) bleibt **unverändert** — Flags sind ein orthogonales, deklaratives System, damit die UI später automatisch generiert werden kann.
+Bestehendes `_app.settings.server.tsx` erweitern (nicht ersetzen):
+- Vollständiges CRUD: Karten mit Status-Badge (aus `connectionStore`), Kontextmenü (Bearbeiten, Duplizieren, Löschen, Als Favorit, Exportieren), Header-Aktionen „Hinzufügen" / „Importieren".
+- Bearbeiten/Neu → öffnet `/settings/server/edit/$id` bzw. `/settings/server/new` (neue Routen als Modal-Sheet).
 
-## Device-Profile
+Neue Sub-Routen:
+- `src/routes/_app.settings.server.new.tsx`
+- `src/routes/_app.settings.server.$id.tsx`
 
-`Device` bekommt (additiv, alle optional — bricht keine bestehenden Konsumenten):
+## Root-Redirect-Logik
 
-```ts
-uuid?, serial?, mac?, hardwareVersion?, softwareVersion?, floor?,
-image?, tags?, description?, customProperties?, capabilityFlags?,
-lifecycle?: LifecycleState, version?: number, relationships?: DeviceRelationship[]
-```
+`src/routes/_app.tsx` erweitern: nach `useCommunicationLayer()` frühzeitiger Redirect via `useEffect`:
+- Wenn `!onboarding.completed` **und** `settings.servers.length === 0` → `navigate({ to: "/onboarding/welcome", replace: true })`.
+- Wenn bereits Server + completed → normales Verhalten (Onboarding wird übersprungen).
+Kein Bruch bestehender Navigation.
 
-## Lifecycle-Machine
+## Komponenten (neu, alle in `src/components/onboarding/`)
 
-`LifecycleState`: `new → initializing → discovering → ready → updating → offline → error → removing → removed`.
-`LifecycleMachine.transition(from, to)` erzwingt gültige Übergänge; ungültige gehen an den `errorBus`. Zustand wird in `Device.lifecycle` gespiegelt.
+- `OnboardingLayout.tsx` — Ambient-Blur-Background + zentrierte GlassCard + Motion.
+- `StepIndicator.tsx` — animierte Punkte/Balken.
+- `PhaseList.tsx` — Statuskarten (idle/running/success/error) mit spring-Animation, Checkmark-Draw, Pulse.
+- `ServerForm.tsx` — Multi-Step (Basics, Verbindung, Auth, Optionen) mit Live-Validierung.
+- `ServerCard.tsx` — Premium-Karte (in Onboarding + Settings wiederverwendet).
+- `ErrorDialog.tsx` — hochwertiger Dialog (Radix Dialog vorhanden via shadcn) mit Titel/Beschreibung/Details/Lösungsvorschlag/Retry-Button.
+- `ImportDialog.tsx` — File-Upload + JSON-Paste, Vorschau, Konfliktauflösung.
 
-## Relationships
+Alle Komponenten nutzen bestehende `GlassCard`, `GlassButton`, `themes/motion`, `themes/glass`. Framer-Motion ist bereits Dependency (aus `_app.tsx`) — keine neuen Packages.
 
-`RelationshipKind`: `group | master | slave | child | parent | gateway | bridge | room | zone | virtual`.
-`RelationshipGraph` (bidirektional, `Map<id, Set<Edge>>`):
-- `link(a, b, kind)`, `unlink(a, b)`, `children(id)`, `parents(id)`, `related(id, kind?)`, `groupsOf(id)`.
-- Zyklen für `child/parent` werden erkannt und blockiert.
+## i18n
 
-## Discovery-Engine
-
-`DiscoveryEngine` (Singleton `discoveryEngine`):
-- Abonniert **beim Start** den `wsManager.dispatcher` und den `wsManager`-Statusstream.
-- Emittiert typisierte Events: `deviceDiscovered | deviceInitialized | deviceReady | deviceUpdated | deviceOnline | deviceOffline | deviceCapabilitiesChanged | deviceFunctionAdded | deviceFunctionRemoved | deviceRemoved | discoveryStarted | discoveryFinished | syncStarted | syncFinished`.
-- Ruft `deviceRegistry`, um unbekannte Typen zu erkennen (`invalid_device_type`).
-- Validiert jedes eingehende Gerät via `Validators` (ID vorhanden, Typ registriert, Duplikat, Firmware-Kompatibilität, Capabilities gültig).
-- Reihenfolge pro Gerät: `validate → resolveType → mergeIntoRegistryDefaults → runLifecycle → upsertStore → emit`.
-- Bricht bestehenden `deviceManager` **nicht** — der `deviceManager` delegiert seine `device.*`-Handler an die Discovery-Engine; der Store bleibt die single source of truth.
-
-## Synchronisation & Versionierung
-
-`DeviceSync`:
-- `fullSync(devices[])` — Snapshot vom Server, ersetzt Registry-Inhalte im Store, respektiert lokale Overrides (favorite, roomId, tags) via `mergePolicy`.
-- `deltaSync(patch)` — `{ added, updated, removed }`.
-- `partialUpdate(deviceId, patch, version)` — Version-Check, verwirft veraltete Patches, ruft bei Konflikt `errorBus`.
-- `Device.version` wird bei jeder Änderung inkrementiert (monoton, lokal), Server-Version separat als `serverVersion`.
-
-Konflikterkennung: Wenn `patch.baseVersion < currentVersion` und geänderte Felder überlappen → `sync_conflict`-Event + Fallback auf Server-Wert.
-
-## Device-Cache
-
-`DeviceCache`:
-- Persistiert `{ schemaVersion, devices, groups, relationships, updatedAt }` in `localStorage` unter `smarthome.cache.devices`.
-- `hydrate()` beim Start → sofortiges Restore in `devicesStore` (aber UI zeigt nach wie vor keine Geräte an — es gibt keine Widgets, die darauf lesen).
-- `persistDebounced()` bei Änderungen (250 ms).
-- `schemaVersion`-Migrationen als Registry: `{ [from]: (state) => nextState }`.
-
-## Command-Queue (Erweiterung des Kommunikationsstacks)
-
-`CommandQueue` in `src/services/commands/`:
-- Ersetzt **nicht** die existierende WS-Offline-Queue (die bleibt für rohe Nachrichten). Command-Queue ist eine Schicht darüber, mit Command-Objekten:
-
-```ts
-{ id, deviceId, key, value, state, attempts, createdAt, updatedAt, error?, correlationId }
-```
-
-- `state`: `queued → sending → sent → acknowledged → completed | failed | cancelled | retrying`.
-- `enqueue(cmd)`, `cancel(id)`, `retry(id)`, `ack(id, result)`.
-- Nutzt `wsManager.send({ type: "command", ..., requestId })` und wartet auf `device.state` oder ein `command.ack` (Protokoll-Adapter-Erweiterung vorbereitet, kein Server-Kontrakt hartcodieren).
-- `CommandTracker` erzeugt vor `sending` einen **optimistic snapshot** des betroffenen Gerätefeldes, bestätigt bei `completed`, rollbackt bei `failed | timeout`.
-- Timeout pro Command konfigurierbar (Default 5 s), Retry mit Backoff.
-
-## Store-Erweiterungen
-
-- `devicesStore`: interne `Map<id, Device>` für O(1)-Lookup neben `devices[]`; `byId(id)` wird auf Map umgestellt; neuer `version`-Zähler; neue Selektoren (`byType`, `byCapability`, `byCategory`, `byLifecycle`).
-- Neu: `registryStore` (read-only Snapshot der Registry-Descriptors — reaktiv, damit UI später automatisch reagiert, wenn Plugins nachladen).
-- Neu: `discoveryStore` (`state: idle | discovering | syncing | ready`, `lastSync`, `errors[]`, `stats`).
-- Neu: `commandsStore` (aktive + historische Commands, gecapped).
-
-Alle neuen Selektoren verwenden `useX(selector, shallow)` bzw. reine Getter, damit Re-Renders minimal bleiben.
-
-## Discovery-Events (öffentlich)
-
-Zentraler `discoveryEvents: TypedEmitter<DiscoveryEventMap>` — UI-Hooks können später eventbasiert reagieren, ohne den Store zu pollen. Der `DeviceManager` reemittiert seine bisherigen Callbacks über diesen Emitter, damit alles über **einen** Kanal läuft.
-
-## Bootstrap-Verdrahtung
-
-`src/services/bootstrap.ts` wird erweitert:
-1. Built-ins registrieren (`import "@/services/registry/builtin"`) — einmalig, per Side-Effect.
-2. `DeviceCache.hydrate()` vor WS-Connect.
-3. `discoveryEngine.start()` nach `deviceManager.start()`.
-4. `commandQueue.start()`.
-5. Auf `wsManager.on("authenticated")` → `discoveryEngine.requestFullSync()` (versendet ein `request`-Message via `wsManager.send`, Operation-Slug bleibt konfigurierbar → keine Hardcodings).
+`src/services/i18n/locales/de.ts` und `en.ts`: Neue Keys unter `onboarding.*` (welcome, intro, server, configure, test, discovery, done, errors, phases).
 
 ## Fehlerbehandlung
 
-Alle Validierungsfehler laufen über `errorBus` mit klaren `kind`s:
-- `parse` (unlesbares Delta), `invalid_message` (fehlende ID/Typ), `server` (unbekannte Server-Fehler), `unknown` (Fallback).
-Zusätzliche `code`s: `duplicate_device`, `unknown_device_type`, `invalid_capability`, `sync_conflict`, `firmware_incompatible`.
+- `OnboardingController` mapped Fehler auf `AppError` (bestehend) mit Codes: `NETWORK_UNREACHABLE`, `TLS_FAILED`, `AUTH_FAILED`, `TIMEOUT`, `PROTOCOL_ERROR`, `DISCOVERY_FAILED`.
+- `ErrorDialog` bekommt lokalisierte Lösungsvorschläge pro Code.
+- Keine `alert()`/`confirm()`.
+
+## Accessibility & PWA
+
+- Alle Buttons ≥44×44, `aria-label`, klare Fokus-Ringe (via bestehende Tailwind-Utility).
+- `AnimatePresence` respektiert `prefers-reduced-motion` via `useReducedMotion`.
+- Onboarding-Routen sind in `manifest.webmanifest`-Scope; `start_url` bleibt `/`.
 
 ## Performance
 
-- `Map<id, T>` überall statt `Array.find`.
-- `Set<id>` für Beziehungen.
-- Selektoren mit `shallow` in Zustand.
-- Debounced Persist im Cache.
-- Registry-Lookups sind konstantzeitlich.
-- Keine Renderzyklen für UI ausgelöst — die UI liest weder Registry noch Discovery in diesem Teil (bewusst).
+- Alle Onboarding-Routen automatisch code-split (TanStack Auto Splitting).
+- Framer-Variants aus `themes/motion` wiederverwenden.
+- Selektoren mit `useSettingsStore((s) => s.field)` einzeln, keine Objekt-Selektoren.
 
-## Nicht-Ziele (Teil 3)
+## Nicht enthalten
 
-- Keine sichtbaren Geräte, Räume, Widgets.
-- Keine Control-/Detail-Komponenten.
-- Keine Diagramme.
-- Keine Änderungen an bestehenden Routen/Screens außer nötigen Bootstrap-Aufrufen.
+- Keine Geräte-, Raum-, Szenen-UI.
+- Kein Dashboard-Inhalt.
+- Keine echte Discovery-UI mit Gerätelisten — nur Phasenanzeige.
 
 ## Verifikation
 
 - `bunx tsgo --noEmit` grün.
-- Registry-Selbstcheck beim Boot: alle 36 Built-in-Typen laden ohne Fehler; Doppelregistrierung feuert `errorBus`.
-- `DeviceCache` round-trip (`hydrate` nach `persist`) preserviert Struktur (später via kleinem Debug-Utility, keine UI).
+- Manuell: frischer Storage → Route `/` leitet zu `/onboarding/welcome`; nach Anlegen + erfolgreichem Fake-Server-Test (Fehlerfall) zeigt `ErrorDialog`; bei bestehendem Server wird Onboarding übersprungen.
