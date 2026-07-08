@@ -26,6 +26,8 @@ export interface Dictionary {
     idle: string;
     connecting: string;
     connected: string;
+    authenticating: string;
+    authenticated: string;
     reconnecting: string;
     disconnected: string;
     error: string;
@@ -67,6 +69,8 @@ export const de: Dictionary = {
     idle: "Nicht verbunden",
     connecting: "Verbinde …",
     connected: "Verbunden",
+    authenticating: "Authentifiziere …",
+    authenticated: "Authentifiziert",
     reconnecting: "Neuverbindung …",
     disconnected: "Getrennt",
     error: "Fehler",

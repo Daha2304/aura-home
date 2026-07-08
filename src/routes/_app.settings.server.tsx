@@ -52,7 +52,9 @@ function ServerSettings() {
               </div>
               <div className="min-w-0 flex-1">
                 <div className="truncate text-[15px] font-semibold">{s.name}</div>
-                <div className="truncate text-xs text-muted-foreground">{s.url}</div>
+                <div className="truncate text-xs text-muted-foreground">
+                  {(s.ssl ? "wss" : "ws")}://{s.host}:{s.port}
+                </div>
               </div>
               {activeId === s.id && (
                 <span className="rounded-full bg-success/15 px-2 py-0.5 text-xs font-medium text-success">

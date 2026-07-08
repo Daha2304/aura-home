@@ -5,12 +5,18 @@ export interface OutgoingQueue {
   flush(send: (msg: WsOutgoingMessage) => void): void;
   clear(): void;
   size(): number;
+  peek(): WsOutgoingMessage[];
 }
 
-export function createOutgoingQueue(): OutgoingQueue {
+/**
+ * FIFO-Queue für ausgehende Nachrichten, solange keine Verbindung besteht.
+ * Priorisierung ist bewusst nicht enthalten — die Reihenfolge der Aufrufe zählt.
+ */
+export function createOutgoingQueue(maxSize = 500): OutgoingQueue {
   const buffer: WsOutgoingMessage[] = [];
   return {
     enqueue(msg) {
+      if (buffer.length >= maxSize) buffer.shift();
       buffer.push(msg);
     },
     flush(send) {
@@ -24,6 +30,9 @@ export function createOutgoingQueue(): OutgoingQueue {
     },
     size() {
       return buffer.length;
+    },
+    peek() {
+      return [...buffer];
     },
   };
 }
