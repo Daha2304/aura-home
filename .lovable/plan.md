@@ -1,108 +1,93 @@
-## Ziel
 
-Vollständige First-Run-Experience: Willkommen → Server anlegen/wählen → Verbindungstest → Auth → Discovery → Sync → Weiterleitung zum Dashboard. Zusätzlich hochwertige Serververwaltung (CRUD, Duplizieren, Import/Export, Favorit, Autoconnect). Keine Geräte-, Raum- oder Dashboard-Inhalte.
+# Teil 5A – Dashboard Engine & Widget Framework
 
-Aufbauend auf bestehender Architektur (`useSettingsStore`, `WebSocketManager`, `DiscoveryEngine`, `wsManager.dispatcher`, `connectionStore`, `discoveryStore`, `useCommunicationLayer`, `GlassCard`/`GlassButton`, `themes/motion`). Nichts wird entfernt.
+Reine Architekturebene. Keine sichtbaren Widgets, keine Dashboard-UI, keine Geräteanzeige. Bestehender `dashboardStore` (nur `widgets`/Favorites) und `models/widget.ts` bleiben lauffähig und werden schrittweise auf das neue System gehoben — nichts wird gelöscht oder verschlechtert.
 
-## Model-Erweiterungen (additiv, backward-compatible)
+## 1. Neue Models (`src/models/`)
 
-`src/models/server.ts`:
-- `ServerAuth.type` erweitern um `"token" | "basic"` bleibt, zusätzlich Felder `description?`, `notes?`, `color?`, `icon?`, `image?`, `favorite?`, `lastConnectedAt?`, `createdAt`, `updatedAt` in `ServerConfig`.
-- Alle neuen Felder optional → keine Bruchänderungen.
-- Neue Helper: `createServerConfig(partial)` → generiert `id`, Timestamps.
-- `validateServerConfig(cfg)` → strukturiertes `{ ok, errors: Record<field,string> }` für Live-Validierung (Host/Port/Path/Auth-Pflichtfelder).
+- `dashboard.ts` – `Dashboard`, `DashboardId`, `DashboardVisibility`, `DashboardBackground`, `DashboardTags`, `DashboardMeta`
+- `layout.ts` – `LayoutBreakpoint` (`phone-portrait` | `phone-landscape` | `tablet-portrait` | `tablet-landscape` | `desktop`), `LayoutGrid`, `LayoutMode` (`grid` | `snap` | `free` | `responsive`), `WidgetPlacement` (`gridX`, `gridY`, `w`, `h`, `zIndex`, `rotation?`)
+- `widgetInstance.ts` – `WidgetInstance` (id, widgetType, title/subtitle, icon, placement pro Layout, layer, visibility, styling: color/theme/padding/margin/radius/shadow/blur/opacity, animation, refreshInterval, dataSource, config, lifecycle, custom)
+- `widgetDescriptor.ts` – `WidgetDescriptor` (name, category, description, icon, defaultSize, minSize, maxSize, supportedLayouts, settingsSchema, capabilities, version, factory)
+- `widgetCategory.ts` – Enum-Union (`favorites` | `devices` | `rooms` | `scenes` | `automations` | `media` | `energy` | `climate` | `sensors` | `cameras` | `statistics` | `charts` | `system` | `custom`)
+- `widgetLifecycle.ts` – Union (`new` | `loading` | `ready` | `updating` | `error` | `hidden` | `disabled` | `deleted`)
+- `widgetAnimation.ts` – Union (`none` | `fade` | `scale` | `slide` | `blur` | `glass` | `spring`)
+- `dashboardEvents.ts` – Event-Payload-Typen
+- `models/index.ts` – neue Exports einhängen; alter `Widget`-Typ bleibt als Legacy-Alias erhalten.
 
-## Neue Stores/Slices
+## 2. Widget Registry (`src/services/widgets/`)
 
-`src/store/slices/onboardingStore.ts`:
-- `completed: boolean` (persist), `currentStep`, `flow: "first-run" | "add-server" | null`, `draftServer?: Partial<ServerConfig>`, `lastError?`, Actions `start/next/prev/setDraft/complete/reset`.
-- Persistiert nur `completed` in `localStorage` (Key `smarthome.onboarding`).
+- `WidgetRegistry.ts` – Singleton, Map-basiert (O(1)), `register(descriptor)`, `unregister`, `get`, `list`, `listByCategory`, `has`, `versions`. Duplicate/Version-Konflikte → `errorBus`.
+- `WidgetDescriptor.ts` – Helper `defineWidget()` für typsichere Registrierung, `createInstance(descriptor, overrides)`.
+- `builtin/index.ts` – vorbereitete leere Kategorie-Buckets; **noch keine echten Widgets registrieren** (nur Platzhalter-Descriptors optional weglassen). Reine Pluginschnittstelle.
+- `events.ts` – `widgetEvents` Emitter (`registered`, `unregistered`).
+- `index.ts` – Public API.
 
-`useSettingsStore` erweitern: `duplicateServer(id)`, `toggleFavorite(id)`, `exportServers()`, `importServers(json, mode)`. Bestehende Actions bleiben.
+## 3. Widget Manager (`src/services/widgets/WidgetManager.ts`)
 
-## Services
+Verwaltet Instanzen unabhängig vom Dashboard:
+- `create(widgetType, overrides)`, `update`, `remove`, `duplicate`
+- `move(instanceId, layout, placement)`, `resize`
+- Lifecycle-Transitions (FSM analog `LifecycleMachine`)
+- Import/Export (JSON), Versionierung, Migrationssystem (`migrations/v1_to_v2.ts` Skeleton)
+- Reagiert nicht auf UI; feuert Events über `dashboardEvents`.
 
-`src/services/onboarding/OnboardingController.ts`:
-- Orchestriert Test-Verbindung als asynchronen Zustandsautomaten:
-  `idle → connecting → authenticating → discovery-prep → syncing → done | error`.
-- Nutzt ausschließlich existierende Bausteine: `wsManager.setConfig()`, `wsManager.connect()`, subscribed auf `dispatcher` Events (`connected`, `authenticated`, `disconnected`, `error`) und auf `discoveryEvents` (`discoveryStarted`, `syncCompleted`).
-- `runConnectionTest(cfg, { signal })` liefert Promise mit Phasenupdates via Callback / EventEmitter.
-- Trennt "Test-Modus" (temporäre Config, kein Persist) von "Aktivierung" (Store-Commit → `setActiveServer`).
-- Keine hardcodierten Credentials.
+## 4. Dashboard Manager (`src/services/dashboards/DashboardManager.ts`)
 
-`src/services/onboarding/serverImportExport.ts`:
-- `exportServers(list) → File-Blob (application/json)`, `parseImport(text)` mit Zod-artigem manuellen Validator (keine neue Dep, wenn zod schon vorhanden — sonst leichter Guard-basierter Parser via `utils/guards`).
+- `create`, `remove`, `duplicate`, `import`, `export`, `activate`, `switch`, `reorder`, `update`
+- Verwaltet aktive Dashboard-ID
+- Emittiert: `dashboardCreated|Deleted|Updated|Selected`, `widgetCreated|Deleted|Moved|Resized|Updated`, `layoutChanged`
+- Delegiert Widgets an `WidgetManager`.
 
-## Routen (neu)
+## 5. Layout Engine (`src/services/dashboards/LayoutEngine.ts`)
 
-Neue Top-Level-Layout-Route außerhalb `_app`, damit kein `AppShell`/BottomNav sichtbar ist:
+Vorbereitung (keine Rendering-Logik):
+- Grid-Berechnung, Snap, Kollisionserkennung (Skelett), Responsive-Mapping zwischen Breakpoints
+- Utility `resolvePlacement(instance, breakpoint)` mit Fallback-Kaskade
+- `autoFit(size, grid)`
 
-- `src/routes/onboarding.tsx` — Pathless Layout mit `<Outlet />`, Framer-Motion `AnimatePresence`, Gradient-/Blur-Hintergrund, Progress-Indicator (Steps).
-- `src/routes/onboarding.index.tsx` → Redirect auf `/onboarding/welcome`.
-- `src/routes/onboarding.welcome.tsx` — Hero + Logo + Buttons „Einrichtung starten" / „Konfiguration importieren".
-- `src/routes/onboarding.intro.tsx` — 3 Slides (Geräte, Automationen, Privatsphäre).
-- `src/routes/onboarding.server.tsx` — Serverliste (nutzt existing Servers) oder Auswahl „Neuen Server anlegen".
-- `src/routes/onboarding.configure.tsx` — Mehrstufiges Formular mit Live-Validierung (Name/Host/Port/SSL/Path/Auth-Typ/Credentials/Optionen).
-- `src/routes/onboarding.test.tsx` — Verbindungstest (nutzt `OnboardingController`), Live-Phasen mit Icons + Animation.
-- `src/routes/onboarding.discovery.tsx` — Discovery-/Sync-Progress mit Statuskarten (Server erreichbar, authentifiziert, Discovery gestartet, Geräte erkannt, Sync abgeschlossen).
-- `src/routes/onboarding.done.tsx` — Erfolgsscreen, CTA „Zum Dashboard".
+## 6. Persistenz (`src/services/dashboards/DashboardCache.ts`)
 
-Bestehendes `_app.settings.server.tsx` erweitern (nicht ersetzen):
-- Vollständiges CRUD: Karten mit Status-Badge (aus `connectionStore`), Kontextmenü (Bearbeiten, Duplizieren, Löschen, Als Favorit, Exportieren), Header-Aktionen „Hinzufügen" / „Importieren".
-- Bearbeiten/Neu → öffnet `/settings/server/edit/$id` bzw. `/settings/server/new` (neue Routen als Modal-Sheet).
+- Versioniertes LocalStorage-Schema (`SCHEMA_VERSION`, `migrate()`)
+- Debounced Persist analog `DeviceCache`
+- Getrennt gespeichert: Dashboards, Widget-Instanzen, Layouts pro Breakpoint.
 
-Neue Sub-Routen:
-- `src/routes/_app.settings.server.new.tsx`
-- `src/routes/_app.settings.server.$id.tsx`
+## 7. Stores (`src/store/slices/`)
 
-## Root-Redirect-Logik
+Neue Slices (Zustand + persist mit versionierten migrations):
+- `dashboardsStore.ts` – `Map<DashboardId, Dashboard>`, `order`, `activeId`, Selectors (`byId`, `favorites`, `visible`)
+- `widgetInstancesStore.ts` – `Map<InstanceId, WidgetInstance>`, `byDashboard`, `byType`, `byLifecycle`
+- `layoutsStore.ts` – `Map<DashboardId, Record<Breakpoint, LayoutGrid>>`
+- `widgetRegistryStore.ts` – reaktiver Snapshot der Registry (analog `registryStore`)
 
-`src/routes/_app.tsx` erweitern: nach `useCommunicationLayer()` frühzeitiger Redirect via `useEffect`:
-- Wenn `!onboarding.completed` **und** `settings.servers.length === 0` → `navigate({ to: "/onboarding/welcome", replace: true })`.
-- Wenn bereits Server + completed → normales Verhalten (Onboarding wird übersprungen).
-Kein Bruch bestehender Navigation.
+Bestehender `dashboardStore.ts` bleibt bestehen und wird intern als Legacy-Adapter markiert (nicht entfernt); neue Screens verwenden ausschließlich die neuen Slices.
 
-## Komponenten (neu, alle in `src/components/onboarding/`)
+## 8. Events (`src/services/dashboards/DashboardEvents.ts`)
 
-- `OnboardingLayout.tsx` — Ambient-Blur-Background + zentrierte GlassCard + Motion.
-- `StepIndicator.tsx` — animierte Punkte/Balken.
-- `PhaseList.tsx` — Statuskarten (idle/running/success/error) mit spring-Animation, Checkmark-Draw, Pulse.
-- `ServerForm.tsx` — Multi-Step (Basics, Verbindung, Auth, Optionen) mit Live-Validierung.
-- `ServerCard.tsx` — Premium-Karte (in Onboarding + Settings wiederverwendet).
-- `ErrorDialog.tsx` — hochwertiger Dialog (Radix Dialog vorhanden via shadcn) mit Titel/Beschreibung/Details/Lösungsvorschlag/Retry-Button.
-- `ImportDialog.tsx` — File-Upload + JSON-Paste, Vorschau, Konfliktauflösung.
+Öffentlicher `dashboardEvents` Emitter mit exakt den geforderten Events. Subscriptions unabhängig von React.
 
-Alle Komponenten nutzen bestehende `GlassCard`, `GlassButton`, `themes/motion`, `themes/glass`. Framer-Motion ist bereits Dependency (aus `_app.tsx`) — keine neuen Packages.
+## 9. Bootstrap-Integration
 
-## i18n
+`src/services/bootstrap.ts`: nach Registry/Discovery-Init zusätzlich:
+- `widgetRegistry.hydrateBuiltin()` (leer, aber ruft Plugin-Hook)
+- `dashboardCache.load()` → Stores hydratisieren
+- Keine Widgets erzeugen, keine Default-Dashboards (nur wenn Cache leer: ein leeres „Home"-Dashboard als Platzhalter, keine Widgets).
 
-`src/services/i18n/locales/de.ts` und `en.ts`: Neue Keys unter `onboarding.*` (welcome, intro, server, configure, test, discovery, done, errors, phases).
+## 10. Performance
 
-## Fehlerbehandlung
+- Alle Lookups über `Map` (O(1))
+- Selectors mit `zustand`-`shallow`, memoisierte Derivate
+- Keine React-Komponenten in diesem Schritt.
 
-- `OnboardingController` mapped Fehler auf `AppError` (bestehend) mit Codes: `NETWORK_UNREACHABLE`, `TLS_FAILED`, `AUTH_FAILED`, `TIMEOUT`, `PROTOCOL_ERROR`, `DISCOVERY_FAILED`.
-- `ErrorDialog` bekommt lokalisierte Lösungsvorschläge pro Code.
-- Keine `alert()`/`confirm()`.
+## Nicht enthalten (explizit)
 
-## Accessibility & PWA
-
-- Alle Buttons ≥44×44, `aria-label`, klare Fokus-Ringe (via bestehende Tailwind-Utility).
-- `AnimatePresence` respektiert `prefers-reduced-motion` via `useReducedMotion`.
-- Onboarding-Routen sind in `manifest.webmanifest`-Scope; `start_url` bleibt `/`.
-
-## Performance
-
-- Alle Onboarding-Routen automatisch code-split (TanStack Auto Splitting).
-- Framer-Variants aus `themes/motion` wiederverwenden.
-- Selektoren mit `useSettingsStore((s) => s.field)` einzeln, keine Objekt-Selektoren.
-
-## Nicht enthalten
-
-- Keine Geräte-, Raum-, Szenen-UI.
-- Kein Dashboard-Inhalt.
-- Keine echte Discovery-UI mit Gerätelisten — nur Phasenanzeige.
+- Keine echten Widget-Implementierungen (Licht, Klima, Kamera, …)
+- Keine Dashboard-UI/Routes/Editor
+- Keine Änderungen am Onboarding, an Discovery oder am WebSocket-Layer
+- Keine Löschung bestehender Legacy-Strukturen.
 
 ## Verifikation
 
-- `bunx tsgo --noEmit` grün.
-- Manuell: frischer Storage → Route `/` leitet zu `/onboarding/welcome`; nach Anlegen + erfolgreichem Fake-Server-Test (Fehlerfall) zeigt `ErrorDialog`; bei bestehendem Server wird Onboarding übersprungen.
+- `bunx tsgo --noEmit` grün
+- `bootstrap` läuft ohne Fehler, Cache Round-Trip getestet via kleinem Dev-Log
+- Registry akzeptiert Test-Descriptor via Plugin-API (nur intern verifiziert, nicht gerendert).

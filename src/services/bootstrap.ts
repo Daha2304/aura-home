@@ -13,6 +13,11 @@ import { useSettingsStore } from "@/store/slices/settingsStore";
 import "@/services/registry/builtin";
 import "@/store/slices/registryStore";
 
+// Widget-Registry & Widget-Store (Plugin-Einstiegspunkt, Teil 5A).
+import "@/services/widgets/builtin";
+import "@/store/slices/widgetRegistryStore";
+import { dashboardManager } from "@/services/dashboards/DashboardManager";
+
 const log = createLogger("bootstrap");
 
 let started = false;
@@ -61,6 +66,10 @@ export function startCommunicationLayer(): void {
       useDiscoveryStore.getState().pushError(payload);
     }),
   );
+
+  // Dashboards aus Cache hydratisieren und Bootstrap-Dashboard sicherstellen.
+  dashboardManager.hydrate();
+  dashboardManager.ensureBootstrapDashboard();
 
   deviceManager.start();
   discoveryEngine.start();
