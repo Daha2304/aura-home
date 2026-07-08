@@ -22,6 +22,7 @@ export type WsIncomingEvent =
   | { type: "welcome"; payload?: Record<string, unknown> }
   | { type: "auth_ok"; payload?: Record<string, unknown> }
   | { type: "auth_failed"; reason?: string }
+  | { type: "snapshot"; devices: Device[] }
   | { type: "device.added"; device: Device }
   | { type: "device.updated"; device: Device }
   | { type: "device.removed"; deviceId: ID }
