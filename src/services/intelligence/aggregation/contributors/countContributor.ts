@@ -18,11 +18,12 @@ export const countContributor: MetricContributor = {
     if (device.online) acc.online = (acc.online ?? 0) + 1;
     else acc.offline = (acc.offline ?? 0) + 1;
 
-    if (device.lifecycle === "unreachable") acc.unreachable = (acc.unreachable ?? 0) + 1;
-    if (device.lifecycle === "discovered" || device.lifecycle === "pending")
+    if (device.lifecycle === "offline") acc.unreachable = (acc.unreachable ?? 0) + 1;
+    if (device.lifecycle === "discovering" || device.lifecycle === "initializing")
       acc.discoveryPending = (acc.discoveryPending ?? 0) + 1;
-    if (device.lifecycle === "syncing") acc.syncPending = (acc.syncPending ?? 0) + 1;
+    if (device.lifecycle === "updating") acc.syncPending = (acc.syncPending ?? 0) + 1;
     if (device.lifecycle === "error") acc.errors = (acc.errors ?? 0) + 1;
+
 
     if (device.favorite) acc.favorites = (acc.favorites ?? 0) + 1;
 
