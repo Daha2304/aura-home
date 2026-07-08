@@ -22,6 +22,8 @@ import { bootstrapIntelligence, stopIntelligence } from "@/services/intelligence
 import { bootstrapDevicePresentation } from "@/services/devices/presentation";
 import { bootstrapCapabilityRegistry } from "@/services/capabilities";
 import { registerBuiltinControls } from "@/components/devices/controls";
+import { bootstrapDevicePanels } from "@/services/devicePanels";
+import { bootstrapDevicePropertyRegistry } from "@/services/deviceProperties";
 
 
 const log = createLogger("bootstrap");
@@ -90,6 +92,8 @@ export function startCommunicationLayer(): void {
   bootstrapDevicePresentation();
   bootstrapCapabilityRegistry();
   registerBuiltinControls();
+  bootstrapDevicePropertyRegistry();
+  bootstrapDevicePanels();
 
 
   // Aktiven Server beobachten und Manager entsprechend (neu) konfigurieren.

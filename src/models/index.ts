@@ -6,6 +6,8 @@ export * from "./capability";
 export * from "./capabilityDescriptor";
 export * from "./controlSpec";
 export * from "./controlType";
+export * from "./devicePanel";
+export * from "./deviceProperty";
 export * from "./device";
 export * from "./deviceType";
 export * from "./deviceCategory";

@@ -1,119 +1,141 @@
-# Teil 7A – Universal Device Control Engine
+# Teil 7B – Device Experience
 
-Ziel: Alle Gerätesteuerungen entstehen ausschließlich aus **Capabilities**. Kein `if(type==="light")`, kein Switch nach `DeviceTypeId`. Neue Geräte werden automatisch bedienbar, sobald sie Capabilities melden.
+Ziel: Die `/devices/$deviceId`-Ansicht wird zur vollwertigen Premium-Smart-Home-Experience. Alle Bereiche entstehen **registry-basiert** aus Capabilities & Device-Properties – kein Typ-Switch, keine gerätespezifische Sonderlogik. Aufbauend auf Teil 7A (Capability Registry, Control Registry, Universal Control Engine, Command Queue).
 
-Basis: `Capability`-Union (`src/models/capability.ts`), `Device.capabilities[]`, `commandQueue` (mit Optimistic + Rollback via `CommandTracker`), Design System (`GlassSwitch`, `GlassSlider`, `SegmentedControl`, `IconButton`, `StatusBadge`, `GlassInput`), Discovery-Events über `wsManager.dispatcher` + `useDevicesStore`.
+## Architektur: Device Panel Registry
 
-## Architektur
+Neue **Panel Registry** analog zur Control Registry. Jedes Panel registriert sich selbst und deklariert, wann es sichtbar ist.
 
 ```text
-Device.capabilities[]
-  → CapabilityRegistry     (Descriptor pro capability.kind, pluginbar)
-  → ControlRegistry        (Control-Bindings pro capability.kind)
-  → ControlFactory         (baut ControlSpecs aus Device+Capabilities)
-  → UniversalControlRenderer (rendert ControlSpecs via Registry-Lookup)
-  → DeviceDetail Section "Steuerung"
+Device
+  → DevicePanelRegistry (Panel-Beschreibungen: id, title, group, priority, icon, isVisible(device), Component)
+  → DevicePanelRenderer (iteriert Registry, filtert sichtbare Panels, staffelt Animationen)
 ```
 
-Alle Schreibpfade laufen über `commandQueue.enqueue(deviceId, key, value, { optimistic:true })`. Kein Store-Write, kein direktes `wsManager.send`.
+**Neue Dateien**
+- `src/models/devicePanel.ts` – `DevicePanelDescriptor { id, title, icon?, group, priority, isVisible(device), component }`; `DevicePanelGroup = "hero" | "status" | "controls" | "information" | "network" | "sensors" | "diagnostics" | "firmware" | "developer" | "custom"`.
+- `src/services/devicePanels/DevicePanelRegistry.ts` – Plugin-Registry (O(1) Map), `register/get/all/visibleFor(device)`.
+- `src/services/devicePanels/builtin/` – ein Modul pro eingebautem Panel (nur Deklaration + Component-Ref):
+  - `heroPanel.tsx` – große Hero-Card, Icon, Name, Raum, Online, Favorit, Tags, Discovery, Firmware, Signal, Batterie.
+  - `statusPanel.tsx` – Live-Statuszeile (online/offline/discovery/sync/warn/error, letzte Änderung, aktuelle Commands via CommandQueue-Store).
+  - `controlsPanel.tsx` – dünner Wrapper um `UniversalControlRenderer` (Teil 7A).
+  - `informationPanel.tsx` – Property Renderer (siehe unten).
+  - `networkPanel.tsx` – IP/MAC/UUID/Serial/Protocol (nur wenn vorhanden).
+  - `sensorsPanel.tsx` – readonly Capabilities via Universal Renderer, gefiltert auf readonly.
+  - `diagnosticsPanel.tsx` – Lifecycle, letzte Verbindung, Command-Historie (aus `commandsStore`).
+  - `firmwarePanel.tsx` – nur sichtbar wenn `firmware`/`hardwareVersion`/`softwareVersion` gesetzt.
+  - `developerPanel.tsx` – Debug-JSON, sichtbar nur bei `settingsStore.debugWebSocket` o. ä. Dev-Flag.
+- `src/services/devicePanels/index.ts` – `bootstrapDevicePanels()`.
 
-## Neue Dateien
+**Bearbeitet:** `src/services/bootstrap.ts` – Aufruf `bootstrapDevicePanels()` nach `registerBuiltinControls()`.
 
-**Models**
-- `src/models/capabilityDescriptor.ts` – `CapabilityDescriptor` (id, kind, name, description, category (`general|lighting|climate|media|sensor|energy|network|system|custom`), dataType (`boolean|number|string|enum|color|composite`), unit, icon, priority, readOnly, min/max/step/precision, defaultValue, format, validation, controlType, rendererId, events, custom).
-- `src/models/controlSpec.ts` – `ControlSpec` (id, deviceId, capabilityId, capabilityKind, controlType, descriptor, currentValue, commandKey, group, priority, readOnly).
-- `src/models/controlType.ts` – String-Union aller Control-IDs (siehe unten).
-- Ergänzung `src/models/index.ts`.
+## Property Renderer (registry-basiert)
 
-**Capability Registry** – `src/services/capabilities/`
-- `CapabilityRegistry.ts` – O(1) Map<kind, Descriptor>, `register/get/all/byCategory`. Versioniert, typisiert.
-- `builtin/` – ein Modul pro Capability-Kind: `onOff.ts`, `dimmer.ts`, `rgb.ts`, `temperature.ts`, `humidity.ts`, `position.ts`, `mode.ts`, `mediaTransport.ts`, `stream.ts`, `energy.ts`, `custom.ts`. Jedes registriert seinen Descriptor.
-- `index.ts` – `bootstrapCapabilityRegistry()`.
+Damit die Info-/Netzwerk-/Firmware-Panels keinerlei Hardcodierung enthalten:
 
-**Control Registry** – `src/services/controls/`
-- `ControlRegistry.ts` – `register(controlType, { component, validate?, format? })`, `resolve(controlType)`. Mehrere Controls pro Capability erlaubt (Registry ist per Control-Type, nicht per Capability).
-- `ControlFactory.ts` – `buildForDevice(device)` → `ControlSpec[]`: iteriert `device.capabilities`, fragt `CapabilityRegistry` nach Descriptor, erzeugt eine oder mehrere `ControlSpec`s, sortiert nach `group` + `priority`. Keine Gerätelogik.
-- `validation.ts` – generische Validatoren (dataType, min, max, step, precision, enum, readOnly, unit).
-- `commandKeys.ts` – deterministisches Mapping `capabilityKind → wire-key` (z.B. `onOff→"power"`, `dimmer→"brightness"`, `rgb→"rgb"`, `mode→"mode"`, `mediaTransport→"transport"`, `position→"position"`, `temperature→"targetTemperature"`). Zentral, keine Duplikate.
-- `index.ts` – `bootstrapControlRegistry()`.
+- `src/models/deviceProperty.ts` – `DevicePropertyDescriptor { id, label, group, priority, read(device) → string|number|boolean|undefined, format?, icon?, sensitive?, tone? }`; `DevicePropertyGroup = "identity" | "network" | "firmware" | "hardware" | "diagnostics" | "custom"`.
+- `src/services/deviceProperties/DevicePropertyRegistry.ts` – Plugin-Registry.
+- `src/services/deviceProperties/builtin.ts` – Built-ins für alle bereits in `Device` vorhandenen Felder (`name/type/manufacturer/model/firmware/hardwareVersion/softwareVersion/uuid/mac/serial/lifecycle/version/serverVersion/floor/description`) + dynamische Ausgabe von `device.customProperties`.
+- `src/components/devices/properties/PropertyList.tsx` – rendert eine Gruppe: DS-`GlassListItem`-artige Zeilen, mit Icon, Label, Wert. Filtert leere Werte, hides sensitive.
 
-**Universal Controls** – `src/components/devices/controls/` (alle basieren auf DS)
-- `PowerToggle.tsx`, `GlassSwitchControl.tsx` (onOff)
-- `PercentageSlider.tsx` (dimmer, position, tilt), `NumericStepper.tsx`
-- `TemperatureSlider.tsx` (temperature/target), `ColorTemperatureControl.tsx`
-- `ColorPickerControl.tsx` (rgb – Hue+Saturation, kein zusätzliches Lib, HSL→RGB)
-- `DropdownControl.tsx`, `SegmentedControlBinding.tsx` (mode)
-- `MediaTransportControl.tsx` (Play/Pause/Stop Button-Group), `VolumeSlider.tsx`, `PositionSlider.tsx`, `MuteToggle.tsx`
-- `LockControl.tsx`, `AlarmControl.tsx`
-- `BooleanReadout.tsx`, `TextReadout.tsx`, `NumberReadout.tsx`, `EnumReadout.tsx`, `ProgressReadout.tsx`, `StatusReadout.tsx` (readonly)
-- `CustomControl.tsx` (Fallback)
-- `index.ts` registriert alle via `controlRegistry.register(...)`.
+Panels konsumieren `devicePropertyRegistry.byGroup("identity" | "network" | …)`.
 
-**Renderer & Groups**
-- `src/components/devices/controls/UniversalControlRenderer.tsx` – `<UniversalControlRenderer device={} />` ruft `controlFactory.buildForDevice(device)`, gruppiert nach `descriptor.category`, rendert pro Spec über `controlRegistry.resolve(spec.controlType).component`. `React.memo` pro Spec, key = `spec.id`. Reagiert auf Store-Updates (live) und `commandsStore` (Feedback).
-- `ControlGroupSection.tsx` – DS `SectionCard`, Gruppenlabel + Icon aus Descriptor-Kategorie.
-- `ControlFeedback.tsx` – zeigt Command-State (queued/sending/sent/retrying/completed/failed/cancelled) als `StatusBadge`/Spinner. Liest aus `useCommandsStore` gefiltert nach `deviceId+key`. Framer Motion Transitions.
+## Command-Historien-Panel (Diagnose)
 
-**Store**
-- `src/store/slices/commandsStore.ts` existiert bereits (verwendet von `CommandQueue`). Neuer Selector `byDeviceKey(deviceId, key)` falls fehlend – sonst inline `useCommandsStore(s => ...)`.
+`diagnosticsPanel.tsx` liest `useCommandsStore().history` gefiltert per `byDevice(device.id)` und rendert die letzten N Commands mit DS-`StatusBadge` (Zustand aus 7A: queued/sending/…/completed/failed). Framer-Motion `AnimatePresence` beim Eintreffen neuer Einträge.
 
-**Bootstrap**
-- `src/services/bootstrap.ts`: nach `bootstrapIntelligence()`, vor `bootstrapDeviceRegistry()`-nahen Widgets → `bootstrapCapabilityRegistry()` + `bootstrapControlRegistry()` aufrufen. Registrierung ist idempotent.
+## Hero + Status (registry-Panels ersetzen Inline-JSX)
 
-## Bearbeitete Dateien
-- `src/routes/_app.devices.$deviceId.tsx` – neue Section **"Steuerung"** ganz oben nach Hero: `<UniversalControlRenderer device={device} />`. Alte "Capabilities"-Chip-Section bleibt (Info). Kein Typ-Switch.
-- `src/models/index.ts` – Exporte.
-- `src/services/bootstrap.ts` – Registry-Boot.
+Der aktuelle Inline-Hero in `_app.devices.$deviceId.tsx` zieht in `heroPanel.tsx` um – unverändertes visuelles Ergebnis (`HeroCard`, `layoutIds.deviceCard`, Favorit-IconButton, Signal/Battery/Discovery/Version MetricCards). Der neue Status-Panel-Bereich zeigt zusätzlich aktive Commands als animierte Chips (Queued/Sending/Retrying/Failed).
 
-## Command-Fluss & Feedback
+## Universal Controls – neue Capability-Descriptoren
 
-1. Control ruft `onChange(value)` →
-2. `commandQueue.enqueue(device.id, commandKeys[capability.kind], value, { optimistic:true })` →
-3. `CommandTracker` schreibt optimistischen Wert in `devicesStore` (Snapshot für Rollback).
-4. Renderer liest neuen Wert live aus `devicesStore` → UI reagiert sofort.
-5. `ControlFeedback` zeigt Zustand animiert (Framer Motion: `queued→sending→sent→completed`).
-6. Bei `failed`/`cancelled` rollt `CommandTracker` zurück; Renderer zeigt Fehler-Badge.
+Für die in 7A noch fehlenden Capabilities registriert werden in `src/services/capabilities/builtin.ts` (nur Zusätze, bestehende Descriptors bleiben):
 
-Alle Änderungen laufen ausschließlich hierüber. Kein `wsManager.send`, kein direkter `upsertDevice`.
+- `colorTemperature` (kind bereits vorbereitbar; neue optional Capability, `slider.color-temperature`).
+- `fanSpeed` (dimmer-ähnlich, `slider.percentage`).
+- `tilt` (`slider.tilt`).
+- `volume`, `mute` (Media-Kontext, `slider.volume`, `toggle.mute`).
+- `seek` (`slider.percentage`, unit `s`).
+- `powerConsumption`, `voltage`, `current` (readonly, `readout.number` mit Units W/V/A).
+- Generische `boolean`, `number`, `text`, `enum` (Fallbacks für dynamische `DeviceFunction`-Werte).
 
-## Validierung
+Wichtig: Der bestehende `Capability`-Union in `src/models/capability.ts` bleibt unangetastet. Neue Capabilities werden über `"custom"`-Kind + `capability.id` diskriminiert und über den bereits vorhandenen `CapabilityDescriptor.kind` (`string & {}` Anteil) registriert. Die Universal Control Engine liest ausschließlich `cap.kind` → RegistryLookup, daher keine Union-Erweiterung nötig.
 
-`validation.ts` prüft vor `enqueue`:
-- dataType-Cast (`number`, `boolean`, enum-Zugehörigkeit)
-- clamp(min,max), snap(step), round(precision)
-- readOnly → keine Command-Erzeugung, nur Anzeige
-- unit-Konvertierung, wenn Descriptor abweicht (z.B. `%` vs. `0..1`)
+Zusätzlich: Der Control-Factory-Loop wird erweitert, um auch `device.functions[]` (protokoll-agnostische generische Funktionen) durchzureichen, indem für jede `DeviceFunction` ein synthetischer Capability-artiger Eintrag erzeugt wird (`kind = function.kind`, `id = function.id`, `value = function.value`, `readonly = function.readonly`). Das aktiviert automatisch `boolean/number/text/enum/custom`-Controls für alle generischen Funktionen ohne UI-Änderung.
 
-Ungültige Werte werden verworfen und via `errorBus` gemeldet.
+Neue Control-Komponenten sind nicht nötig – die Slider/Stepper/Readout-Bausteine aus 7A decken alle neuen Descriptoren ab. Nur zwei kleine Ergänzungen in `src/components/devices/controls/builtin.tsx`:
+- `toggle.mute` (Alias auf `PowerToggle`, Icon `VolumeX`).
+- `readout.text` bleibt Fallback.
 
-## Live Updates
+## Shared-Element-Transitions
 
-`UniversalControlRenderer` abonniert `useDevicesStore` per selector (`shallow`, memoized). Kein Polling, keine Refresh-Buttons. Discovery-`device.state`-Events fließen bereits über bestehende Pipeline in den Store.
+- `HeroCard` nutzt bereits `layoutIds.deviceCard(device.id)` – bleibt.
+- Panels erscheinen gestaffelt: `motion.section` mit `initial={{opacity:0, y:8}} animate={{opacity:1, y:0}} transition={{delay: i * 0.04}}`.
+- Controls-Panel: `AnimatePresence` bereits in `UniversalControlRenderer`/`ControlFeedback`.
+- Werte animieren via `motion.span` mit `layout` in Readouts (bereits in 7A ProgressReadout).
+
+## Gesten (vorbereitet, nicht aktiviert)
+
+Neuer Hook `src/hooks/useDeviceGestures.ts` – exportiert bewusst leere/no-op Handler mit klaren TODO-Kommentaren:
+- `onSwipeBack` → hookt später in Router zurück.
+- `onPullToRefresh` → ruft später `discoveryEngine.refresh(device.id)`.
+- `onLongPress` → öffnet später `DeviceQuickActions` (existiert bereits).
+
+Damit ist die API vorhanden, aber keine Verhaltensänderung. Kein neuer Library-Import.
+
+## Dashboard- & Room-Integration
+
+Kein Codepfad-Umbau nötig: Widgets und Room-Views lesen bereits aus `devicesStore`/`roomMetricsStore`, die durch die Command-Queue (Optimistic Updates aus 7A) live aktualisiert werden. Änderung nur:
+- `src/services/widgets/builtin/devices.tsx` – prüfen, dass Widget-Renderer `React.memo` und selektive Selektoren nutzen (Fixups wenn nötig, keine neuen Widgets).
+- `src/routes/_app.rooms.$roomId.tsx` – bleibt (Teil 6B).
+
+## Neue/geänderte Dateien
+
+**Neu**
+- `src/models/devicePanel.ts`
+- `src/models/deviceProperty.ts`
+- `src/services/devicePanels/DevicePanelRegistry.ts`
+- `src/services/devicePanels/index.ts`
+- `src/services/devicePanels/builtin/heroPanel.tsx`
+- `src/services/devicePanels/builtin/statusPanel.tsx`
+- `src/services/devicePanels/builtin/controlsPanel.tsx`
+- `src/services/devicePanels/builtin/informationPanel.tsx`
+- `src/services/devicePanels/builtin/networkPanel.tsx`
+- `src/services/devicePanels/builtin/sensorsPanel.tsx`
+- `src/services/devicePanels/builtin/diagnosticsPanel.tsx`
+- `src/services/devicePanels/builtin/firmwarePanel.tsx`
+- `src/services/devicePanels/builtin/developerPanel.tsx`
+- `src/services/deviceProperties/DevicePropertyRegistry.ts`
+- `src/services/deviceProperties/builtin.ts`
+- `src/services/deviceProperties/index.ts`
+- `src/components/devices/properties/PropertyList.tsx`
+- `src/components/devices/detail/DevicePanelRenderer.tsx` – iteriert Registry, staffelt Framer-Motion.
+- `src/hooks/useDeviceGestures.ts`
+
+**Bearbeitet**
+- `src/services/capabilities/builtin.ts` – zusätzliche Descriptors (colorTemperature, fanSpeed, tilt, volume, mute, seek, powerConsumption, voltage, current, generic boolean/number/text/enum).
+- `src/services/controls/ControlFactory.ts` – zusätzlich `device.functions[]` als synthetische Capabilities.
+- `src/components/devices/controls/builtin.tsx` – `toggle.mute` Registrierung.
+- `src/services/bootstrap.ts` – `bootstrapDevicePanels()` und `bootstrapDevicePropertyRegistry()`.
+- `src/routes/_app.devices.$deviceId.tsx` – ersetzt Inline-Sections durch `<DevicePanelRenderer device={device} />` (Route-String, `notFoundComponent`, `layoutIds` bleiben unverändert). Alte JSX-Blocks werden gelöscht.
+- `src/models/index.ts` – neue Exporte.
 
 ## Performance
-- `React.memo` auf allen Control-Komponenten (Vergleich per `spec.id + currentValue + commandState`).
-- `ControlFactory` cached `ControlSpec[]`-Ergebnis per `device.id + capabilities-Hash` (WeakMap).
-- Selectors mit `useShallow` in Renderer.
-- Lazy: Registry-Lookups sind O(1) Maps.
+- Panels: `React.memo`, `isVisible(device)` einmalig pro Render.
+- Property-Zeilen: memoized nach `device.id + property.id + value`.
+- Controls: bereits in 7A optimiert.
+- Renderer subscribed nur zur ID: `useDevicesStore((s) => s.byId(deviceId))` → identity-basiert.
 
 ## Accessibility
-- Große Touchflächen (min 44px) – DS-Komponenten erfüllen das bereits.
-- `aria-label` an jedem Control aus `descriptor.name`.
-- Slider mit `role="slider"`, `aria-valuenow/min/max` (bereits in `GlassSlider`).
-- Keyboard: `GlassSwitch`/`SegmentedControl` sind fokussierbar.
+- Panels als `<section aria-labelledby>`.
+- Große Touchflächen bleiben durch DS-Komponenten (>=44px).
+- Fokusreihenfolge: Hero → Status → Controls → Info → Network → Diagnostics.
+- Screenreader-Landmarks via `role="region"` + Panel-Title.
 
-## Was NICHT dazugehört
-Keine Szenen, keine Automationen, keine Historie, keine Diagramme, keine Kameras, keine gerätespezifischen Sonderkomponenten.
+## Was NICHT gebaut wird
+Keine Szenen, keine Automationen, keine Historie-Diagramme, keine Kamera-Streams, keine gerätespezifischen Komponenten.
 
 ## Verifikation
 - `bunx tsgo --noEmit`
-- Playwright: `/devices/$id` einer On/Off-Lampe (Toggle), eines Dimmers (Slider), eines Thermostats (Temperature), eines Mode-Devices – Command wird ausgelöst, optimistischer Wert erscheint, Feedback-Badge durchläuft `sending→completed`.
-
-## Plugin-Verträglichkeit
-
-Neue Capability = nur zwei Registrierungen:
-```ts
-capabilityRegistry.register({ kind:"foo", ... });
-controlRegistry.register("foo.slider", { component: FooSlider, validate, format });
-```
-Renderer und Detailseite bleiben unverändert.
+- Playwright auf `/devices/$id`: Hero rendert, Panels erscheinen gestaffelt, Universal Controls funktionieren mit Command-Feedback, Netzwerk/Firmware-Panels verstecken sich bei fehlenden Werten, Diagnose zeigt Command-Historie.

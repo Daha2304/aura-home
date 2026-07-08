@@ -48,6 +48,45 @@ class ControlFactoryImpl {
       });
     }
 
+    // Synthesize capabilities from generic DeviceFunction entries. This makes
+    // dynamic, protocol-agnostic functions bindable without any device-type
+    // branching. Skip ids that already exist as native capabilities.
+    const takenIds = new Set(specs.map((s) => s.capabilityId));
+    for (const fn of device.functions ?? []) {
+      if (takenIds.has(fn.id)) continue;
+      const descriptor = capabilityRegistry.get(fn.kind);
+      if (!descriptor) continue;
+      const controlType = pickControlType(descriptor);
+      if (!controlType) continue;
+      const synthetic = {
+        kind: fn.kind,
+        id: fn.id,
+        label: fn.label,
+        readonly: fn.readonly,
+        value: fn.value,
+        // enum options passthrough for mode-like functions
+        options: fn.options,
+        unit: fn.unit,
+        min: fn.min,
+        max: fn.max,
+        step: fn.step,
+      } as unknown as Capability;
+      specs.push({
+        id: `${device.id}:${fn.id}:${controlType}`,
+        deviceId: device.id,
+        capabilityId: fn.id,
+        capabilityKind: fn.kind,
+        controlType,
+        descriptor,
+        currentValue: fn.value,
+        commandKey: fn.id,
+        group: descriptor.category,
+        priority: descriptor.priority - 5,
+        readOnly: Boolean(descriptor.readOnly || fn.readonly),
+        capability: synthetic,
+      });
+    }
+
     specs.sort((a, b) => b.priority - a.priority);
     this.cache.set(device, { capsRef: device.capabilities, specs });
     return specs;

@@ -447,6 +447,7 @@ export function registerBuiltinControls(): void {
   const R = controlRegistry;
   R.register({ controlType: "power.toggle", component: PowerToggle });
   R.register({ controlType: "switch.glass", component: PowerToggle });
+  R.register({ controlType: "toggle.mute", component: PowerToggle });
   R.register({ controlType: "slider.percentage", component: PercentageSlider });
   R.register({ controlType: "slider.position", component: PercentageSlider });
   R.register({ controlType: "slider.tilt", component: PercentageSlider });
