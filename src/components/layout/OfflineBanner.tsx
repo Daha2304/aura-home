@@ -27,7 +27,7 @@ export function OfflineBanner() {
   if (connected) return null;
 
   const label =
-    status === "authentication_failed"
+    status === "connected" && !authenticated
       ? "Anmeldung fehlgeschlagen"
       : connecting
         ? "Verbindung wird aufgebaut …"
