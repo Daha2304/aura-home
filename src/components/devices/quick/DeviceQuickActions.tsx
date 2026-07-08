@@ -12,6 +12,7 @@ interface Props {
 }
 
 export function DeviceQuickActions({ device, onClose }: Props) {
+  const navigate = useNavigate();
   if (!device) return null;
   const store = useDevicesStore.getState();
   const toggleFavorite = () => {
@@ -22,29 +23,32 @@ export function DeviceQuickActions({ device, onClose }: Props) {
     deviceAssignmentEngine.assign(device.id, { roomId: null });
     onClose();
   };
+  const openDetails = () => {
+    void navigate({ to: "/devices/$deviceId", params: { deviceId: device.id } });
+    onClose();
+  };
   return (
     <BottomSheet open={!!device} onClose={onClose} title={device.name}>
       <div className="flex flex-col gap-2">
-        <Link to="/devices/$deviceId" params={{ deviceId: device.id }}>
-          <GlassListItem
-            leading={<Eye className="h-4 w-4" />}
-            title="Details öffnen"
-            description="Alle Informationen zum Gerät"
-          />
-        </Link>
-        <button type="button" onClick={toggleFavorite} className="text-left">
-          <GlassListItem
-            leading={<Heart className="h-4 w-4" />}
-            title={device.favorite ? "Favorit entfernen" : "Als Favorit"}
-          />
-        </button>
-        <button type="button" onClick={clearRoom} className="text-left">
-          <GlassListItem
-            leading={<MapPin className="h-4 w-4" />}
-            title="Raumzuweisung entfernen"
-            description={device.roomId ? "Gerät ist aktuell einem Raum zugewiesen" : "Gerät ist ohne Raum"}
-          />
-        </button>
+        <GlassListItem
+          onClick={openDetails}
+          leading={<Eye className="h-4 w-4" />}
+          title="Details öffnen"
+          description="Alle Informationen zum Gerät"
+          showChevron
+        />
+        <GlassListItem
+          onClick={toggleFavorite}
+          leading={<Heart className="h-4 w-4" />}
+          title={device.favorite ? "Favorit entfernen" : "Als Favorit"}
+        />
+        <GlassListItem
+          onClick={clearRoom}
+          leading={<MapPin className="h-4 w-4" />}
+          title="Raumzuweisung entfernen"
+          description={device.roomId ? "Gerät ist aktuell einem Raum zugewiesen" : "Gerät ist ohne Raum"}
+        />
+
         <GlassListItem
           leading={<Tag className="h-4 w-4" />}
           title="Tags"
