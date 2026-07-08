@@ -48,7 +48,7 @@ export function registerBuiltinDevicePresenters(): void {
     accent: "#7C5CFF",
     presentationTags: (ctx: { device: Device }) => {
       const flags = ctx.device.capabilityFlags ?? deviceRegistry.getCapabilities(ctx.device.type);
-      return flags.includes("supportsColorRGB") ? ["Farbe"] : [];
+      return flags.includes("supportsRGB") ? ["Farbe"] : [];
     },
   });
 
