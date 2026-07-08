@@ -24,6 +24,7 @@ import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppScenesRouteImport } from './routes/_app.scenes'
 import { Route as AppRoomsRouteImport } from './routes/_app.rooms'
 import { Route as AppMoreRouteImport } from './routes/_app.more'
+import { Route as AppGroupsRouteImport } from './routes/_app.groups'
 import { Route as AppDevicesRouteImport } from './routes/_app.devices'
 import { Route as AppDashboardsRouteImport } from './routes/_app.dashboards'
 import { Route as AppAutomationsRouteImport } from './routes/_app.automations'
@@ -37,6 +38,7 @@ import { Route as AppSettingsBackupRouteImport } from './routes/_app.settings.ba
 import { Route as AppSettingsAppearanceRouteImport } from './routes/_app.settings.appearance'
 import { Route as AppScenesSceneIdRouteImport } from './routes/_app.scenes.$sceneId'
 import { Route as AppRoomsRoomIdRouteImport } from './routes/_app.rooms.$roomId'
+import { Route as AppGroupsGroupIdRouteImport } from './routes/_app.groups.$groupId'
 import { Route as AppDevicesDeviceIdRouteImport } from './routes/_app.devices.$deviceId'
 import { Route as AppDashboardsDashboardIdRouteImport } from './routes/_app.dashboards.$dashboardId'
 import { Route as AppDashboardsDashboardIdIndexRouteImport } from './routes/_app.dashboards.$dashboardId.index'
@@ -119,6 +121,11 @@ const AppMoreRoute = AppMoreRouteImport.update({
   path: '/more',
   getParentRoute: () => AppRoute,
 } as any)
+const AppGroupsRoute = AppGroupsRouteImport.update({
+  id: '/groups',
+  path: '/groups',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppDevicesRoute = AppDevicesRouteImport.update({
   id: '/devices',
   path: '/devices',
@@ -185,6 +192,11 @@ const AppRoomsRoomIdRoute = AppRoomsRoomIdRouteImport.update({
   path: '/$roomId',
   getParentRoute: () => AppRoomsRoute,
 } as any)
+const AppGroupsGroupIdRoute = AppGroupsGroupIdRouteImport.update({
+  id: '/$groupId',
+  path: '/$groupId',
+  getParentRoute: () => AppGroupsRoute,
+} as any)
 const AppDevicesDeviceIdRoute = AppDevicesDeviceIdRouteImport.update({
   id: '/$deviceId',
   path: '/$deviceId',
@@ -230,6 +242,7 @@ export interface FileRoutesByFullPath {
   '/automations': typeof AppAutomationsRoute
   '/dashboards': typeof AppDashboardsRouteWithChildren
   '/devices': typeof AppDevicesRouteWithChildren
+  '/groups': typeof AppGroupsRouteWithChildren
   '/more': typeof AppMoreRoute
   '/rooms': typeof AppRoomsRouteWithChildren
   '/scenes': typeof AppScenesRouteWithChildren
@@ -244,6 +257,7 @@ export interface FileRoutesByFullPath {
   '/onboarding/': typeof OnboardingIndexRoute
   '/dashboards/$dashboardId': typeof AppDashboardsDashboardIdRouteWithChildren
   '/devices/$deviceId': typeof AppDevicesDeviceIdRoute
+  '/groups/$groupId': typeof AppGroupsGroupIdRoute
   '/rooms/$roomId': typeof AppRoomsRoomIdRoute
   '/scenes/$sceneId': typeof AppScenesSceneIdRouteWithChildren
   '/settings/appearance': typeof AppSettingsAppearanceRoute
@@ -263,6 +277,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/automations': typeof AppAutomationsRoute
   '/devices': typeof AppDevicesRouteWithChildren
+  '/groups': typeof AppGroupsRouteWithChildren
   '/more': typeof AppMoreRoute
   '/rooms': typeof AppRoomsRouteWithChildren
   '/scenes': typeof AppScenesRouteWithChildren
@@ -277,6 +292,7 @@ export interface FileRoutesByTo {
   '/': typeof AppIndexRoute
   '/onboarding': typeof OnboardingIndexRoute
   '/devices/$deviceId': typeof AppDevicesDeviceIdRoute
+  '/groups/$groupId': typeof AppGroupsGroupIdRoute
   '/rooms/$roomId': typeof AppRoomsRoomIdRoute
   '/scenes/$sceneId': typeof AppScenesSceneIdRouteWithChildren
   '/settings/appearance': typeof AppSettingsAppearanceRoute
@@ -300,6 +316,7 @@ export interface FileRoutesById {
   '/_app/automations': typeof AppAutomationsRoute
   '/_app/dashboards': typeof AppDashboardsRouteWithChildren
   '/_app/devices': typeof AppDevicesRouteWithChildren
+  '/_app/groups': typeof AppGroupsRouteWithChildren
   '/_app/more': typeof AppMoreRoute
   '/_app/rooms': typeof AppRoomsRouteWithChildren
   '/_app/scenes': typeof AppScenesRouteWithChildren
@@ -315,6 +332,7 @@ export interface FileRoutesById {
   '/onboarding/': typeof OnboardingIndexRoute
   '/_app/dashboards/$dashboardId': typeof AppDashboardsDashboardIdRouteWithChildren
   '/_app/devices/$deviceId': typeof AppDevicesDeviceIdRoute
+  '/_app/groups/$groupId': typeof AppGroupsGroupIdRoute
   '/_app/rooms/$roomId': typeof AppRoomsRoomIdRoute
   '/_app/scenes/$sceneId': typeof AppScenesSceneIdRouteWithChildren
   '/_app/settings/appearance': typeof AppSettingsAppearanceRoute
@@ -339,6 +357,7 @@ export interface FileRouteTypes {
     | '/automations'
     | '/dashboards'
     | '/devices'
+    | '/groups'
     | '/more'
     | '/rooms'
     | '/scenes'
@@ -353,6 +372,7 @@ export interface FileRouteTypes {
     | '/onboarding/'
     | '/dashboards/$dashboardId'
     | '/devices/$deviceId'
+    | '/groups/$groupId'
     | '/rooms/$roomId'
     | '/scenes/$sceneId'
     | '/settings/appearance'
@@ -372,6 +392,7 @@ export interface FileRouteTypes {
   to:
     | '/automations'
     | '/devices'
+    | '/groups'
     | '/more'
     | '/rooms'
     | '/scenes'
@@ -386,6 +407,7 @@ export interface FileRouteTypes {
     | '/'
     | '/onboarding'
     | '/devices/$deviceId'
+    | '/groups/$groupId'
     | '/rooms/$roomId'
     | '/scenes/$sceneId'
     | '/settings/appearance'
@@ -408,6 +430,7 @@ export interface FileRouteTypes {
     | '/_app/automations'
     | '/_app/dashboards'
     | '/_app/devices'
+    | '/_app/groups'
     | '/_app/more'
     | '/_app/rooms'
     | '/_app/scenes'
@@ -423,6 +446,7 @@ export interface FileRouteTypes {
     | '/onboarding/'
     | '/_app/dashboards/$dashboardId'
     | '/_app/devices/$deviceId'
+    | '/_app/groups/$groupId'
     | '/_app/rooms/$roomId'
     | '/_app/scenes/$sceneId'
     | '/_app/settings/appearance'
@@ -552,6 +576,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppMoreRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/groups': {
+      id: '/_app/groups'
+      path: '/groups'
+      fullPath: '/groups'
+      preLoaderRoute: typeof AppGroupsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/devices': {
       id: '/_app/devices'
       path: '/devices'
@@ -642,6 +673,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/rooms/$roomId'
       preLoaderRoute: typeof AppRoomsRoomIdRouteImport
       parentRoute: typeof AppRoomsRoute
+    }
+    '/_app/groups/$groupId': {
+      id: '/_app/groups/$groupId'
+      path: '/$groupId'
+      fullPath: '/groups/$groupId'
+      preLoaderRoute: typeof AppGroupsGroupIdRouteImport
+      parentRoute: typeof AppGroupsRoute
     }
     '/_app/devices/$deviceId': {
       id: '/_app/devices/$deviceId'
@@ -737,6 +775,18 @@ const AppDevicesRouteWithChildren = AppDevicesRoute._addFileChildren(
   AppDevicesRouteChildren,
 )
 
+interface AppGroupsRouteChildren {
+  AppGroupsGroupIdRoute: typeof AppGroupsGroupIdRoute
+}
+
+const AppGroupsRouteChildren: AppGroupsRouteChildren = {
+  AppGroupsGroupIdRoute: AppGroupsGroupIdRoute,
+}
+
+const AppGroupsRouteWithChildren = AppGroupsRoute._addFileChildren(
+  AppGroupsRouteChildren,
+)
+
 interface AppRoomsRouteChildren {
   AppRoomsRoomIdRoute: typeof AppRoomsRoomIdRoute
 }
@@ -813,6 +863,7 @@ interface AppRouteChildren {
   AppAutomationsRoute: typeof AppAutomationsRoute
   AppDashboardsRoute: typeof AppDashboardsRouteWithChildren
   AppDevicesRoute: typeof AppDevicesRouteWithChildren
+  AppGroupsRoute: typeof AppGroupsRouteWithChildren
   AppMoreRoute: typeof AppMoreRoute
   AppRoomsRoute: typeof AppRoomsRouteWithChildren
   AppScenesRoute: typeof AppScenesRouteWithChildren
@@ -825,6 +876,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppAutomationsRoute: AppAutomationsRoute,
   AppDashboardsRoute: AppDashboardsRouteWithChildren,
   AppDevicesRoute: AppDevicesRouteWithChildren,
+  AppGroupsRoute: AppGroupsRouteWithChildren,
   AppMoreRoute: AppMoreRoute,
   AppRoomsRoute: AppRoomsRouteWithChildren,
   AppScenesRoute: AppScenesRouteWithChildren,
