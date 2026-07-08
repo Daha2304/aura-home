@@ -5,7 +5,6 @@ import { AppShell } from "@/components/layout/AppShell";
 import { pageTransition } from "@/themes/motion";
 import { useCommunicationLayer } from "@/hooks/useCommunicationLayer";
 import { useSettingsStore } from "@/store/slices/settingsStore";
-import { useOnboardingStore } from "@/store/slices/onboardingStore";
 
 export const Route = createFileRoute("/_app")({
   component: AppLayout,
@@ -16,13 +15,15 @@ function AppLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
   const hasServers = useSettingsStore((s) => s.servers.length > 0);
-  const completed = useOnboardingStore((s) => s.completed);
 
+  // Only force onboarding when no server profile exists at all.
+  // A failed connection MUST NEVER redirect back to onboarding — the
+  // connection is an app status, never a navigation gate.
   useEffect(() => {
-    if (!completed && !hasServers) {
+    if (!hasServers) {
       navigate({ to: "/onboarding/welcome", replace: true });
     }
-  }, [completed, hasServers, navigate]);
+  }, [hasServers, navigate]);
 
   return (
     <AppShell>
