@@ -170,6 +170,7 @@ export class WebSocketManager
     try {
       const encoded = this.protocol.encode(message);
       this.socket!.send(encoded as string);
+      this.emit("sent", message);
     } catch (err) {
       errorBus.report(
         new AppError("parse", "Nachricht konnte nicht kodiert werden", {
