@@ -1,4 +1,45 @@
-export const de = {
+export interface Dictionary {
+  nav: {
+    dashboard: string;
+    rooms: string;
+    devices: string;
+    scenes: string;
+    automations: string;
+    statistics: string;
+    settings: string;
+    more: string;
+  };
+  common: {
+    add: string;
+    edit: string;
+    done: string;
+    cancel: string;
+    save: string;
+    delete: string;
+    search: string;
+    empty: string;
+    loading: string;
+    offline: string;
+    online: string;
+  };
+  connection: {
+    idle: string;
+    connecting: string;
+    connected: string;
+    reconnecting: string;
+    disconnected: string;
+    error: string;
+  };
+  empty: {
+    rooms: string;
+    devices: string;
+    scenes: string;
+    automations: string;
+    connectHint: string;
+  };
+}
+
+export const de: Dictionary = {
   nav: {
     dashboard: "Dashboard",
     rooms: "Räume",
@@ -37,6 +78,4 @@ export const de = {
     automations: "Noch keine Automationen",
     connectHint: "Verbinde dich mit einem Server, um Daten zu laden.",
   },
-} as const;
-
-export type Dictionary = typeof de;
+};

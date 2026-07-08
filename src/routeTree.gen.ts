@@ -9,50 +9,445 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppRouteImport } from './routes/_app'
+import { Route as AppIndexRouteImport } from './routes/_app.index'
+import { Route as AppStatisticsRouteImport } from './routes/_app.statistics'
+import { Route as AppSettingsRouteImport } from './routes/_app.settings'
+import { Route as AppScenesRouteImport } from './routes/_app.scenes'
+import { Route as AppRoomsRouteImport } from './routes/_app.rooms'
+import { Route as AppMoreRouteImport } from './routes/_app.more'
+import { Route as AppDevicesRouteImport } from './routes/_app.devices'
+import { Route as AppAutomationsRouteImport } from './routes/_app.automations'
+import { Route as AppSettingsUsersRouteImport } from './routes/_app.settings.users'
+import { Route as AppSettingsServerRouteImport } from './routes/_app.settings.server'
+import { Route as AppSettingsNotificationsRouteImport } from './routes/_app.settings.notifications'
+import { Route as AppSettingsLanguageRouteImport } from './routes/_app.settings.language'
+import { Route as AppSettingsDeveloperRouteImport } from './routes/_app.settings.developer'
+import { Route as AppSettingsBackupRouteImport } from './routes/_app.settings.backup'
+import { Route as AppSettingsAppearanceRouteImport } from './routes/_app.settings.appearance'
+import { Route as AppRoomsRoomIdRouteImport } from './routes/_app.rooms.$roomId'
+import { Route as AppDevicesDeviceIdRouteImport } from './routes/_app.devices.$deviceId'
 
-const IndexRoute = IndexRouteImport.update({
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
+} as any)
+const AppStatisticsRoute = AppStatisticsRouteImport.update({
+  id: '/statistics',
+  path: '/statistics',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppScenesRoute = AppScenesRouteImport.update({
+  id: '/scenes',
+  path: '/scenes',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppRoomsRoute = AppRoomsRouteImport.update({
+  id: '/rooms',
+  path: '/rooms',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMoreRoute = AppMoreRouteImport.update({
+  id: '/more',
+  path: '/more',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDevicesRoute = AppDevicesRouteImport.update({
+  id: '/devices',
+  path: '/devices',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAutomationsRoute = AppAutomationsRouteImport.update({
+  id: '/automations',
+  path: '/automations',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsUsersRoute = AppSettingsUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
+const AppSettingsServerRoute = AppSettingsServerRouteImport.update({
+  id: '/server',
+  path: '/server',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
+const AppSettingsNotificationsRoute =
+  AppSettingsNotificationsRouteImport.update({
+    id: '/notifications',
+    path: '/notifications',
+    getParentRoute: () => AppSettingsRoute,
+  } as any)
+const AppSettingsLanguageRoute = AppSettingsLanguageRouteImport.update({
+  id: '/language',
+  path: '/language',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
+const AppSettingsDeveloperRoute = AppSettingsDeveloperRouteImport.update({
+  id: '/developer',
+  path: '/developer',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
+const AppSettingsBackupRoute = AppSettingsBackupRouteImport.update({
+  id: '/backup',
+  path: '/backup',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
+const AppSettingsAppearanceRoute = AppSettingsAppearanceRouteImport.update({
+  id: '/appearance',
+  path: '/appearance',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
+const AppRoomsRoomIdRoute = AppRoomsRoomIdRouteImport.update({
+  id: '/$roomId',
+  path: '/$roomId',
+  getParentRoute: () => AppRoomsRoute,
+} as any)
+const AppDevicesDeviceIdRoute = AppDevicesDeviceIdRouteImport.update({
+  id: '/$deviceId',
+  path: '/$deviceId',
+  getParentRoute: () => AppDevicesRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
+  '/': typeof AppIndexRoute
+  '/automations': typeof AppAutomationsRoute
+  '/devices': typeof AppDevicesRouteWithChildren
+  '/more': typeof AppMoreRoute
+  '/rooms': typeof AppRoomsRouteWithChildren
+  '/scenes': typeof AppScenesRoute
+  '/settings': typeof AppSettingsRouteWithChildren
+  '/statistics': typeof AppStatisticsRoute
+  '/devices/$deviceId': typeof AppDevicesDeviceIdRoute
+  '/rooms/$roomId': typeof AppRoomsRoomIdRoute
+  '/settings/appearance': typeof AppSettingsAppearanceRoute
+  '/settings/backup': typeof AppSettingsBackupRoute
+  '/settings/developer': typeof AppSettingsDeveloperRoute
+  '/settings/language': typeof AppSettingsLanguageRoute
+  '/settings/notifications': typeof AppSettingsNotificationsRoute
+  '/settings/server': typeof AppSettingsServerRoute
+  '/settings/users': typeof AppSettingsUsersRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
+  '/automations': typeof AppAutomationsRoute
+  '/devices': typeof AppDevicesRouteWithChildren
+  '/more': typeof AppMoreRoute
+  '/rooms': typeof AppRoomsRouteWithChildren
+  '/scenes': typeof AppScenesRoute
+  '/settings': typeof AppSettingsRouteWithChildren
+  '/statistics': typeof AppStatisticsRoute
+  '/': typeof AppIndexRoute
+  '/devices/$deviceId': typeof AppDevicesDeviceIdRoute
+  '/rooms/$roomId': typeof AppRoomsRoomIdRoute
+  '/settings/appearance': typeof AppSettingsAppearanceRoute
+  '/settings/backup': typeof AppSettingsBackupRoute
+  '/settings/developer': typeof AppSettingsDeveloperRoute
+  '/settings/language': typeof AppSettingsLanguageRoute
+  '/settings/notifications': typeof AppSettingsNotificationsRoute
+  '/settings/server': typeof AppSettingsServerRoute
+  '/settings/users': typeof AppSettingsUsersRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
+  '/_app': typeof AppRouteWithChildren
+  '/_app/automations': typeof AppAutomationsRoute
+  '/_app/devices': typeof AppDevicesRouteWithChildren
+  '/_app/more': typeof AppMoreRoute
+  '/_app/rooms': typeof AppRoomsRouteWithChildren
+  '/_app/scenes': typeof AppScenesRoute
+  '/_app/settings': typeof AppSettingsRouteWithChildren
+  '/_app/statistics': typeof AppStatisticsRoute
+  '/_app/': typeof AppIndexRoute
+  '/_app/devices/$deviceId': typeof AppDevicesDeviceIdRoute
+  '/_app/rooms/$roomId': typeof AppRoomsRoomIdRoute
+  '/_app/settings/appearance': typeof AppSettingsAppearanceRoute
+  '/_app/settings/backup': typeof AppSettingsBackupRoute
+  '/_app/settings/developer': typeof AppSettingsDeveloperRoute
+  '/_app/settings/language': typeof AppSettingsLanguageRoute
+  '/_app/settings/notifications': typeof AppSettingsNotificationsRoute
+  '/_app/settings/server': typeof AppSettingsServerRoute
+  '/_app/settings/users': typeof AppSettingsUsersRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/automations'
+    | '/devices'
+    | '/more'
+    | '/rooms'
+    | '/scenes'
+    | '/settings'
+    | '/statistics'
+    | '/devices/$deviceId'
+    | '/rooms/$roomId'
+    | '/settings/appearance'
+    | '/settings/backup'
+    | '/settings/developer'
+    | '/settings/language'
+    | '/settings/notifications'
+    | '/settings/server'
+    | '/settings/users'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/automations'
+    | '/devices'
+    | '/more'
+    | '/rooms'
+    | '/scenes'
+    | '/settings'
+    | '/statistics'
+    | '/'
+    | '/devices/$deviceId'
+    | '/rooms/$roomId'
+    | '/settings/appearance'
+    | '/settings/backup'
+    | '/settings/developer'
+    | '/settings/language'
+    | '/settings/notifications'
+    | '/settings/server'
+    | '/settings/users'
+  id:
+    | '__root__'
+    | '/_app'
+    | '/_app/automations'
+    | '/_app/devices'
+    | '/_app/more'
+    | '/_app/rooms'
+    | '/_app/scenes'
+    | '/_app/settings'
+    | '/_app/statistics'
+    | '/_app/'
+    | '/_app/devices/$deviceId'
+    | '/_app/rooms/$roomId'
+    | '/_app/settings/appearance'
+    | '/_app/settings/backup'
+    | '/_app/settings/developer'
+    | '/_app/settings/language'
+    | '/_app/settings/notifications'
+    | '/_app/settings/server'
+    | '/_app/settings/users'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
+  AppRoute: typeof AppRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
+    '/_app': {
+      id: '/_app'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app/': {
+      id: '/_app/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/statistics': {
+      id: '/_app/statistics'
+      path: '/statistics'
+      fullPath: '/statistics'
+      preLoaderRoute: typeof AppStatisticsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/settings': {
+      id: '/_app/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/scenes': {
+      id: '/_app/scenes'
+      path: '/scenes'
+      fullPath: '/scenes'
+      preLoaderRoute: typeof AppScenesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/rooms': {
+      id: '/_app/rooms'
+      path: '/rooms'
+      fullPath: '/rooms'
+      preLoaderRoute: typeof AppRoomsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/more': {
+      id: '/_app/more'
+      path: '/more'
+      fullPath: '/more'
+      preLoaderRoute: typeof AppMoreRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/devices': {
+      id: '/_app/devices'
+      path: '/devices'
+      fullPath: '/devices'
+      preLoaderRoute: typeof AppDevicesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/automations': {
+      id: '/_app/automations'
+      path: '/automations'
+      fullPath: '/automations'
+      preLoaderRoute: typeof AppAutomationsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/settings/users': {
+      id: '/_app/settings/users'
+      path: '/users'
+      fullPath: '/settings/users'
+      preLoaderRoute: typeof AppSettingsUsersRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/settings/server': {
+      id: '/_app/settings/server'
+      path: '/server'
+      fullPath: '/settings/server'
+      preLoaderRoute: typeof AppSettingsServerRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/settings/notifications': {
+      id: '/_app/settings/notifications'
+      path: '/notifications'
+      fullPath: '/settings/notifications'
+      preLoaderRoute: typeof AppSettingsNotificationsRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/settings/language': {
+      id: '/_app/settings/language'
+      path: '/language'
+      fullPath: '/settings/language'
+      preLoaderRoute: typeof AppSettingsLanguageRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/settings/developer': {
+      id: '/_app/settings/developer'
+      path: '/developer'
+      fullPath: '/settings/developer'
+      preLoaderRoute: typeof AppSettingsDeveloperRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/settings/backup': {
+      id: '/_app/settings/backup'
+      path: '/backup'
+      fullPath: '/settings/backup'
+      preLoaderRoute: typeof AppSettingsBackupRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/settings/appearance': {
+      id: '/_app/settings/appearance'
+      path: '/appearance'
+      fullPath: '/settings/appearance'
+      preLoaderRoute: typeof AppSettingsAppearanceRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/rooms/$roomId': {
+      id: '/_app/rooms/$roomId'
+      path: '/$roomId'
+      fullPath: '/rooms/$roomId'
+      preLoaderRoute: typeof AppRoomsRoomIdRouteImport
+      parentRoute: typeof AppRoomsRoute
+    }
+    '/_app/devices/$deviceId': {
+      id: '/_app/devices/$deviceId'
+      path: '/$deviceId'
+      fullPath: '/devices/$deviceId'
+      preLoaderRoute: typeof AppDevicesDeviceIdRouteImport
+      parentRoute: typeof AppDevicesRoute
     }
   }
 }
 
+interface AppDevicesRouteChildren {
+  AppDevicesDeviceIdRoute: typeof AppDevicesDeviceIdRoute
+}
+
+const AppDevicesRouteChildren: AppDevicesRouteChildren = {
+  AppDevicesDeviceIdRoute: AppDevicesDeviceIdRoute,
+}
+
+const AppDevicesRouteWithChildren = AppDevicesRoute._addFileChildren(
+  AppDevicesRouteChildren,
+)
+
+interface AppRoomsRouteChildren {
+  AppRoomsRoomIdRoute: typeof AppRoomsRoomIdRoute
+}
+
+const AppRoomsRouteChildren: AppRoomsRouteChildren = {
+  AppRoomsRoomIdRoute: AppRoomsRoomIdRoute,
+}
+
+const AppRoomsRouteWithChildren = AppRoomsRoute._addFileChildren(
+  AppRoomsRouteChildren,
+)
+
+interface AppSettingsRouteChildren {
+  AppSettingsAppearanceRoute: typeof AppSettingsAppearanceRoute
+  AppSettingsBackupRoute: typeof AppSettingsBackupRoute
+  AppSettingsDeveloperRoute: typeof AppSettingsDeveloperRoute
+  AppSettingsLanguageRoute: typeof AppSettingsLanguageRoute
+  AppSettingsNotificationsRoute: typeof AppSettingsNotificationsRoute
+  AppSettingsServerRoute: typeof AppSettingsServerRoute
+  AppSettingsUsersRoute: typeof AppSettingsUsersRoute
+}
+
+const AppSettingsRouteChildren: AppSettingsRouteChildren = {
+  AppSettingsAppearanceRoute: AppSettingsAppearanceRoute,
+  AppSettingsBackupRoute: AppSettingsBackupRoute,
+  AppSettingsDeveloperRoute: AppSettingsDeveloperRoute,
+  AppSettingsLanguageRoute: AppSettingsLanguageRoute,
+  AppSettingsNotificationsRoute: AppSettingsNotificationsRoute,
+  AppSettingsServerRoute: AppSettingsServerRoute,
+  AppSettingsUsersRoute: AppSettingsUsersRoute,
+}
+
+const AppSettingsRouteWithChildren = AppSettingsRoute._addFileChildren(
+  AppSettingsRouteChildren,
+)
+
+interface AppRouteChildren {
+  AppAutomationsRoute: typeof AppAutomationsRoute
+  AppDevicesRoute: typeof AppDevicesRouteWithChildren
+  AppMoreRoute: typeof AppMoreRoute
+  AppRoomsRoute: typeof AppRoomsRouteWithChildren
+  AppScenesRoute: typeof AppScenesRoute
+  AppSettingsRoute: typeof AppSettingsRouteWithChildren
+  AppStatisticsRoute: typeof AppStatisticsRoute
+  AppIndexRoute: typeof AppIndexRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppAutomationsRoute: AppAutomationsRoute,
+  AppDevicesRoute: AppDevicesRouteWithChildren,
+  AppMoreRoute: AppMoreRoute,
+  AppRoomsRoute: AppRoomsRouteWithChildren,
+  AppScenesRoute: AppScenesRoute,
+  AppSettingsRoute: AppSettingsRouteWithChildren,
+  AppStatisticsRoute: AppStatisticsRoute,
+  AppIndexRoute: AppIndexRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
+  AppRoute: AppRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
