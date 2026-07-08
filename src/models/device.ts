@@ -1,30 +1,15 @@
 import type { Capability } from "./capability";
 import type { HexColor, ID, IconName, Timestamp } from "./common";
+import type { CapabilityFlag } from "./deviceCapability";
+import type { LifecycleState } from "./deviceLifecycle";
+import type { DeviceRelationship } from "./deviceRelationship";
+import type { DeviceTypeId } from "./deviceType";
 
-export type DeviceType =
-  | "light"
-  | "rgb"
-  | "dimmer"
-  | "outlet"
-  | "sensor"
-  | "temperature"
-  | "humidity"
-  | "blinds"
-  | "heating"
-  | "thermostat"
-  | "ac"
-  | "window"
-  | "door"
-  | "garage"
-  | "tv"
-  | "avr"
-  | "speaker"
-  | "camera"
-  | "alarm"
-  | "smoke"
-  | "water"
-  | "energy"
-  | "custom";
+/**
+ * @deprecated Nutze {@link DeviceTypeId}. Der Alias bleibt erhalten, damit
+ * bestehende Konsumenten nicht brechen.
+ */
+export type DeviceType = DeviceTypeId;
 
 /**
  * Generische Gerätefunktion. Ein Gerät kann beliebig viele Funktionen besitzen.
@@ -71,14 +56,28 @@ export interface DeviceFunction<TValue = unknown> {
 export interface Device {
   id: ID;
   name: string;
-  type: DeviceType;
+  type: DeviceTypeId;
   roomId?: ID;
   groupIds?: ID[];
   icon?: IconName;
   color?: HexColor;
+
+  // Profil (statische Metadaten)
   manufacturer?: string;
   model?: string;
   firmware?: string;
+  hardwareVersion?: string;
+  softwareVersion?: string;
+  serial?: string;
+  uuid?: string;
+  mac?: string;
+  floor?: number;
+  image?: string;
+  description?: string;
+  tags?: string[];
+  customProperties?: Record<string, unknown>;
+
+  // Live-Zustand
   online: boolean;
   /** 0..100 */
   signal?: number;
@@ -87,11 +86,24 @@ export interface Device {
   favorite?: boolean;
   lastSeen?: Timestamp;
   updatedAt?: Timestamp;
-  /** Strukturierte, typisierte Capabilities (bestehendes System). */
+
+  // Fähigkeiten und Funktionen
+  /** Strukturierte, wertetragende Capabilities. */
   capabilities: Capability[];
+  /** Deklarative Fähigkeits-Flags. Registry-Default + optionale Overrides. */
+  capabilityFlags?: CapabilityFlag[];
   /** Dynamische, generische Funktionen (protokoll-agnostisch). */
   functions?: DeviceFunction[];
-  /** Beliebige zusätzliche, serverseitige Attribute. */
+
+  // Discovery/Sync
+  lifecycle?: LifecycleState;
+  /** Lokale, monotone Version. Wird bei jeder Änderung inkrementiert. */
+  version?: number;
+  /** Vom Server gelieferte Version, unabhängig von der lokalen. */
+  serverVersion?: number;
+  relationships?: DeviceRelationship[];
+
+  // Serverseitige Zusatzattribute
   attributes?: Record<string, unknown>;
 }
 

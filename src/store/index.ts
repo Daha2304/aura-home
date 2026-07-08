@@ -9,3 +9,6 @@ export { useUsersStore } from "./slices/usersStore";
 export { useConnectionStore } from "./slices/connectionStore";
 export { useNotificationsStore } from "./slices/notificationsStore";
 export { useHistoryStore } from "./slices/historyStore";
+export { useRegistryStore } from "./slices/registryStore";
+export { useDiscoveryStore } from "./slices/discoveryStore";
+export { useCommandsStore } from "./slices/commandsStore";
