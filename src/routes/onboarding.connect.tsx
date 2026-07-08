@@ -81,6 +81,19 @@ function ConnectScreen() {
     [draft],
   );
 
+  // Serverprofil sofort persistieren und Onboarding als abgeschlossen
+  // markieren, sobald dieser Screen betreten wird. Dadurch bleibt der
+  // Benutzer bei einem Verbindungsfehler NIE im Onboarding hängen.
+  useEffect(() => {
+    if (!server) return;
+    const isNew = !existing.some((s) => s.id === server.id);
+    if (isNew) addServer(server);
+    else updateServer(server);
+    setActive(server.id);
+    complete();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [server?.id]);
+
   useEffect(() => {
     if (!server) return;
     setFailed(null);
@@ -94,14 +107,7 @@ function ConnectScreen() {
       setError(e);
     });
     const offDone = onboardingController.on("done", () => {
-      // Persistieren
-      const isNew = !existing.some((s) => s.id === server.id);
-      if (isNew) addServer(server);
-      else updateServer(server);
-      setActive(server.id);
       markConnected(server.id);
-      complete();
-      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
       setTimeout(() => navigate({ to: "/onboarding/done" }), 400);
     });
 
@@ -125,12 +131,21 @@ function ConnectScreen() {
     state: stateFor(p, phase, failed),
   }));
 
+  const goToDashboard = () => {
+    onboardingController.abort();
+    navigate({ to: "/", replace: true });
+  };
+
   return (
-    <OnboardingLayout step={4} totalSteps={5}>
+    <OnboardingLayout step={4} totalSteps={4}>
       <div className="mb-5">
         <h1 className="text-2xl font-bold">Verbindung wird geprüft</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {server ? `${server.name} · ${server.host}:${server.port}` : ""}
+        </p>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Das Serverprofil ist bereits gespeichert. Du kannst jederzeit
+          direkt ins Dashboard wechseln.
         </p>
       </div>
       <div className="flex-1">
@@ -146,7 +161,15 @@ function ConnectScreen() {
           </motion.div>
         )}
       </div>
-      <div className="mt-6 flex gap-2">
+      <div className="mt-6 flex flex-col gap-2">
+        <GlassButton
+          variant="primary"
+          size="lg"
+          className="w-full"
+          onClick={goToDashboard}
+        >
+          Zum Dashboard
+        </GlassButton>
         <GlassButton
           variant="ghost"
           size="md"
@@ -155,7 +178,7 @@ function ConnectScreen() {
             navigate({ to: "/onboarding/configure" });
           }}
         >
-          Bearbeiten
+          Server bearbeiten
         </GlassButton>
       </div>
 
@@ -170,7 +193,10 @@ function ConnectScreen() {
           setFailed(null);
           navigate({ to: "/onboarding/configure" });
         }}
-        onCancel={() => setFailed(null)}
+        onCancel={() => {
+          setFailed(null);
+          goToDashboard();
+        }}
       />
     </OnboardingLayout>
   );
