@@ -16,6 +16,8 @@ import { Route as AppIndexRouteImport } from './routes/_app.index'
 import { Route as OnboardingWelcomeRouteImport } from './routes/onboarding.welcome'
 import { Route as OnboardingServerRouteImport } from './routes/onboarding.server'
 import { Route as OnboardingIntroRouteImport } from './routes/onboarding.intro'
+import { Route as OnboardingDoneRouteImport } from './routes/onboarding.done'
+import { Route as OnboardingConnectRouteImport } from './routes/onboarding.connect'
 import { Route as OnboardingConfigureRouteImport } from './routes/onboarding.configure'
 import { Route as AppStatisticsRouteImport } from './routes/_app.statistics'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
@@ -66,6 +68,16 @@ const OnboardingServerRoute = OnboardingServerRouteImport.update({
 const OnboardingIntroRoute = OnboardingIntroRouteImport.update({
   id: '/intro',
   path: '/intro',
+  getParentRoute: () => OnboardingRoute,
+} as any)
+const OnboardingDoneRoute = OnboardingDoneRouteImport.update({
+  id: '/done',
+  path: '/done',
+  getParentRoute: () => OnboardingRoute,
+} as any)
+const OnboardingConnectRoute = OnboardingConnectRouteImport.update({
+  id: '/connect',
+  path: '/connect',
   getParentRoute: () => OnboardingRoute,
 } as any)
 const OnboardingConfigureRoute = OnboardingConfigureRouteImport.update({
@@ -166,6 +178,8 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AppSettingsRouteWithChildren
   '/statistics': typeof AppStatisticsRoute
   '/onboarding/configure': typeof OnboardingConfigureRoute
+  '/onboarding/connect': typeof OnboardingConnectRoute
+  '/onboarding/done': typeof OnboardingDoneRoute
   '/onboarding/intro': typeof OnboardingIntroRoute
   '/onboarding/server': typeof OnboardingServerRoute
   '/onboarding/welcome': typeof OnboardingWelcomeRoute
@@ -189,6 +203,8 @@ export interface FileRoutesByTo {
   '/settings': typeof AppSettingsRouteWithChildren
   '/statistics': typeof AppStatisticsRoute
   '/onboarding/configure': typeof OnboardingConfigureRoute
+  '/onboarding/connect': typeof OnboardingConnectRoute
+  '/onboarding/done': typeof OnboardingDoneRoute
   '/onboarding/intro': typeof OnboardingIntroRoute
   '/onboarding/server': typeof OnboardingServerRoute
   '/onboarding/welcome': typeof OnboardingWelcomeRoute
@@ -216,6 +232,8 @@ export interface FileRoutesById {
   '/_app/settings': typeof AppSettingsRouteWithChildren
   '/_app/statistics': typeof AppStatisticsRoute
   '/onboarding/configure': typeof OnboardingConfigureRoute
+  '/onboarding/connect': typeof OnboardingConnectRoute
+  '/onboarding/done': typeof OnboardingDoneRoute
   '/onboarding/intro': typeof OnboardingIntroRoute
   '/onboarding/server': typeof OnboardingServerRoute
   '/onboarding/welcome': typeof OnboardingWelcomeRoute
@@ -244,6 +262,8 @@ export interface FileRouteTypes {
     | '/settings'
     | '/statistics'
     | '/onboarding/configure'
+    | '/onboarding/connect'
+    | '/onboarding/done'
     | '/onboarding/intro'
     | '/onboarding/server'
     | '/onboarding/welcome'
@@ -267,6 +287,8 @@ export interface FileRouteTypes {
     | '/settings'
     | '/statistics'
     | '/onboarding/configure'
+    | '/onboarding/connect'
+    | '/onboarding/done'
     | '/onboarding/intro'
     | '/onboarding/server'
     | '/onboarding/welcome'
@@ -293,6 +315,8 @@ export interface FileRouteTypes {
     | '/_app/settings'
     | '/_app/statistics'
     | '/onboarding/configure'
+    | '/onboarding/connect'
+    | '/onboarding/done'
     | '/onboarding/intro'
     | '/onboarding/server'
     | '/onboarding/welcome'
@@ -363,6 +387,20 @@ declare module '@tanstack/react-router' {
       path: '/intro'
       fullPath: '/onboarding/intro'
       preLoaderRoute: typeof OnboardingIntroRouteImport
+      parentRoute: typeof OnboardingRoute
+    }
+    '/onboarding/done': {
+      id: '/onboarding/done'
+      path: '/done'
+      fullPath: '/onboarding/done'
+      preLoaderRoute: typeof OnboardingDoneRouteImport
+      parentRoute: typeof OnboardingRoute
+    }
+    '/onboarding/connect': {
+      id: '/onboarding/connect'
+      path: '/connect'
+      fullPath: '/onboarding/connect'
+      preLoaderRoute: typeof OnboardingConnectRouteImport
       parentRoute: typeof OnboardingRoute
     }
     '/onboarding/configure': {
@@ -561,6 +599,8 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
 interface OnboardingRouteChildren {
   OnboardingConfigureRoute: typeof OnboardingConfigureRoute
+  OnboardingConnectRoute: typeof OnboardingConnectRoute
+  OnboardingDoneRoute: typeof OnboardingDoneRoute
   OnboardingIntroRoute: typeof OnboardingIntroRoute
   OnboardingServerRoute: typeof OnboardingServerRoute
   OnboardingWelcomeRoute: typeof OnboardingWelcomeRoute
@@ -569,6 +609,8 @@ interface OnboardingRouteChildren {
 
 const OnboardingRouteChildren: OnboardingRouteChildren = {
   OnboardingConfigureRoute: OnboardingConfigureRoute,
+  OnboardingConnectRoute: OnboardingConnectRoute,
+  OnboardingDoneRoute: OnboardingDoneRoute,
   OnboardingIntroRoute: OnboardingIntroRoute,
   OnboardingServerRoute: OnboardingServerRoute,
   OnboardingWelcomeRoute: OnboardingWelcomeRoute,
