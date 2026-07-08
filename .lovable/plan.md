@@ -1,98 +1,170 @@
 
-# Teil 5B – Dashboard Editor (visuell)
+# Teil 5C — Dashboard Runtime
 
-Voll funktionsfähiger Editor auf Basis der in 5A gebauten Engine. Keine echten Smart-Home-Widgets — der Editor arbeitet mit Registry-Platzhaltern. Legacy `WidgetGrid` bleibt unverändert; die Dashboard-Route wird auf die neue Canvas umgezogen.
+Vollständig eigenständige Runtime, strikt getrennt vom Editor. Nutzt Widget Registry, Widget Manager, Layout Engine, Dashboard Manager und Layouts Store unverändert. Registry-basiertes Rendering, Premium Glass Design, Framer Motion. Keine Smart-Home-Widgets.
 
-## 1. Services (`src/services/dashboards/editor/`)
+## Architektur
 
-- `EditorController.ts` – Singleton, orchestriert Edit-Session (aktives Dashboard, Breakpoint, Selection, Clipboard, Modus). Emitter `editorEvents`.
-- `HistoryStack.ts` – Command-Pattern (`do/undo`), begrenzte Tiefe, coalescing für drag/resize.
-- `Clipboard.ts` – copy/cut/paste/duplicate über `widgetManager`.
-- `Guides.ts` – berechnet magnetische Hilfslinien und Snap-Offsets aus Grid + Nachbar-Placements.
-- `AutoSave.ts` – debounced `dashboardManager.persist()`, mit Version-Bump im Dashboard-Meta.
-- `PlaceholderWidgets.ts` – registriert bei Editor-Mount 6 generische Platzhalter-Descriptors (`placeholder.card`, `placeholder.tile`, `placeholder.wide`, `placeholder.tall`, `placeholder.hero`, `placeholder.mini`) in `widgetRegistry` — reine Layout-Blöcke, keine Smart-Home-Logik.
+```
+src/services/runtime/
+  RuntimeController.ts     Aktives Dashboard, aktueller Breakpoint, Overlay-State
+  BreakpointDetector.ts    ResizeObserver + matchMedia → LayoutBreakpoint
+  RuntimeEvents.ts         TypedEmitter: dashboardChanged, breakpointChanged, overlayChanged
+  greetings.ts             Zeit-/Statusbasierte Hero-Inhalte (Guten Morgen, Alle Systeme online …)
+  index.ts
 
-## 2. Store (`src/store/slices/editorStore.ts`)
+src/store/slices/runtimeStore.ts
+  activeDashboardId, breakpoint, theme (light|dark|auto), overlays[]
+  Selektoren, keine Persistenz (Session-State)
 
-`useEditorStore` (nicht persistiert):
-- `mode: "normal" | "edit"`, `activeBreakpoint`, `zoom` (0.5–1.5), `showGrid`, `showGuides`, `showSpacing`, `snap`, `lockAspect`
-- `selection: Set<WidgetInstanceId>`, `hoverId`, `dragging`, `resizing`
-- `clipboard`, `history: { past, future }` (Referenzen; Daten in `HistoryStack`)
-- Actions: `enterEdit`, `exitEdit`, `select`, `toggleSelection`, `clearSelection`, `setBreakpoint`, `setZoom`, `toggleGrid`/`Guides`/`Spacing`/`Snap`/`LockAspect`, `setDragging`, `setResizing`
+src/hooks/runtime/
+  useRuntimeDashboard.ts    Dashboard + Instanzen + Placements aus Stores
+  useBreakpoint.ts          Reaktiver Breakpoint
+  useWidgetInstance.ts      Einzelinstanz + Descriptor via Registry
+  useVisibleWidgets.ts      Sichtbarkeits-/Viewport-Filter (Vorbereitung Virtualisierung)
+  useRuntimeTheme.ts
+  useSwipeNavigation.ts     Vorbereitung Dashboard-Swipe
+  useRuntimeOverlays.ts
 
-## 3. Hooks (`src/hooks/`)
+src/components/runtime/
+  DashboardRuntime.tsx      Wurzelkomponente (nur Anzeige)
+  RuntimeCanvas.tsx         Grid-Renderer aus LayoutEngine
+  RuntimeWidgetHost.tsx     Nimmt WidgetInstance → resolve über widgetRegistry → dynamischer Render (Factory Pattern, keine switch/if-Ketten)
+  RuntimeWidgetShell.tsx    Glass-Karte, Styling aus Instance
+  RuntimeHeader.tsx         Dashboard-Titel, Datum, Uhr, „Bearbeiten"-Button
+  RuntimePager.tsx          Vorbereitung Multi-Dashboard-Swipe (Framer Motion)
+  RuntimeEmptyState.tsx     Illustration + Button „Dashboard bearbeiten"
+  RuntimeSkeleton.tsx       Skeleton-Loading
+  overlays/
+    OverlayLayer.tsx        AnimatePresence-Manager
+    DiscoveryOverlay.tsx  ServerOfflineOverlay.tsx  SyncOverlay.tsx
+    AuthOverlay.tsx  UpdateOverlay.tsx
+  glass/
+    GlassSurface.tsx        Frosted / Liquid / Frost-Varianten
+    GlassDivider.tsx
 
-- `useDashboardEditor.ts` – öffentliche API für Routen (Selektoren + Actions gebündelt, memoisiert).
-- `useDragWidget.ts` – Pointer Events, 60 FPS via `requestAnimationFrame`, Touch + Mouse + Pen. Meldet an `EditorController`, ruft `widgetManager.move` beim Drop.
-- `useResizeWidget.ts` – 8 Griffe, `lockAspect`-Support, Min/Max aus Descriptor, Snap.
-- `useLongPressEdit.ts` – Long-Press (500 ms) auf Widget aktiviert Edit-Mode + Selection.
-- `useEditorKeyboard.ts` – Delete, Cmd/Ctrl+C/X/V/D/Z/Shift-Z, Pfeiltasten (1 Zelle), Esc.
-- `useAutoSave.ts` – bindet Store-Änderungen an `AutoSave`.
+src/components/runtime/widgets/            System-Widgets (registry-registriert)
+  WelcomeWidget.tsx
+  DashboardHeaderWidget.tsx
+  DashboardTitleWidget.tsx
+  DateWidget.tsx
+  ClockWidget.tsx
+  ServerStatusWidget.tsx
+  ConnectionStatusWidget.tsx
+  DiscoveryStatusWidget.tsx
+  SyncStatusWidget.tsx
+  SystemInfoWidget.tsx
+  AppVersionWidget.tsx
+  UserProfileWidget.tsx        (vorbereitet)
+  QuickActionsWidget.tsx       (vorbereitet)
+  HeroGreetingWidget.tsx       (Guten Morgen / Willkommen zurück)
+  HeroStatusWidget.tsx         (Alle Systeme online / Server verbunden / Sync erfolgreich / Discovery abgeschlossen)
 
-## 4. Komponenten (`src/components/dashboard/editor/`)
+src/services/widgets/builtin/system.ts     Registriert alle System-Widgets via defineWidget + render-Factory
+src/services/widgets/builtin/index.ts      Ruft system.ts + placeholder-Registrierung auf
 
-- `DashboardCanvas.tsx` – Haupt-Container, rendert Grid + Widgets, verwaltet Zoom-Transform, Breakpoint-Viewport-Skalierung. Nutzt Framer-Motion `layout`-Animationen.
-- `GridBackground.tsx` – SVG-Raster, sichtbar nur im Edit-Mode oder wenn `showGrid`.
-- `GuidesOverlay.tsx` – renderbare Hilfslinien während drag/resize (aus `Guides`).
-- `SpacingOverlay.tsx` – Abstands-Badges zu Nachbarn.
-- `WidgetFrame.tsx` – wrappt jede Instanz, zeigt Selection-Border, Resize-Handles, Kontextmenü-Trigger; delegiert Rendering an `WidgetRenderer`.
-- `WidgetRenderer.tsx` – löst Descriptor über `widgetRegistry` auf; wenn `render` fehlt → `PlaceholderTile` mit Icon/Titel/Grid-Info.
-- `PlaceholderTile.tsx` – hübscher Glass-Block für Platzhalter-Descriptors.
-- `ResizeHandles.tsx` – 8 Griffe (N/E/S/W + Ecken) mit großen Touch-Zielflächen.
-- `SelectionBox.tsx` – Rahmen + Tool-Chips (duplicate, delete, more).
-- `EditorTopBar.tsx` – Fertig / Undo / Redo / Zoom / Breakpoint-Switcher / Hilfen-Toggles / Import-Export.
-- `BreakpointSwitcher.tsx` – Chips für die 5 Breakpoints, feedbackt aktiven Viewport.
-- `ZoomControl.tsx` – Steps 50/75/100/125/150 %.
-- `WidgetToolbox.tsx` – seitliches Sheet (rechts auf Desktop, Bottom Sheet auf Mobile) mit Kategorie-Tabs, Suche, Favoriten (Prep), Drag-Source für Canvas.
-- `ToolboxItem.tsx` – draggable Descriptor-Kachel.
-- `PropertyEditor.tsx` – Sheet für ausgewählte Instanz: Titel, Untertitel, Icon-Picker, Farb-Picker, Opacity/Blur/Shadow-Slider, Padding/Margin/Radius, Animation-Select, Layer, Visibility.
-- `PropertyField.tsx`, `SliderField.tsx`, `ColorField.tsx`, `IconField.tsx`, `AnimationField.tsx` – Bausteine.
-- `ContextMenu.tsx` – rechtsklick / long-press: duplicate, delete, cut, copy, bring-to-front/back.
-- `EmptyDashboardHint.tsx` – Aufforderung im Edit-Mode.
+src/themes/
+  glass.ts     Token-Presets (frosted / liquid / frost), Radius, Shadow
+  motion.ts    Ergänzt runtime-spezifische Varianten (widgetFade, widgetScale, overlayFade, pagerSlide)
+```
 
-## 5. Routen
+## Registry-basierter Renderer (Factory Pattern)
 
-- Bestehendes `_app.index.tsx` bleibt Landing, aber leitet auf aktives Dashboard weiter.
-- Neu: `_app.dashboards.$dashboardId.tsx` – Live-Ansicht (Normal-Mode) mit Toggle in Edit-Mode.
-- Neu: `_app.dashboards.tsx` – Listen-Route (Dashboards-Übersicht mit Create/Duplicate/Import/Export/Reorder).
-- Neu: `_app.dashboards.index.tsx` – Redirect zu aktivem Dashboard.
-- `BottomNav`/`layout` erhalten keinen neuen Eintrag (nur Verlinkung aus Home).
+`WidgetDescriptor` erhält ein optionales, typisiertes Feld
+`render?: (ctx: WidgetRenderContext) => ReactNode`. Beim Registrieren liefert
+jedes System-Widget seinen Renderer mit; `RuntimeWidgetHost` liest den
+Descriptor aus `widgetRegistry.get(instance.widgetType)` und ruft `render`
+auf. Fehlt der Renderer (Placeholder-Widgets aus 5B), wird ein neutrales
+`RuntimeMissingRenderer`-Tile gezeigt — keine `switch`/`if`-Kette.
 
-## 6. Import / Export
+`WidgetRenderContext` enthält: `instance`, `descriptor`, `breakpoint`,
+`placement`, `theme`, `size` (Pixelmaße aus LayoutEngine).
 
-`Export` erzeugt Datei über `dashboardManager.export`. `Import` per `<input type="file">` → `dashboardManager.import`. Fehler über bestehenden `errorBus`/`ErrorDialog` (Onboarding-Komponente wiederverwendbar oder minimaler neuer Dialog).
+## Navigation Editor vs Runtime
 
-## 7. Animationen
+- `/_app/dashboards/$dashboardId` zeigt **ausschließlich die Runtime**
+  (neue Komponente `DashboardRuntime`).
+- Neuer Route: `/_app/dashboards/$dashboardId/edit` mountet den bestehenden
+  Editor (EditorTopBar, DashboardCanvas, WidgetToolbox, PropertyEditor).
+- Header-Button „Bearbeiten" navigiert per `<Link>` zum Edit-Route.
+- Editor-`Fertig`-Button navigiert zurück zur Runtime.
+- Keine Wiederverwendung von Editor-Komponenten in Runtime.
 
-- Framer Motion `layout`, `AnimatePresence` für Widget-Enter/Exit
-- `whileTap`/`whileHover` für Toolbox-Items
-- Spring-Presets aus `themes/motion`
-- Keine CSS-Keyframe-Tricks
+## Bootstrap-Dashboard
 
-## 8. Performance
+`dashboardManager.ensureBootstrapDashboard()` erhält zusätzlichen Aufruf
+`ensureRuntimeDefaults(dashboard)`: legt Standard-Instanzen an (Header,
+Clock, Date, Hero-Greeting, ServerStatus, ConnectionStatus,
+SyncStatus, AppVersion) — nur wenn Dashboard leer ist.
 
-- `WidgetFrame` mit `React.memo` + gezielten Zustand-Selektoren
-- Placements aus `useLayoutsStore` via `useShallow`
-- Drag/Resize läuft in `useRef`-basierter Delta-Berechnung ohne State-Setzen pro Frame; State wird erst am Drop-Ende committet
-- `HistoryStack`-Einträge coalescen aufeinander folgende move/resize innerhalb 200 ms
+## Runtime-Layout
 
-## 9. Touch
+- `RuntimeCanvas` nutzt `layoutEngine` (bereits vorhanden) zur Umrechnung
+  Placement→CSS-Grid, exakt wie im Editor, jedoch read-only.
+- Reaktion auf `breakpoint` aus `BreakpointDetector` (matchMedia +
+  ResizeObserver auf dem Runtime-Container) — separate Layouts für
+  phone-portrait/landscape, tablet-portrait/landscape, desktop.
+- Nur sichtbare Widgets werden gemountet (`visible === true`); Vorbereitung
+  Virtualisierung: `useVisibleWidgets` liefert IntersectionObserver-Hook,
+  gerendert werden vorerst alle mit `content-visibility: auto`.
 
-- Long-Press (500 ms) → Edit-Mode + Selection + Haptic
-- Touch-Handles ≥ 32 px, mit größerer unsichtbarer Hitbox
-- Passive-listener-Regeln beachtet, `touchAction: "none"` nur während drag
+## Glass Design
 
-## 10. i18n
+- `GlassSurface` in Varianten `frosted` (backdrop-blur-xl + bg-white/30),
+  `liquid` (Gradient + Noise), `frost` (Highlight-Border).
+- Tokens ergänzen `src/styles.css` (semantische Layer, kein Hard-Coded
+  White/Black — nur `bg-background/…`, `border-white/…` via Utility-
+  Klassen im semantischen Rahmen).
+- Grosse Radien (`rounded-3xl`), sanfte Shadows (`shadow-elegant`).
 
-Neue Keys `editor.*` (Buttons, Property-Labels, Breakpoint-Namen, Toolbox-Kategorien) in `en.ts` + `de.ts`.
+## Animationen
 
-## 11. Verifikation
+Framer Motion-Varianten in `themes/motion.ts` (ergänzt): `widgetFade`,
+`widgetScale`, `overlayFade`, `pagerSlide`. `AnimatePresence` für Overlays
+und Pager. `LayoutGroup` für Widget-Positionswechsel bei
+Breakpoint-Wechsel.
 
-- `bunx tsgo --noEmit`
-- Manuell: Dashboard erstellen → Widgets aus Toolbox ziehen (Platzhalter) → verschieben, resizen, Property-Editor, Undo/Redo, Copy/Paste, Import/Export, Breakpoint-Wechsel.
+## Overlays / Status Layer
 
-## Nicht enthalten
+`OverlayLayer` mountet auf App-Ebene innerhalb der Runtime. Overlays
+werden vom `runtimeStore` gesteuert und aus vorhandenen Stores gespeist:
+- Discovery: `discoveryStore`
+- Server offline: `connectionStore`
+- Sync: `commandsStore` / `historyStore`
+- Auth: `usersStore`/settings
+- Update: `settingsStore`
 
-- Keine echten Smart-Home-Widgets, Geräte, Räume, Szenen, Kameras
-- Keine Server-Sync-Änderungen
-- Bestehender `dashboardStore` (Legacy) und `WidgetGrid` bleiben unangetastet
+Keine Business-Logik-Änderungen, nur Konsum bestehender Signale.
+
+## Theme
+
+`useRuntimeTheme` liest `settingsStore.theme`, mapped auf
+`document.documentElement.dataset.theme`. Dynamic Theme via
+`prefers-color-scheme`.
+
+## Empty State
+
+Wenn Dashboard 0 sichtbare Widgets hat: SVG-Illustration inline (keine
+Bilddatei), Text „Dieses Dashboard ist leer", Button navigiert zu
+`/dashboards/$id/edit`.
+
+## Performance
+
+- `React.memo` auf `RuntimeWidgetHost`, `RuntimeWidgetShell`.
+- `useSyncExternalStore`-Selektoren aus Zustand mit stabilen Slices.
+- `React.lazy` für System-Widgets (Chunk per Kategorie).
+- `content-visibility: auto` auf Widget-Karten.
+- Keine Prop-Objekt-Neuanlagen in Render-Pfaden (`useMemo`).
+
+## Verifikation
+
+`bunx tsgo --noEmit`, dann Playwright: Route `/dashboards/<id>` zeigt
+Runtime (kein Editor sichtbar), Button „Bearbeiten" führt zu
+`/edit`-Variante, Bootstrap-Widgets werden gerendert.
+
+## Bewusst NICHT enthalten
+
+Keine Smart-Home-Widgets, keine Geräte-/Raum-/Szenen-/Kamera-/Chart-
+Widgets, keine Editor-Funktionalität in der Runtime, keine Änderungen an
+Registry/Manager/LayoutEngine-Signaturen (nur additives `render?`-Feld
+im Descriptor).

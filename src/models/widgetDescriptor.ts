@@ -1,6 +1,19 @@
+import type { ReactNode } from "react";
 import type { WidgetCategory } from "./widgetCategory";
 import type { LayoutBreakpoint, WidgetPlacement } from "./layout";
 import type { WidgetInstance, WidgetTypeId } from "./widgetInstance";
+
+export interface WidgetRenderContext {
+  instance: WidgetInstance;
+  descriptor: WidgetDescriptor;
+  breakpoint: LayoutBreakpoint;
+  placement: WidgetPlacement;
+  /** Pixelmaße der Zelle nach LayoutEngine (falls verfügbar). */
+  size: { width: number; height: number };
+  theme: "light" | "dark";
+}
+
+export type WidgetRenderer = (ctx: WidgetRenderContext) => ReactNode;
 
 export interface WidgetSizeSpec {
   w: number;
@@ -45,6 +58,8 @@ export interface WidgetDescriptor {
   createDefaults?: () => Partial<WidgetInstance>;
   /** Optionale Placement-Empfehlung pro Breakpoint. */
   defaultPlacement?: Partial<Record<LayoutBreakpoint, WidgetPlacement>>;
+  /** Runtime-Renderer. Fehlt er, zeigt die Runtime einen neutralen Fallback. */
+  render?: WidgetRenderer;
 }
 
 export function defineWidget(desc: WidgetDescriptor): WidgetDescriptor {
