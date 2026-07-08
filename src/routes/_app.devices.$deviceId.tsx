@@ -154,9 +154,6 @@ function DeviceDetail() {
         <InfoCard>Historische Werte werden in einem späteren Schritt ergänzt.</InfoCard>
       </SectionCard>
 
-      <p className="mt-6 text-center text-xs text-muted-foreground">
-        Gerätesteuerung wird im nächsten Teil aktiviert.
-      </p>
     </PageTransition>
   );
 }
