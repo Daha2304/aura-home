@@ -41,6 +41,7 @@ import { Route as AppDashboardsDashboardIdRouteImport } from './routes/_app.dash
 import { Route as AppDashboardsDashboardIdIndexRouteImport } from './routes/_app.dashboards.$dashboardId.index'
 import { Route as AppSettingsServerNewRouteImport } from './routes/_app.settings.server.new'
 import { Route as AppSettingsServerIdRouteImport } from './routes/_app.settings.server.$id'
+import { Route as AppDashboardsDashboardIdEditRouteImport } from './routes/_app.dashboards.$dashboardId.edit'
 
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
@@ -204,6 +205,12 @@ const AppSettingsServerIdRoute = AppSettingsServerIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AppSettingsServerRoute,
 } as any)
+const AppDashboardsDashboardIdEditRoute =
+  AppDashboardsDashboardIdEditRouteImport.update({
+    id: '/edit',
+    path: '/edit',
+    getParentRoute: () => AppDashboardsDashboardIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
@@ -234,6 +241,7 @@ export interface FileRoutesByFullPath {
   '/settings/server': typeof AppSettingsServerRouteWithChildren
   '/settings/users': typeof AppSettingsUsersRoute
   '/dashboards/': typeof AppDashboardsIndexRoute
+  '/dashboards/$dashboardId/edit': typeof AppDashboardsDashboardIdEditRoute
   '/settings/server/$id': typeof AppSettingsServerIdRoute
   '/settings/server/new': typeof AppSettingsServerNewRoute
   '/dashboards/$dashboardId/': typeof AppDashboardsDashboardIdIndexRoute
@@ -264,6 +272,7 @@ export interface FileRoutesByTo {
   '/settings/server': typeof AppSettingsServerRouteWithChildren
   '/settings/users': typeof AppSettingsUsersRoute
   '/dashboards': typeof AppDashboardsIndexRoute
+  '/dashboards/$dashboardId/edit': typeof AppDashboardsDashboardIdEditRoute
   '/settings/server/$id': typeof AppSettingsServerIdRoute
   '/settings/server/new': typeof AppSettingsServerNewRoute
   '/dashboards/$dashboardId': typeof AppDashboardsDashboardIdIndexRoute
@@ -299,6 +308,7 @@ export interface FileRoutesById {
   '/_app/settings/server': typeof AppSettingsServerRouteWithChildren
   '/_app/settings/users': typeof AppSettingsUsersRoute
   '/_app/dashboards/': typeof AppDashboardsIndexRoute
+  '/_app/dashboards/$dashboardId/edit': typeof AppDashboardsDashboardIdEditRoute
   '/_app/settings/server/$id': typeof AppSettingsServerIdRoute
   '/_app/settings/server/new': typeof AppSettingsServerNewRoute
   '/_app/dashboards/$dashboardId/': typeof AppDashboardsDashboardIdIndexRoute
@@ -334,6 +344,7 @@ export interface FileRouteTypes {
     | '/settings/server'
     | '/settings/users'
     | '/dashboards/'
+    | '/dashboards/$dashboardId/edit'
     | '/settings/server/$id'
     | '/settings/server/new'
     | '/dashboards/$dashboardId/'
@@ -364,6 +375,7 @@ export interface FileRouteTypes {
     | '/settings/server'
     | '/settings/users'
     | '/dashboards'
+    | '/dashboards/$dashboardId/edit'
     | '/settings/server/$id'
     | '/settings/server/new'
     | '/dashboards/$dashboardId'
@@ -398,6 +410,7 @@ export interface FileRouteTypes {
     | '/_app/settings/server'
     | '/_app/settings/users'
     | '/_app/dashboards/'
+    | '/_app/dashboards/$dashboardId/edit'
     | '/_app/settings/server/$id'
     | '/_app/settings/server/new'
     | '/_app/dashboards/$dashboardId/'
@@ -634,15 +647,24 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsServerIdRouteImport
       parentRoute: typeof AppSettingsServerRoute
     }
+    '/_app/dashboards/$dashboardId/edit': {
+      id: '/_app/dashboards/$dashboardId/edit'
+      path: '/edit'
+      fullPath: '/dashboards/$dashboardId/edit'
+      preLoaderRoute: typeof AppDashboardsDashboardIdEditRouteImport
+      parentRoute: typeof AppDashboardsDashboardIdRoute
+    }
   }
 }
 
 interface AppDashboardsDashboardIdRouteChildren {
+  AppDashboardsDashboardIdEditRoute: typeof AppDashboardsDashboardIdEditRoute
   AppDashboardsDashboardIdIndexRoute: typeof AppDashboardsDashboardIdIndexRoute
 }
 
 const AppDashboardsDashboardIdRouteChildren: AppDashboardsDashboardIdRouteChildren =
   {
+    AppDashboardsDashboardIdEditRoute: AppDashboardsDashboardIdEditRoute,
     AppDashboardsDashboardIdIndexRoute: AppDashboardsDashboardIdIndexRoute,
   }
 
