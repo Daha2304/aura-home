@@ -25,7 +25,9 @@ import { Route as AppScenesRouteImport } from './routes/_app.scenes'
 import { Route as AppRoomsRouteImport } from './routes/_app.rooms'
 import { Route as AppMoreRouteImport } from './routes/_app.more'
 import { Route as AppDevicesRouteImport } from './routes/_app.devices'
+import { Route as AppDashboardsRouteImport } from './routes/_app.dashboards'
 import { Route as AppAutomationsRouteImport } from './routes/_app.automations'
+import { Route as AppDashboardsIndexRouteImport } from './routes/_app.dashboards.index'
 import { Route as AppSettingsUsersRouteImport } from './routes/_app.settings.users'
 import { Route as AppSettingsServerRouteImport } from './routes/_app.settings.server'
 import { Route as AppSettingsNotificationsRouteImport } from './routes/_app.settings.notifications'
@@ -35,6 +37,7 @@ import { Route as AppSettingsBackupRouteImport } from './routes/_app.settings.ba
 import { Route as AppSettingsAppearanceRouteImport } from './routes/_app.settings.appearance'
 import { Route as AppRoomsRoomIdRouteImport } from './routes/_app.rooms.$roomId'
 import { Route as AppDevicesDeviceIdRouteImport } from './routes/_app.devices.$deviceId'
+import { Route as AppDashboardsDashboardIdRouteImport } from './routes/_app.dashboards.$dashboardId'
 import { Route as AppSettingsServerNewRouteImport } from './routes/_app.settings.server.new'
 import { Route as AppSettingsServerIdRouteImport } from './routes/_app.settings.server.$id'
 
@@ -117,10 +120,20 @@ const AppDevicesRoute = AppDevicesRouteImport.update({
   path: '/devices',
   getParentRoute: () => AppRoute,
 } as any)
+const AppDashboardsRoute = AppDashboardsRouteImport.update({
+  id: '/dashboards',
+  path: '/dashboards',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppAutomationsRoute = AppAutomationsRouteImport.update({
   id: '/automations',
   path: '/automations',
   getParentRoute: () => AppRoute,
+} as any)
+const AppDashboardsIndexRoute = AppDashboardsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppDashboardsRoute,
 } as any)
 const AppSettingsUsersRoute = AppSettingsUsersRouteImport.update({
   id: '/users',
@@ -168,6 +181,12 @@ const AppDevicesDeviceIdRoute = AppDevicesDeviceIdRouteImport.update({
   path: '/$deviceId',
   getParentRoute: () => AppDevicesRoute,
 } as any)
+const AppDashboardsDashboardIdRoute =
+  AppDashboardsDashboardIdRouteImport.update({
+    id: '/$dashboardId',
+    path: '/$dashboardId',
+    getParentRoute: () => AppDashboardsRoute,
+  } as any)
 const AppSettingsServerNewRoute = AppSettingsServerNewRouteImport.update({
   id: '/new',
   path: '/new',
@@ -183,6 +202,7 @@ export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/onboarding': typeof OnboardingRouteWithChildren
   '/automations': typeof AppAutomationsRoute
+  '/dashboards': typeof AppDashboardsRouteWithChildren
   '/devices': typeof AppDevicesRouteWithChildren
   '/more': typeof AppMoreRoute
   '/rooms': typeof AppRoomsRouteWithChildren
@@ -196,6 +216,7 @@ export interface FileRoutesByFullPath {
   '/onboarding/server': typeof OnboardingServerRoute
   '/onboarding/welcome': typeof OnboardingWelcomeRoute
   '/onboarding/': typeof OnboardingIndexRoute
+  '/dashboards/$dashboardId': typeof AppDashboardsDashboardIdRoute
   '/devices/$deviceId': typeof AppDevicesDeviceIdRoute
   '/rooms/$roomId': typeof AppRoomsRoomIdRoute
   '/settings/appearance': typeof AppSettingsAppearanceRoute
@@ -205,6 +226,7 @@ export interface FileRoutesByFullPath {
   '/settings/notifications': typeof AppSettingsNotificationsRoute
   '/settings/server': typeof AppSettingsServerRouteWithChildren
   '/settings/users': typeof AppSettingsUsersRoute
+  '/dashboards/': typeof AppDashboardsIndexRoute
   '/settings/server/$id': typeof AppSettingsServerIdRoute
   '/settings/server/new': typeof AppSettingsServerNewRoute
 }
@@ -224,6 +246,7 @@ export interface FileRoutesByTo {
   '/onboarding/welcome': typeof OnboardingWelcomeRoute
   '/': typeof AppIndexRoute
   '/onboarding': typeof OnboardingIndexRoute
+  '/dashboards/$dashboardId': typeof AppDashboardsDashboardIdRoute
   '/devices/$deviceId': typeof AppDevicesDeviceIdRoute
   '/rooms/$roomId': typeof AppRoomsRoomIdRoute
   '/settings/appearance': typeof AppSettingsAppearanceRoute
@@ -233,6 +256,7 @@ export interface FileRoutesByTo {
   '/settings/notifications': typeof AppSettingsNotificationsRoute
   '/settings/server': typeof AppSettingsServerRouteWithChildren
   '/settings/users': typeof AppSettingsUsersRoute
+  '/dashboards': typeof AppDashboardsIndexRoute
   '/settings/server/$id': typeof AppSettingsServerIdRoute
   '/settings/server/new': typeof AppSettingsServerNewRoute
 }
@@ -241,6 +265,7 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/onboarding': typeof OnboardingRouteWithChildren
   '/_app/automations': typeof AppAutomationsRoute
+  '/_app/dashboards': typeof AppDashboardsRouteWithChildren
   '/_app/devices': typeof AppDevicesRouteWithChildren
   '/_app/more': typeof AppMoreRoute
   '/_app/rooms': typeof AppRoomsRouteWithChildren
@@ -255,6 +280,7 @@ export interface FileRoutesById {
   '/onboarding/welcome': typeof OnboardingWelcomeRoute
   '/_app/': typeof AppIndexRoute
   '/onboarding/': typeof OnboardingIndexRoute
+  '/_app/dashboards/$dashboardId': typeof AppDashboardsDashboardIdRoute
   '/_app/devices/$deviceId': typeof AppDevicesDeviceIdRoute
   '/_app/rooms/$roomId': typeof AppRoomsRoomIdRoute
   '/_app/settings/appearance': typeof AppSettingsAppearanceRoute
@@ -264,6 +290,7 @@ export interface FileRoutesById {
   '/_app/settings/notifications': typeof AppSettingsNotificationsRoute
   '/_app/settings/server': typeof AppSettingsServerRouteWithChildren
   '/_app/settings/users': typeof AppSettingsUsersRoute
+  '/_app/dashboards/': typeof AppDashboardsIndexRoute
   '/_app/settings/server/$id': typeof AppSettingsServerIdRoute
   '/_app/settings/server/new': typeof AppSettingsServerNewRoute
 }
@@ -273,6 +300,7 @@ export interface FileRouteTypes {
     | '/'
     | '/onboarding'
     | '/automations'
+    | '/dashboards'
     | '/devices'
     | '/more'
     | '/rooms'
@@ -286,6 +314,7 @@ export interface FileRouteTypes {
     | '/onboarding/server'
     | '/onboarding/welcome'
     | '/onboarding/'
+    | '/dashboards/$dashboardId'
     | '/devices/$deviceId'
     | '/rooms/$roomId'
     | '/settings/appearance'
@@ -295,6 +324,7 @@ export interface FileRouteTypes {
     | '/settings/notifications'
     | '/settings/server'
     | '/settings/users'
+    | '/dashboards/'
     | '/settings/server/$id'
     | '/settings/server/new'
   fileRoutesByTo: FileRoutesByTo
@@ -314,6 +344,7 @@ export interface FileRouteTypes {
     | '/onboarding/welcome'
     | '/'
     | '/onboarding'
+    | '/dashboards/$dashboardId'
     | '/devices/$deviceId'
     | '/rooms/$roomId'
     | '/settings/appearance'
@@ -323,6 +354,7 @@ export interface FileRouteTypes {
     | '/settings/notifications'
     | '/settings/server'
     | '/settings/users'
+    | '/dashboards'
     | '/settings/server/$id'
     | '/settings/server/new'
   id:
@@ -330,6 +362,7 @@ export interface FileRouteTypes {
     | '/_app'
     | '/onboarding'
     | '/_app/automations'
+    | '/_app/dashboards'
     | '/_app/devices'
     | '/_app/more'
     | '/_app/rooms'
@@ -344,6 +377,7 @@ export interface FileRouteTypes {
     | '/onboarding/welcome'
     | '/_app/'
     | '/onboarding/'
+    | '/_app/dashboards/$dashboardId'
     | '/_app/devices/$deviceId'
     | '/_app/rooms/$roomId'
     | '/_app/settings/appearance'
@@ -353,6 +387,7 @@ export interface FileRouteTypes {
     | '/_app/settings/notifications'
     | '/_app/settings/server'
     | '/_app/settings/users'
+    | '/_app/dashboards/'
     | '/_app/settings/server/$id'
     | '/_app/settings/server/new'
   fileRoutesById: FileRoutesById
@@ -476,12 +511,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDevicesRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/dashboards': {
+      id: '/_app/dashboards'
+      path: '/dashboards'
+      fullPath: '/dashboards'
+      preLoaderRoute: typeof AppDashboardsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/automations': {
       id: '/_app/automations'
       path: '/automations'
       fullPath: '/automations'
       preLoaderRoute: typeof AppAutomationsRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/_app/dashboards/': {
+      id: '/_app/dashboards/'
+      path: '/'
+      fullPath: '/dashboards/'
+      preLoaderRoute: typeof AppDashboardsIndexRouteImport
+      parentRoute: typeof AppDashboardsRoute
     }
     '/_app/settings/users': {
       id: '/_app/settings/users'
@@ -546,6 +595,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDevicesDeviceIdRouteImport
       parentRoute: typeof AppDevicesRoute
     }
+    '/_app/dashboards/$dashboardId': {
+      id: '/_app/dashboards/$dashboardId'
+      path: '/$dashboardId'
+      fullPath: '/dashboards/$dashboardId'
+      preLoaderRoute: typeof AppDashboardsDashboardIdRouteImport
+      parentRoute: typeof AppDashboardsRoute
+    }
     '/_app/settings/server/new': {
       id: '/_app/settings/server/new'
       path: '/new'
@@ -562,6 +618,20 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface AppDashboardsRouteChildren {
+  AppDashboardsDashboardIdRoute: typeof AppDashboardsDashboardIdRoute
+  AppDashboardsIndexRoute: typeof AppDashboardsIndexRoute
+}
+
+const AppDashboardsRouteChildren: AppDashboardsRouteChildren = {
+  AppDashboardsDashboardIdRoute: AppDashboardsDashboardIdRoute,
+  AppDashboardsIndexRoute: AppDashboardsIndexRoute,
+}
+
+const AppDashboardsRouteWithChildren = AppDashboardsRoute._addFileChildren(
+  AppDashboardsRouteChildren,
+)
 
 interface AppDevicesRouteChildren {
   AppDevicesDeviceIdRoute: typeof AppDevicesDeviceIdRoute
@@ -626,6 +696,7 @@ const AppSettingsRouteWithChildren = AppSettingsRoute._addFileChildren(
 
 interface AppRouteChildren {
   AppAutomationsRoute: typeof AppAutomationsRoute
+  AppDashboardsRoute: typeof AppDashboardsRouteWithChildren
   AppDevicesRoute: typeof AppDevicesRouteWithChildren
   AppMoreRoute: typeof AppMoreRoute
   AppRoomsRoute: typeof AppRoomsRouteWithChildren
@@ -637,6 +708,7 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppAutomationsRoute: AppAutomationsRoute,
+  AppDashboardsRoute: AppDashboardsRouteWithChildren,
   AppDevicesRoute: AppDevicesRouteWithChildren,
   AppMoreRoute: AppMoreRoute,
   AppRoomsRoute: AppRoomsRouteWithChildren,
