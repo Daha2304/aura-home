@@ -21,6 +21,7 @@ import { RoomIcon } from "@/components/rooms/RoomIcon";
 import { RoomForm, type RoomFormValue } from "@/components/rooms/RoomForm";
 import { layoutIds } from "@/components/ds/motion/SharedLayout";
 import { getRoomCategoryMeta } from "@/models/roomCategory";
+import { DeviceCatalog } from "@/components/devices/catalog";
 
 export const Route = createFileRoute("/_app/rooms/$roomId")({
   component: RoomDetail,
