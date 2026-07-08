@@ -37,7 +37,7 @@ function RoomsIndex() {
   const rooms = useRoomsStore((s) => s.rooms);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const discovering = useDiscoveryStore((s) => s.isScanning);
+  const discovering = useDiscoveryStore((s) => s.state === "discovering");
 
   const sortedRooms = useMemo(
     () =>

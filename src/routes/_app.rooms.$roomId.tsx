@@ -37,7 +37,7 @@ function RoomDetail() {
   const onlineCount = useDevicesStore(
     (s) => s.devices.filter((d) => d.roomId === roomId && d.online).length,
   );
-  const discovering = useDiscoveryStore((s) => s.isScanning);
+  const discovering = useDiscoveryStore((s) => s.state === "discovering");
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
