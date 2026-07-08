@@ -3,12 +3,11 @@ import { useEffect } from "react";
 import { useDashboardsStore } from "@/store/slices/dashboardsStore";
 import { dashboardManager } from "@/services/dashboards/DashboardManager";
 
-export const Route = createFileRoute("/_app/")({
-  head: () => ({ meta: [{ title: "Dashboard · Smart Home" }] }),
-  component: DashboardIndex,
+export const Route = createFileRoute("/_app/dashboards/")({
+  component: DashboardsIndex,
 });
 
-function DashboardIndex() {
+function DashboardsIndex() {
   const navigate = useNavigate();
   const activeId = useDashboardsStore((s) => s.activeId);
   const first = useDashboardsStore((s) => s.order[0]);
