@@ -102,7 +102,7 @@ const descriptors: WidgetDescriptor[] = [
       "tablet-landscape",
       "desktop",
     ],
-    settings: [{ key: "groupId", label: "Gruppe", type: "group" }],
+    settings: [{ key: "groupId", label: "Gruppe", type: "string" }],
     capabilities: ["themeable", "movable", "resizable", "configurable"],
     version: 1,
     render: ({ instance }) => <GroupControlWidget groupId={instance.config?.groupId as string | undefined} />,
