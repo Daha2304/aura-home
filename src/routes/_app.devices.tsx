@@ -1,9 +1,8 @@
 import { createFileRoute, Outlet, useRouterState } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { DeviceList } from "@/components/devices/DeviceList";
+import { DeviceCatalog } from "@/components/devices/catalog";
+import { PageTransition } from "@/components/ds/motion/PageTransition";
 import { useDevicesStore } from "@/store/slices/devicesStore";
-import { Input } from "@/components/ui/input";
 
 export const Route = createFileRoute("/_app/devices")({
   head: () => ({ meta: [{ title: "Geräte · Smart Home" }] }),
@@ -17,33 +16,15 @@ function DevicesLayout() {
 }
 
 function DevicesIndex() {
-  const devices = useDevicesStore((s) => s.devices);
-  const [query, setQuery] = useState("");
-  const filtered = useMemo(
-    () =>
-      query.trim().length === 0
-        ? devices
-        : devices.filter((d) =>
-            d.name.toLowerCase().includes(query.toLowerCase()),
-          ),
-    [devices, query],
-  );
-
+  const total = useDevicesStore((s) => s.devices.length);
+  const online = useDevicesStore((s) => s.devices.filter((d) => d.online).length);
   return (
-    <>
+    <PageTransition>
       <PageHeader
         title="Geräte"
-        subtitle={`${devices.length} Gerät${devices.length === 1 ? "" : "e"} insgesamt`}
+        subtitle={`${total} Gerät${total === 1 ? "" : "e"} · ${online} online`}
       />
-      <div className="mb-4">
-        <Input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Geräte suchen …"
-          className="glass-panel !border-0 !bg-transparent"
-        />
-      </div>
-      <DeviceList devices={filtered} />
-    </>
+      <DeviceCatalog />
+    </PageTransition>
   );
 }
