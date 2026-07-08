@@ -14,6 +14,8 @@ import { useConnectionStore } from "@/store/slices/connectionStore";
 import { useDiscoveryStore } from "@/store/slices/discoveryStore";
 import { useNotificationsStore } from "@/store/slices/notificationsStore";
 import { useSettingsStore } from "@/store/slices/settingsStore";
+import { devLog } from "@/store/slices/devLogStore";
+import { buildServerUrl } from "@/models/server";
 
 // Built-in-Gerätetypen und Registry-Store einmalig als Side-Effect laden.
 import "@/services/registry/builtin";
@@ -59,26 +61,68 @@ export function startCommunicationLayer(): void {
   wsManager.setProtocol(appsocketProtocol);
 
   unsubscribers.push(
-    wsManager.on("status", (status) => useConnectionStore.getState().setStatus(status)),
-    wsManager.on("connected", () => useConnectionStore.getState().markConnected()),
-    wsManager.on("authenticated", () => useConnectionStore.getState().setAuthenticated(true)),
+    wsManager.on("status", (status) => {
+      useConnectionStore.getState().setStatus(status);
+      if (status === "connecting") {
+        const s = useSettingsStore.getState();
+        const srv = s.servers.find((x) => x.id === s.activeServerId);
+        devLog(
+          "connect",
+          "Verbindungsversuch gestartet",
+          srv ? buildServerUrl(srv) : undefined,
+        );
+      } else {
+        devLog("info", `Status: ${status}`);
+      }
+    }),
+    wsManager.on("connected", () => {
+      useConnectionStore.getState().markConnected();
+      devLog("open", "WebSocket geöffnet");
+    }),
+    wsManager.on("authenticated", () => {
+      useConnectionStore.getState().setAuthenticated(true);
+      devLog("auth", "Authentifiziert");
+    }),
     wsManager.on("authentication_failed", ({ reason }) => {
       useConnectionStore.getState().setAuthenticated(false);
       useConnectionStore.getState().setError(reason ?? "Auth fehlgeschlagen");
+      devLog("auth_failed", "Authentifizierung fehlgeschlagen", reason);
     }),
-    wsManager.on("disconnected", () => {
+    wsManager.on("disconnected", ({ code, reason }) => {
       useConnectionStore.getState().setAuthenticated(false);
       appsocketResetIndex();
+      devLog(
+        "close",
+        `WebSocket geschlossen${code !== undefined ? ` (Code ${code})` : ""}`,
+        reason,
+      );
     }),
-    wsManager.on("heartbeat", ({ latencyMs }) =>
-      useConnectionStore.getState().setLatency(latencyMs),
-    ),
-    wsManager.on("reconnecting", ({ attempt }) =>
-      useConnectionStore.getState().setReconnectAttempt(attempt),
-    ),
-    wsManager.on("error", (payload) =>
-      useConnectionStore.getState().setError(payload.message),
-    ),
+    wsManager.on("heartbeat", ({ latencyMs }) => {
+      useConnectionStore.getState().setLatency(latencyMs);
+      devLog("pong", `Heartbeat · ${latencyMs} ms`);
+    }),
+    wsManager.on("reconnecting", ({ attempt, delayMs }) => {
+      useConnectionStore.getState().setReconnectAttempt(attempt);
+      devLog(
+        "reconnect",
+        `Reconnect #${attempt} in ${Math.round(delayMs)} ms`,
+      );
+    }),
+    wsManager.on("error", (payload) => {
+      useConnectionStore.getState().setError(payload.message);
+      devLog("error", payload.message, {
+        kind: payload.kind,
+        code: payload.code,
+        context: payload.context,
+      });
+    }),
+    wsManager.on("sent", (msg) => {
+      if (msg.type === "ping") devLog("ping", "→ ping", msg);
+      else devLog("send", `→ ${msg.type}`, msg);
+    }),
+    wsManager.on("message", (ev) => {
+      devLog("recv", `← ${ev.type}`, ev);
+    }),
     wsManager.dispatcher.on("notification", (ev) =>
       useNotificationsStore.getState().push(ev.notification),
     ),
