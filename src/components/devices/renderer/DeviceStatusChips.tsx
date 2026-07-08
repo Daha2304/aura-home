@@ -27,7 +27,7 @@ export function DeviceStatusChips({ device }: { device: Device }) {
         </StatusBadge>
       ),
     });
-  } else if (device.lifecycle === "discovered") {
+  } else if (device.lifecycle === "discovering" || device.lifecycle === "new") {
     chips.push({
       key: "discovering",
       node: (
