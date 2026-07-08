@@ -30,7 +30,7 @@ export class SearchEngine {
       });
     }
     try {
-      const dashboards = useDashboardsStore.getState().dashboards ?? [];
+      const dashboards = Array.from(useDashboardsStore.getState().dashboards.values());
       for (const db of dashboards) {
         searchIndex.add({
           id: db.id,
@@ -41,6 +41,7 @@ export class SearchEngine {
     } catch {
       // dashboards optional
     }
+
   }
 
   search(query: string, limit?: number): SearchHit[] {
