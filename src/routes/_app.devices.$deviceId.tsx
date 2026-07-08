@@ -109,8 +109,11 @@ function DeviceDetail() {
         />
       </div>
 
+      <SectionCard title="Steuerung" className="mt-4">
+        <UniversalControlRenderer deviceId={device.id} />
+      </SectionCard>
+
       <SectionCard title="Informationen" className="mt-4">
-        <dl className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {rows.map((r) => (
             <div key={r.label} className="flex items-baseline justify-between gap-3 border-b border-white/5 pb-1 last:border-b-0">
               <dt className="text-xs uppercase tracking-wide text-muted-foreground">{r.label}</dt>
