@@ -1,136 +1,86 @@
-## Teil 6A.5 — Smart Home Intelligence Layer
+## Teil 6B – Device Catalog (Plan)
 
-Neue Service-Ebene `src/services/intelligence/` als zentrale Rechenschicht. Keine Änderung bestehender Architektur — nur zusätzliche Services, Stores, Events. Widgets/Komponenten/Stores rechnen nicht mehr selbst.
+Ziel: Live Geräteübersicht auf Basis vorhandener Discovery, Intelligence Layer, Device Registry, Widget Registry, Room Manager, Design System. Keine Steuerung, keine Mockdaten, keine neuen Datenmodelle.
 
-### 1. Verzeichnisstruktur
+### 1. Device Registry (neu, plugin-basiert)
+`src/services/devices/registry/`
+- `DeviceRegistry.ts` – Map<type, DevicePresentation> mit `register`, `resolve`, `resolveByCapability`, Fallback-Presenter.
+- `DevicePresentation` (Model): `{ type, category, icon, label, accent, tags, renderCard?, renderHero?, renderDetail? }`.
+- `builtin/` Presenter für vorhandene Discovery Typen (light, switch, sensor, climate, cover, outlet, generic) – nur Darstellung, keine Steuerung.
+- `bootstrap()` registriert Builtins, in `src/services/bootstrap.ts` nach Intelligence.
+- Keine Switch/if-Ketten im UI – alles über Registry.
 
-```text
-src/services/intelligence/
-  index.ts                       Public API + bootstrap()
-  IntelligenceController.ts      Orchestrator, abonniert device/room/discovery events
-  aggregation/
-    RoomAggregator.ts            pro Raum: Metrics berechnen (inkrementell)
-    HouseAggregator.ts           gesamtes Haus
-    MetricContributors.ts        Plugin-Registry (contributor pattern)
-    contributors/
-      countContributor.ts        Geräteanzahl, online/offline/warn/fav
-      climateContributor.ts      temp/humidity/co2/voc/airQuality (avg)
-      openingsContributor.ts     Fenster/Türen offen
-      lightingContributor.ts     Lampen aktiv
-      outletContributor.ts       Steckdosen aktiv
-      shadingContributor.ts      Rolläden
-      climateControlContributor.ts Heizung/Klima aktiv
-      mediaContributor.ts        Medien aktiv
-      energyContributor.ts       power/energy sum, PV, wallbox
-      healthContributor.ts       battery/signal avg
-      activityContributor.ts     lastSeen max, discovery/sync
-  status/
-    RoomStatusEngine.ts          normal/warn/error/offline/sync/discovery/empty
-    HouseStatusEngine.ts
-  assignment/
-    DeviceAssignmentEngine.ts    move device room/group/floor/virtual
-  filter/
-    DeviceFilterEngine.ts        composable predicates (room/cat/type/online/…)
-    filters/*.ts                 pluginfähige Einzelfilter
-  search/
-    SearchEngine.ts              tokenized, alias/synonyms, cross-entity
-    SearchIndex.ts               inverted index (Map<token,Set<id>>)
-    synonyms.ts
-  insights/
-    RoomInsightsEngine.ts        rendert Metrics → Insight[]
-    HouseInsightsEngine.ts
-    InsightTypes.ts
-  cache/
-    MemoCache.ts                 keyed memo (revision+roomId)
-    Selectors.ts                 reselect-artige createSelector
-  events/
-    IntelligenceEvents.ts        typed EventEmitter (roomMetricsUpdated, …)
-  types.ts                       RoomMetrics, HouseMetrics, RoomStatus, Insight
-```
+### 2. Device Renderer (Factory)
+`src/components/devices/renderer/`
+- `DeviceRenderer.tsx` – zieht Presenter aus Registry, delegiert an `renderCard/renderHero/renderDetail`, Fallback = `GenericDeviceCard`.
+- `DeviceIconRenderer.tsx`, `DeviceStatusRenderer.tsx` – gemeinsame Bausteine, gespeist aus Intelligence + Discovery events.
 
-### 2. Neue Modelle (`src/models/`)
+### 3. Device Catalog UI
+`src/components/devices/catalog/`
+- `DeviceCatalog.tsx` – Root: Header (Suche, Ansicht, Sort, Gruppierung, Filter), Content (Grid/List), Empty/Loading.
+- `DeviceCatalogToolbar.tsx` – Segmented Controls (Design System) für View-Mode und Grouping, IconButton für Filter-BottomSheet.
+- `DeviceCatalogSearch.tsx` – debounced (150 ms) via `intelligence.search`.
+- `DeviceCatalogFilters.tsx` – BottomSheet aus DS, arbeitet mit `DeviceFilterEngine` Prädikaten.
+- `DeviceCatalogGroups.tsx` – gruppiert nach Raum/Kategorie/Typ/Hersteller/Status/Favorit/Tags/Capability/Custom via Selector.
+- `DeviceCatalogGrid.tsx` – Varianten: `grid`, `list`, `compact`, `large`. Auto-Breakpoint via `useBreakpoint`.
+- `DeviceCatalogItem.tsx` – nutzt `DeviceRenderer`, umhüllt in DS `Card`.
+- Virtualisierung via `@tanstack/react-virtual` (bereits im Stack – falls nicht: `bun add @tanstack/react-virtual`).
 
-- `roomMetrics.ts` — `RoomMetrics` interface (alle im Prompt genannten Felder, alle optional außer counts).
-- `houseMetrics.ts` — `HouseMetrics`.
-- `roomStatus.ts` — `type RoomStatus = "normal"|"warning"|"error"|"offline"|"syncing"|"discovering"|"empty"`.
-- `insight.ts` — `Insight { id, scope: "room"|"house", roomId?, kind, label, value, icon?, severity? }`.
-- `intelligenceEvents.ts` — Event-Namen als Konstanten + Payload-Typen.
+### 4. Device Card (Presentation)
+`src/components/devices/cards/`
+- `DeviceCardLarge.tsx`, `DeviceCardCompact.tsx`, `DeviceCardList.tsx` – nur DS-Komponenten (`Card`, `MetricCard`, `StatusBadge`, `GlassSurface`).
+- Anzeige: Icon, Name, Raum, Kategorie, Online, Signal, Batterie, Favorit, Tags, Capabilities, letzte Aktivität, Discovery-Status, Warnungen/Fehler.
+- Framer-Motion `layout` + `AnimatePresence` für Status-Übergänge.
 
-### 3. Neue Stores (`src/store/slices/`, nur Vorbereitung)
+### 5. Filter / Sort / Group Layer
+`src/services/devices/catalog/`
+- `DeviceCatalogEngine.ts` – reiner Selector: `(devices, roomMetrics, filters, sort, group) → GroupedDevices`. Nutzt `DeviceFilterEngine`, `SearchIndex`, `RoomManager`, `intelligenceEvents`.
+- Sort-Strategien pluginfähig: `sortStrategies.ts` (name, room, category, lastActive, signal, battery, manufacturer, firmware, custom).
+- Group-Strategien pluginfähig: `groupStrategies.ts`.
+- Speicherung Ansicht/Sort/Gruppierung in neuem Slice `deviceCatalogStore.ts` (persist).
 
-- `roomMetricsStore.ts` — `Map<roomId, RoomMetrics>`, `revision`, `setRoom`, `patchRoom`, `byId`.
-- `houseMetricsStore.ts` — `HouseMetrics | null`, `set`, `revision`.
-- `insightsStore.ts` — `Map<scopeKey, Insight[]>`.
-- `assignmentStore.ts` — pending assignments queue (später mit Command Queue verknüpfbar).
+### 6. Favorites + Tags
+- Favorite Toggle via `DeviceAssignmentEngine` (bereits vorhanden → optionale `setFavorite` Methode dort ergänzen, kein neues Modell).
+- Tags nutzen bestehendes `device.tags`; farbige Chips via DS `Tag` (falls fehlend → in DS als `Tag.tsx` ergänzen).
 
-Alle mit O(1) `Map`-Index; Selektoren memoisiert.
+### 7. Quick Actions (nur Vorbereitung)
+`src/components/devices/quick/DeviceQuickActions.tsx`
+- DS `BottomSheet` mit Einträgen Details / Favorit / Raum ändern / Tags / Info. Handler nur navigate + assignment; keine Gerätesteuerung.
 
-### 4. Contributor-Pattern (Plugin-System)
+### 8. Device Detail
+`src/routes/_app.devices.$deviceId.tsx` (bereits vorhanden → erweitern, nicht ersetzen)
+- Hero via `DeviceRenderer.renderHero` + `HeroCard` (Shared Layout ID = `device-{id}`).
+- Sections: Identität (Hersteller/Modell/UUID/MAC/Firmware/Hardware/Software), Capabilities, Tags, Signal/Battery, Discovery-Status, History-Placeholder (leere `SectionCard`).
 
-```ts
-interface MetricContributor {
-  id: string;
-  contribute(ctx: { device: Device; acc: MutableRoomMetrics }): void;
-  reset?(acc: MutableRoomMetrics): void;
-  finalize?(acc: MutableRoomMetrics): void; // averages
-}
-```
+### 9. Room-Seite Integration
+- `_app.rooms.$roomId.tsx` bekommt Live-Geräteabschnitt: Liste + Metrik-Cards (Geräte, Online, Offline, Warnungen, Favoriten) aus `roomMetricsStore` (bereits berechnet). Nur Ergänzung, keine Struktur-Änderung.
 
-`MetricContributors.register(c)` — neue Gerätetypen fügen einfach neue Contributor hinzu; Aggregatoren iterieren blind über die Registry. Damit: **keine** Aggregator-Änderung bei neuen Device-Types.
+### 10. Dashboard-Widgets (Widget Registry)
+Neue Builtins in `src/services/widgets/builtin/devices.tsx`:
+- `device.count`, `device.online`, `device.offline`, `device.favorites`, `device.latest`, `device.discoveryStatus`, `room.summary` (falls noch nicht vorhanden).
+Registrierung nur über bestehende Widget Registry, subscribes auf `intelligenceEvents`/`discoveryEvents`.
 
-### 5. Inkrementelle Berechnung
+### 11. States & Feedback
+- `DeviceCatalogEmpty.tsx` (keine Geräte, Discovery läuft, Server offline, kein Netz, keine Ergebnisse) – nutzt DS `EmptyStateCard`.
+- `DeviceCatalogSkeleton.tsx` – DS `SkeletonCard` + Shimmer.
 
-`IntelligenceController` abonniert:
-- `devicesStore` (via zustand subscribe — vergleicht `revision` und diffed `index`)
-- `roomsStore`
-- `DiscoveryEvents`, `RoomEvents`
+### 12. Live-Updates
+- Alle Komponenten selectieren via Zustand + `intelligenceEvents`. Kein Polling, keine Refresh-Buttons.
+- Debounced Store-Updates via existierende Events; UI reagiert automatisch.
 
-Bei Device-Update: nur betroffenen Raum (alt+neu) neu berechnen → `RoomAggregator.recompute(roomId)`. HouseAggregator aggregiert über RoomMetrics (nicht über alle Devices erneut). Ergebnisse werden in Stores geschrieben + Event emittiert.
+### 13. Performance
+- `React.memo` auf Card-Komponenten, `useMemo` für Gruppen, Selectors mit shallow, `react-virtual` für lange Listen, Code-Split der Detail-Route.
 
-### 6. Status-Engine
+### 14. Route-Änderungen
+- `_app.devices.tsx`: alte Ad-hoc-Filter-Logik durch `<DeviceCatalog />` ersetzen (Legacy `DeviceList` bleibt fallback-frei entfernt, sofern nirgends sonst genutzt – Grep prüft).
+- `_app.devices.$deviceId.tsx`: erweitert.
 
-`RoomStatusEngine.derive(metrics, room, discovery)` → deterministischer Status. Priorität: error > offline > warning > syncing > discovering > empty > normal.
+### 15. Bootstrap
+`src/services/bootstrap.ts`: `bootstrapDeviceRegistry()` nach `bootstrapIntelligence()`, vor Widgets.
 
-### 7. Assignment-Engine
+### Nicht enthalten
+Keine Schalter/Dimmer/RGB/Rollo/Thermostat/Szenen/Automationen. Keine Command-Queue-Aufrufe. Keine Mockdaten.
 
-`DeviceAssignmentEngine.assign(deviceId, { roomId?, groupIds?, floor?, virtualRoomId? })`
-- validiert
-- mutiert `devicesStore` (upsertDevice) und ggf. `roomsStore`
-- triggert Recompute alter + neuer Raum
-- emittet `deviceAssigned`/`deviceUnassigned`
-
-### 8. Filter- & Search-Engine (nur vorbereitet)
-
-- Filter: `DeviceFilterEngine.apply(devices, criteria)` mit pluginbaren Prädikaten (`registerFilter`).
-- Search: `SearchIndex` baut invertierten Index über Devices/Rooms/Dashboards/Widgets/Scenes/Automations/Tags/Aliases. Synonym-Map (`de` initial leer/Skeleton).
-
-### 9. Insights
-
-`RoomInsightsEngine.build(roomId)` transformiert Metrics + Status in Liste kurzer, UI-fertiger `Insight`-Objekte (Text kommt aus einem `InsightFormatter`, i18n-ready via bestehendem `services/i18n`).
-
-### 10. Events
-
-Neues Emitter-Modul `IntelligenceEvents` (nutzt `services/events/EventEmitter`):
-`roomMetricsUpdated`, `houseMetricsUpdated`, `roomStatusChanged`, `deviceAssigned`, `deviceUnassigned`, `aggregationUpdated`, `insightUpdated`.
-
-### 11. Bootstrap
-
-`src/services/bootstrap.ts` erweitern: nach Registry/Rooms Init → `intelligence.bootstrap()` (registriert Standard-Contributors, abonniert Stores, initiale Voll-Berechnung).
-
-### 12. Caching / Performance
-
-- `MemoCache` keyed auf `(roomId, devicesRevision, roomsRevision)`.
-- Aggregator hält mutable Akkumulatoren pro Raum, tauscht nur bei Änderung.
-- HouseMetrics = Reduktion über RoomMetrics-Map, nicht über Devices.
-- Selektoren mit strukturellem Sharing für Zustand-Konsumenten.
-
-### 13. Nicht enthalten
-
-Keine UI-Anbindung, keine Widgets ändern, keine Devices/Scenes/Automations-Features, keine Charts.
-
-### 14. Verifikation
-
+### Verifikation
 - `bunx tsgo --noEmit`
-- Kurzer Smoke: In DevTools `intelligence.debug.snapshot()` liefert leere RoomMetrics für alle bestehenden Räume (keine Devices vorhanden) ohne Fehler.
-
-Bereit zur Umsetzung — bei Freigabe implementiere ich alle o. g. Dateien in einem Batch.
+- Playwright: `/devices` lädt, Toolbar reagiert (View/Sort/Group), Suche filtert, `/devices/$id` zeigt Hero + Sections, `/rooms/$id` zeigt Live-Zähler, Dashboard zeigt neue Widgets.
