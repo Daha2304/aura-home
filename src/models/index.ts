@@ -1,5 +1,7 @@
 export * from "./common";
 export * from "./room";
+export * from "./roomCategory";
+export * from "./roomEvents";
 export * from "./capability";
 export * from "./device";
 export * from "./deviceType";

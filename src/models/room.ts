@@ -3,15 +3,27 @@ import type { HexColor, ID, IconName } from "./common";
 export type RoomType =
   | "living"
   | "kitchen"
+  | "dining"
   | "bedroom"
+  | "kids"
   | "bathroom"
-  | "office"
+  | "wc"
   | "hallway"
-  | "outdoor"
+  | "stairway"
+  | "office"
   | "garage"
+  | "garden"
+  | "terrace"
+  | "balcony"
   | "basement"
   | "attic"
+  | "laundry"
+  | "technical"
+  | "outdoor"
+  | "other"
   | "custom";
+
+export type RoomStatus = "active" | "inactive" | "maintenance" | "hidden";
 
 export interface Room {
   id: ID;
@@ -22,4 +34,13 @@ export interface Room {
   floor?: number;
   order: number;
   type: RoomType;
+  /** Optional erweiterte Felder (rückwärtskompatibel). */
+  description?: string;
+  category?: RoomType;
+  favorite?: boolean;
+  tags?: string[];
+  status?: RoomStatus;
+  customProps?: Record<string, unknown>;
+  createdAt?: number;
+  updatedAt?: number;
 }

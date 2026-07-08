@@ -1,170 +1,69 @@
+## Teil 6A – Design System + Room Management
 
-# Teil 5C — Dashboard Runtime
+Aufbauend auf existierender Architektur (bestehende `roomsStore`, `RoomCard`, `glass/*`, `runtime`, `widgetRegistry`, `dashboardManager`). Nichts wird ersetzt – alles wird erweitert.
 
-Vollständig eigenständige Runtime, strikt getrennt vom Editor. Nutzt Widget Registry, Widget Manager, Layout Engine, Dashboard Manager und Layouts Store unverändert. Registry-basiertes Rendering, Premium Glass Design, Framer Motion. Keine Smart-Home-Widgets.
+### 1. Design Tokens (`src/themes/`)
+Zentrale Tokens als TS-Konstanten + CSS-Variablen-Erweiterung in `src/styles.css`:
+- `themes/tokens.ts` — colors, blur, shadows, radii, spacing, typography scale, glass intensity, motion duration, icon sizes
+- `themes/motion.ts` — Erweiterung: spring, fade, scale, swipe, hover, touch presets (Framer Motion Variants)
+- `styles.css` — zusätzliche CSS-Variablen (`--glass-blur-sm/md/xl`, `--shadow-glass-*`, `--radius-hero`, `--motion-spring`)
 
-## Architektur
+### 2. Design-System Komponenten (`src/components/ds/`)
+Alle als reine Präsentations-Komponenten mit `cva`-Varianten. Wo eine Basis existiert (`GlassCard`, `GlassButton`), werden Wrapper darauf aufgebaut, ohne die Originale zu entfernen.
 
-```
-src/services/runtime/
-  RuntimeController.ts     Aktives Dashboard, aktueller Breakpoint, Overlay-State
-  BreakpointDetector.ts    ResizeObserver + matchMedia → LayoutBreakpoint
-  RuntimeEvents.ts         TypedEmitter: dashboardChanged, breakpointChanged, overlayChanged
-  greetings.ts             Zeit-/Statusbasierte Hero-Inhalte (Guten Morgen, Alle Systeme online …)
-  index.ts
+Cards: `GlassCard` (Re-Export/Erweiterung), `HeroCard`, `SectionCard`, `StatusCard`, `MetricCard`, `ActionCard`, `RoomCard` (Re-Export bestehender + neue Variante `RoomHeroCard`), `InfoCard`, `EmptyStateCard`, `LoadingCard`, `SkeletonCard`, `DialogCard`, `BottomSheet`.
 
-src/store/slices/runtimeStore.ts
-  activeDashboardId, breakpoint, theme (light|dark|auto), overlays[]
-  Selektoren, keine Persistenz (Session-State)
+Controls: `GlassButton` (Re-Export), `IconButton`, `FloatingButton`, `SegmentedControl`, `StatusBadge`, `GlassInput`, `GlassSwitch`, `GlassSlider`, `GlassListItem`.
 
-src/hooks/runtime/
-  useRuntimeDashboard.ts    Dashboard + Instanzen + Placements aus Stores
-  useBreakpoint.ts          Reaktiver Breakpoint
-  useWidgetInstance.ts      Einzelinstanz + Descriptor via Registry
-  useVisibleWidgets.ts      Sichtbarkeits-/Viewport-Filter (Vorbereitung Virtualisierung)
-  useRuntimeTheme.ts
-  useSwipeNavigation.ts     Vorbereitung Dashboard-Swipe
-  useRuntimeOverlays.ts
+Barrel: `src/components/ds/index.ts`.
 
-src/components/runtime/
-  DashboardRuntime.tsx      Wurzelkomponente (nur Anzeige)
-  RuntimeCanvas.tsx         Grid-Renderer aus LayoutEngine
-  RuntimeWidgetHost.tsx     Nimmt WidgetInstance → resolve über widgetRegistry → dynamischer Render (Factory Pattern, keine switch/if-Ketten)
-  RuntimeWidgetShell.tsx    Glass-Karte, Styling aus Instance
-  RuntimeHeader.tsx         Dashboard-Titel, Datum, Uhr, „Bearbeiten"-Button
-  RuntimePager.tsx          Vorbereitung Multi-Dashboard-Swipe (Framer Motion)
-  RuntimeEmptyState.tsx     Illustration + Button „Dashboard bearbeiten"
-  RuntimeSkeleton.tsx       Skeleton-Loading
-  overlays/
-    OverlayLayer.tsx        AnimatePresence-Manager
-    DiscoveryOverlay.tsx  ServerOfflineOverlay.tsx  SyncOverlay.tsx
-    AuthOverlay.tsx  UpdateOverlay.tsx
-  glass/
-    GlassSurface.tsx        Frosted / Liquid / Frost-Varianten
-    GlassDivider.tsx
+### 3. Animation Framework (`src/components/ds/motion/`)
+- `PageTransition.tsx`, `HeroTransition.tsx`, `CardTransition.tsx`
+- `SharedLayout.tsx` (Wrapper um `LayoutGroup` mit stabilen `layoutId`-Konventionen: `room-hero-${roomId}`)
+- `TouchFeedback.tsx` (whileTap/whileHover Wrapper)
+- Vorbereitung Shared-Element Dashboard → RoomCard → RoomDetail über `layoutId`.
 
-src/components/runtime/widgets/            System-Widgets (registry-registriert)
-  WelcomeWidget.tsx
-  DashboardHeaderWidget.tsx
-  DashboardTitleWidget.tsx
-  DateWidget.tsx
-  ClockWidget.tsx
-  ServerStatusWidget.tsx
-  ConnectionStatusWidget.tsx
-  DiscoveryStatusWidget.tsx
-  SyncStatusWidget.tsx
-  SystemInfoWidget.tsx
-  AppVersionWidget.tsx
-  UserProfileWidget.tsx        (vorbereitet)
-  QuickActionsWidget.tsx       (vorbereitet)
-  HeroGreetingWidget.tsx       (Guten Morgen / Willkommen zurück)
-  HeroStatusWidget.tsx         (Alle Systeme online / Server verbunden / Sync erfolgreich / Discovery abgeschlossen)
+### 4. Room Model Erweiterung (`src/models/room.ts`)
+Erweitern (nicht ersetzen) um: `description?`, `category?` (= erweiterte `RoomType`), `favorite?: boolean`, `tags?: string[]`, `status?: RoomStatus`, `customProps?: Record<string, unknown>`. `RoomType` erweitern: `dining`, `kids`, `wc`, `stairway`, `garden`, `terrace`, `balcony`, `laundry`, `technical`, `other`. Bestehende Werte bleiben erhalten.
 
-src/services/widgets/builtin/system.ts     Registriert alle System-Widgets via defineWidget + render-Factory
-src/services/widgets/builtin/index.ts      Ruft system.ts + placeholder-Registrierung auf
+Neu: `src/models/roomCategory.ts` (Katalog aus Icon, Farbvorschlag, Default-Name, Sort-Group), `src/models/roomEvents.ts`.
 
-src/themes/
-  glass.ts     Token-Presets (frosted / liquid / frost), Radius, Shadow
-  motion.ts    Ergänzt runtime-spezifische Varianten (widgetFade, widgetScale, overlayFade, pagerSlide)
-```
+### 5. Room Registry (`src/services/rooms/`)
+- `RoomRegistry.ts` — plugin-fähiger Katalog von Raumtypen (`registerRoomType`, `getRoomType`, `listRoomTypes`), pre-registriert mit den 18 Typen.
+- `RoomManager.ts` — CRUD: `create/update/delete/move/reorder/duplicate`, `export/import` (JSON), `mergePrepare` (nur Vorbereitung), delegiert an `roomsStore`. Persistenz via bestehender Storage-Layer.
+- `RoomEvents.ts` — `TypedEmitter` (`roomCreated`, `roomUpdated`, `roomDeleted`, `roomsReordered`).
+- `index.ts` (Barrel).
 
-## Registry-basierter Renderer (Factory Pattern)
+Bootstrap: `services/bootstrap.ts` erweitern → `roomRegistry` initialisieren.
 
-`WidgetDescriptor` erhält ein optionales, typisiertes Feld
-`render?: (ctx: WidgetRenderContext) => ReactNode`. Beim Registrieren liefert
-jedes System-Widget seinen Renderer mit; `RuntimeWidgetHost` liest den
-Descriptor aus `widgetRegistry.get(instance.widgetType)` und ruft `render`
-auf. Fehlt der Renderer (Placeholder-Widgets aus 5B), wird ein neutrales
-`RuntimeMissingRenderer`-Tile gezeigt — keine `switch`/`if`-Kette.
+### 6. Room Store Erweiterung
+`store/slices/roomsStore.ts` behält Signatur, wird ergänzt um:
+- Selectors: `selectRoomById`, `selectRoomsSorted`, `selectFavoriteRooms`, `selectRoomsByFloor` — memoisiert via `zustand` shallow + `useMemo`-Selectors in `hooks/rooms/`.
+- Index-Map `byId` für O(1)-Lookup (intern; API abwärtskompatibel).
+- Actions: `reorder`, `toggleFavorite`, `setRooms` (bereits vorhanden), `merge` Vorbereitung.
 
-`WidgetRenderContext` enthält: `instance`, `descriptor`, `breakpoint`,
-`placement`, `theme`, `size` (Pixelmaße aus LayoutEngine).
+### 7. Room Widgets (System-Registrierung)
+Neue Widget-Descriptors via `widgetRegistry.register` (analog zu `system.tsx`):
+- `room.overview`, `room.hero`, `room.status`, `room.summary` — verwenden `useRoomsStore`, zeigen Platzhalter-Metriken (Geräteanzahl = 0, wird in 6B/7 real gefüllt).
+Datei: `src/services/widgets/builtin/rooms.tsx`, registriert in `builtin/index.ts`.
 
-## Navigation Editor vs Runtime
+### 8. Routen / UI
+- `_app.rooms.tsx` — neue Übersicht: `HeroCard` (Header, Discovery-Status), Grid aus `RoomCard`s (Shared-Layout `layoutId="room-card-${id}"`), Empty-State, FAB „Raum erstellen" (`BottomSheet` mit `RoomForm`).
+- `_app.rooms.$roomId.tsx` — Detail: `HeroCard` mit Raumbild/Farbe/Icon, `MetricCard`s (Geräteanzahl 0, Online 0, Offline 0, Favoriten 0), `StatusCard` (Discovery), Placeholder-Slot „Geräte folgen in Teil 6B/7". Edit-Sheet + Delete-Confirm.
+- Beide nutzen ausschließlich `components/ds/*`.
 
-- `/_app/dashboards/$dashboardId` zeigt **ausschließlich die Runtime**
-  (neue Komponente `DashboardRuntime`).
-- Neuer Route: `/_app/dashboards/$dashboardId/edit` mountet den bestehenden
-  Editor (EditorTopBar, DashboardCanvas, WidgetToolbox, PropertyEditor).
-- Header-Button „Bearbeiten" navigiert per `<Link>` zum Edit-Route.
-- Editor-`Fertig`-Button navigiert zurück zur Runtime.
-- Keine Wiederverwendung von Editor-Komponenten in Runtime.
+Formulare: `components/rooms/RoomForm.tsx` (BottomSheet-Content) mit Icon-Picker, Farb-Picker, Typ-Picker, Etage, Tags.
 
-## Bootstrap-Dashboard
+### 9. Performance & A11y
+- Grid virtualisiert vorbereitet (Wrapper `VirtualGrid` als No-Op-Placeholder → später ersetzbar).
+- `React.memo` auf allen DS-Cards, `useMemo` für Listen-Selectors.
+- `content-visibility: auto` auf Karten außerhalb Viewport.
+- Alle Buttons ≥ 44×44, `aria-label` auf IconButtons, sichtbare Focus-Ringe über `--ring`.
 
-`dashboardManager.ensureBootstrapDashboard()` erhält zusätzlichen Aufruf
-`ensureRuntimeDefaults(dashboard)`: legt Standard-Instanzen an (Header,
-Clock, Date, Hero-Greeting, ServerStatus, ConnectionStatus,
-SyncStatus, AppVersion) — nur wenn Dashboard leer ist.
+### Nicht enthalten
+Keine Gerätesteuerung, keine Szenen, keine echten Metriken, keine Diagramme, keine Automationen.
 
-## Runtime-Layout
-
-- `RuntimeCanvas` nutzt `layoutEngine` (bereits vorhanden) zur Umrechnung
-  Placement→CSS-Grid, exakt wie im Editor, jedoch read-only.
-- Reaktion auf `breakpoint` aus `BreakpointDetector` (matchMedia +
-  ResizeObserver auf dem Runtime-Container) — separate Layouts für
-  phone-portrait/landscape, tablet-portrait/landscape, desktop.
-- Nur sichtbare Widgets werden gemountet (`visible === true`); Vorbereitung
-  Virtualisierung: `useVisibleWidgets` liefert IntersectionObserver-Hook,
-  gerendert werden vorerst alle mit `content-visibility: auto`.
-
-## Glass Design
-
-- `GlassSurface` in Varianten `frosted` (backdrop-blur-xl + bg-white/30),
-  `liquid` (Gradient + Noise), `frost` (Highlight-Border).
-- Tokens ergänzen `src/styles.css` (semantische Layer, kein Hard-Coded
-  White/Black — nur `bg-background/…`, `border-white/…` via Utility-
-  Klassen im semantischen Rahmen).
-- Grosse Radien (`rounded-3xl`), sanfte Shadows (`shadow-elegant`).
-
-## Animationen
-
-Framer Motion-Varianten in `themes/motion.ts` (ergänzt): `widgetFade`,
-`widgetScale`, `overlayFade`, `pagerSlide`. `AnimatePresence` für Overlays
-und Pager. `LayoutGroup` für Widget-Positionswechsel bei
-Breakpoint-Wechsel.
-
-## Overlays / Status Layer
-
-`OverlayLayer` mountet auf App-Ebene innerhalb der Runtime. Overlays
-werden vom `runtimeStore` gesteuert und aus vorhandenen Stores gespeist:
-- Discovery: `discoveryStore`
-- Server offline: `connectionStore`
-- Sync: `commandsStore` / `historyStore`
-- Auth: `usersStore`/settings
-- Update: `settingsStore`
-
-Keine Business-Logik-Änderungen, nur Konsum bestehender Signale.
-
-## Theme
-
-`useRuntimeTheme` liest `settingsStore.theme`, mapped auf
-`document.documentElement.dataset.theme`. Dynamic Theme via
-`prefers-color-scheme`.
-
-## Empty State
-
-Wenn Dashboard 0 sichtbare Widgets hat: SVG-Illustration inline (keine
-Bilddatei), Text „Dieses Dashboard ist leer", Button navigiert zu
-`/dashboards/$id/edit`.
-
-## Performance
-
-- `React.memo` auf `RuntimeWidgetHost`, `RuntimeWidgetShell`.
-- `useSyncExternalStore`-Selektoren aus Zustand mit stabilen Slices.
-- `React.lazy` für System-Widgets (Chunk per Kategorie).
-- `content-visibility: auto` auf Widget-Karten.
-- Keine Prop-Objekt-Neuanlagen in Render-Pfaden (`useMemo`).
-
-## Verifikation
-
-`bunx tsgo --noEmit`, dann Playwright: Route `/dashboards/<id>` zeigt
-Runtime (kein Editor sichtbar), Button „Bearbeiten" führt zu
-`/edit`-Variante, Bootstrap-Widgets werden gerendert.
-
-## Bewusst NICHT enthalten
-
-Keine Smart-Home-Widgets, keine Geräte-/Raum-/Szenen-/Kamera-/Chart-
-Widgets, keine Editor-Funktionalität in der Runtime, keine Änderungen an
-Registry/Manager/LayoutEngine-Signaturen (nur additives `render?`-Feld
-im Descriptor).
+### Verifikation
+- `bunx tsgo --noEmit`
+- Manueller Klickpfad `/rooms` → Create → Detail → Edit → Delete
+- Screenshot Empty-State + gefüllte Liste + Detail via Playwright

@@ -2,7 +2,9 @@ import type { RoomType } from "@/models/room";
 import {
   Sofa,
   UtensilsCrossed,
+  Utensils,
   Bed,
+  Baby,
   Bath,
   Laptop,
   DoorClosed,
@@ -11,20 +13,34 @@ import {
   Boxes,
   House,
   Sparkles,
+  Sun,
+  Flower2,
+  WashingMachine,
+  Cpu,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 const map: Record<RoomType, LucideIcon> = {
   living: Sofa,
   kitchen: UtensilsCrossed,
+  dining: Utensils,
   bedroom: Bed,
+  kids: Baby,
   bathroom: Bath,
-  office: Laptop,
+  wc: Bath,
   hallway: DoorClosed,
-  outdoor: Trees,
+  stairway: DoorClosed,
+  office: Laptop,
   garage: Car,
+  garden: Trees,
+  terrace: Sun,
+  balcony: Flower2,
   basement: Boxes,
   attic: House,
+  laundry: WashingMachine,
+  technical: Cpu,
+  outdoor: Trees,
+  other: Sparkles,
   custom: Sparkles,
 };
 

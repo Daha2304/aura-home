@@ -17,6 +17,7 @@ import "@/store/slices/registryStore";
 import "@/services/widgets/builtin";
 import "@/store/slices/widgetRegistryStore";
 import { dashboardManager } from "@/services/dashboards/DashboardManager";
+import { registerBuiltinRoomTypes, roomManager } from "@/services/rooms";
 
 const log = createLogger("bootstrap");
 
@@ -70,6 +71,10 @@ export function startCommunicationLayer(): void {
   // Dashboards aus Cache hydratisieren und Bootstrap-Dashboard sicherstellen.
   dashboardManager.hydrate();
   dashboardManager.ensureBootstrapDashboard();
+
+  // Raumverwaltung starten: Registry mit Built-ins, dann Persistenz hydrieren.
+  registerBuiltinRoomTypes();
+  roomManager.hydrate();
 
   deviceManager.start();
   discoveryEngine.start();
