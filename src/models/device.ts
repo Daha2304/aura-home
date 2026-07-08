@@ -107,9 +107,6 @@ export interface Device {
   attributes?: Record<string, unknown>;
 }
 
-export interface DeviceGroup {
-  id: ID;
-  name: string;
-  deviceIds: ID[];
-  icon?: IconName;
-}
+// NOTE: `DeviceGroup` moved to `./deviceGroup` (Teil 8). The Registry-based
+// GroupManager owns the sole authoritative model. Do not re-introduce a
+// minimal DeviceGroup type here — it would create a parallel data model.

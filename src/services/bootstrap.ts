@@ -32,6 +32,8 @@ import { bootstrapCapabilityRegistry } from "@/services/capabilities";
 import { registerBuiltinControls } from "@/components/devices/controls";
 import { bootstrapDevicePanels } from "@/services/devicePanels";
 import { bootstrapDevicePropertyRegistry } from "@/services/deviceProperties";
+import { bootstrapScenes } from "@/services/scenes";
+import { bootstrapGroups, stopGroups } from "@/services/groups";
 
 
 const log = createLogger("bootstrap");
@@ -160,6 +162,13 @@ export function startCommunicationLayer(): void {
   bootstrapDevicePropertyRegistry();
   bootstrapDevicePanels();
 
+  // Szenen + Gerätegruppen. Beide nutzen ausschließlich Command Queue,
+  // Universal Control Engine und existierende Registries.
+  bootstrapScenes();
+  bootstrapGroups();
+
+
+
 
   // Aktiven Server beobachten und Manager entsprechend (neu) konfigurieren.
   const applyActiveServer = () => {
@@ -193,6 +202,7 @@ export function stopCommunicationLayer(): void {
   unsubActiveServer?.();
   unsubActiveServer = null;
   stopIntelligence();
+  stopGroups();
   commandQueue.stop();
   discoveryEngine.stop();
   deviceManager.stop();

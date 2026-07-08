@@ -1,141 +1,137 @@
-# Teil 7B – Device Experience
+# Teil 8 – Szenen & Gerätegruppen
 
-Ziel: Die `/devices/$deviceId`-Ansicht wird zur vollwertigen Premium-Smart-Home-Experience. Alle Bereiche entstehen **registry-basiert** aus Capabilities & Device-Properties – kein Typ-Switch, keine gerätespezifische Sonderlogik. Aufbauend auf Teil 7A (Capability Registry, Control Registry, Universal Control Engine, Command Queue).
+Ziel: eine vollständig generische Szenen- und Gerätegruppen-Plattform, die ausschließlich vorhandene Systeme nutzt (Device Registry, Capability Registry, Universal Control Engine, Command Queue, Widget Registry, Intelligence Layer, Room Manager, Design System, Event System, Stores). Keine parallelen Datenmodelle, keine Sonderlogik pro Gerätetyp, keine Änderungen an Command Queue oder Universal Control Engine.
 
-## Architektur: Device Panel Registry
+## 1. Datenmodelle (`src/models/`)
 
-Neue **Panel Registry** analog zur Control Registry. Jedes Panel registriert sich selbst und deklariert, wann es sichtbar ist.
+Das bestehende `scene.ts` wird erweitert (keine Breaking Changes, alte Felder bleiben erhalten).
 
-```text
-Device
-  → DevicePanelRegistry (Panel-Beschreibungen: id, title, group, priority, icon, isVisible(device), Component)
-  → DevicePanelRenderer (iteriert Registry, filtert sichtbare Panels, staffelt Animationen)
+- `scene.ts` – `Scene`, `SceneCategory`, `SceneStatus`, `SceneErrorStrategy`. Felder: `id`, `uuid`, `name`, `description`, `icon`, `color`, `category`, `favorite`, `tags[]`, `version`, `active`, `archived`, `createdAt`, `updatedAt`, `createdBy`, `updatedBy`, `custom`, `actions[]`, `order`, `parameters[]`, `templateId?`.
+- `sceneAction.ts` – `id`, `deviceId?`, `groupId?`, `capabilityId`, `targetValue`, `previousValue?`, `delayMs`, `priority`, `parallel`, `optional`, `errorStrategy` (`abort` | `continue` | `retry`), `comment`, `condition?` (Placeholder Teil 9), `parameterRef?` (verknüpft mit `SceneParameter`).
+- `sceneParameter.ts` – **Vorbereitung ohne Ausführungslogik**: `id`, `key`, `label`, `type` (`boolean` | `number` | `string` | `enum` | `device` | `group` | `capability` | `color`), `default?`, `options?`, `min?`, `max?`, `required?`, `description?`. Wird in Szenen persistiert, aber nicht ausgewertet.
+- `sceneTemplate.ts` – **eigene Datenstruktur**: `id`, `uuid`, `name`, `description`, `icon`, `color`, `category`, `tags[]`, `version`, `createdAt`, `updatedAt`, `parameters[]`, `actions[]` (mit `parameterRef` auf Template-Parameter), `builtin?`. Keine UI notwendig – nur Registry + Store.
+- `sceneVersion.ts` – Snapshot: `versionNumber`, `createdAt`, `createdBy`, `payload` (vollständige Scene ohne `version`).
+- `sceneExecution.ts` – `id`, `sceneId`, `status` (`planned` | `running` | `partial` | `succeeded` | `failed` | `cancelled`), `startedAt`, `finishedAt?`, `progress: { completed, total, failed, cancelled }`, `steps[]` (pro Aktion: `actionId`, `commandIds[]`, `state`, `error?`), `undoable`, `undoSnapshot[]` (Vorwerte je Gerät/Capability – **nur Datenerfassung**, Ausführung folgt später).
+- `deviceGroup.ts` – `DeviceGroup`, `DeviceGroupKind` (`light` | `outlet` | `blind` | `thermostat` | `sensor` | `media` | `mixed` | `virtual` | `dynamic`), `DeviceGroupStatus`. Felder: `id`, `uuid`, `name`, `description`, `icon`, `color`, `category`, `favorite`, `tags[]`, `version`, `deviceIds[]`, `groupIds[]` (**verschachtelte Gruppen**), `capabilities[]`, `status`, `custom`, `createdAt`, `updatedAt`, `createdBy`, `updatedBy`.
+- `sceneEvents.ts`, `groupEvents.ts` – TypedEmitter-Event-Maps für sceneCreated/Updated/Deleted/Executed/ExecutionStarted/Completed/Failed und groupCreated/Updated/Deleted.
+- Re-Exports in `models/index.ts`.
+
+## 2. Services
+
+```
+src/services/scenes/
+  SceneRegistry.ts        // O(1)-Lookup, byCategory, byTag, byDevice, byGroup
+  SceneManager.ts         // CRUD + Versionierung + Persistenz ("scenes.v1")
+  SceneTemplateRegistry.ts// Template-Registry (O(1), byCategory)
+  SceneTemplateManager.ts // Templates registrieren + instanziieren zu Scene
+  SceneParameterRegistry.ts // Parameter-Typ-Descriptors (boolean/enum/device/…)
+  SceneVersionStore.ts    // Ringpuffer je Szene, max. 20 Versionen
+  SceneExecutor.ts        // plant Aktionen → CommandQueue, Progress, Undo-Snapshot
+  SceneEvents.ts
+  sceneSerialization.ts   // JSON Import/Export inkl. Versionen + Templates
+  index.ts
+src/services/groups/
+  GroupRegistry.ts        // O(1)-Lookup, byKind, byDevice, byParentGroup
+  GroupManager.ts         // CRUD, Zyklenerkennung bei set/add
+  GroupResolver.ts        // rekursive Expansion (Gruppe → Geräte, cycle-safe)
+  GroupExecutor.ts        // Fan-out zu CommandQueue
+  GroupEvents.ts
+  groupSerialization.ts
+  index.ts
 ```
 
-**Neue Dateien**
-- `src/models/devicePanel.ts` – `DevicePanelDescriptor { id, title, icon?, group, priority, isVisible(device), component }`; `DevicePanelGroup = "hero" | "status" | "controls" | "information" | "network" | "sensors" | "diagnostics" | "firmware" | "developer" | "custom"`.
-- `src/services/devicePanels/DevicePanelRegistry.ts` – Plugin-Registry (O(1) Map), `register/get/all/visibleFor(device)`.
-- `src/services/devicePanels/builtin/` – ein Modul pro eingebautem Panel (nur Deklaration + Component-Ref):
-  - `heroPanel.tsx` – große Hero-Card, Icon, Name, Raum, Online, Favorit, Tags, Discovery, Firmware, Signal, Batterie.
-  - `statusPanel.tsx` – Live-Statuszeile (online/offline/discovery/sync/warn/error, letzte Änderung, aktuelle Commands via CommandQueue-Store).
-  - `controlsPanel.tsx` – dünner Wrapper um `UniversalControlRenderer` (Teil 7A).
-  - `informationPanel.tsx` – Property Renderer (siehe unten).
-  - `networkPanel.tsx` – IP/MAC/UUID/Serial/Protocol (nur wenn vorhanden).
-  - `sensorsPanel.tsx` – readonly Capabilities via Universal Renderer, gefiltert auf readonly.
-  - `diagnosticsPanel.tsx` – Lifecycle, letzte Verbindung, Command-Historie (aus `commandsStore`).
-  - `firmwarePanel.tsx` – nur sichtbar wenn `firmware`/`hardwareVersion`/`softwareVersion` gesetzt.
-  - `developerPanel.tsx` – Debug-JSON, sichtbar nur bei `settingsStore.debugWebSocket` o. ä. Dev-Flag.
-- `src/services/devicePanels/index.ts` – `bootstrapDevicePanels()`.
+### Verschachtelte Gruppen mit Zyklenerkennung
 
-**Bearbeitet:** `src/services/bootstrap.ts` – Aufruf `bootstrapDevicePanels()` nach `registerBuiltinControls()`.
+- `GroupManager.setChildren(groupId, {deviceIds, groupIds})` prüft vor dem Speichern per DFS, ob `groupIds` einen Zyklus erzeugt (`hasCycle(groupId, candidates)`). Bei Zyklus: kein Write, `errorBus.report` + Rückgabe `{ok:false, reason:"cycle"}`.
+- `GroupResolver.expand(groupId)` liefert eine deduplizierte, cycle-safe `Set<deviceId>` per DFS mit `visited`-Set. Ergebnis wird in `groupsStore.expandedById` memoisiert und bei jeder Group-Änderung invalidiert.
+- Alle Konsumenten (Executor, Intelligence Contributor, Widgets) lesen ausschließlich das expandierte Set – nirgends eigene Rekursion.
 
-## Property Renderer (registry-basiert)
+### Ausführung (Command Queue unverändert)
 
-Damit die Info-/Netzwerk-/Firmware-Panels keinerlei Hardcodierung enthalten:
+- `SceneExecutor.run(sceneId, args?)` erzeugt eine `SceneExecution` mit `progress.total = Σ konkrete Zielgeräte` (nach Group-Expansion). Für jede Aktion:
+  1. `previousValue` aus `devicesStore` in `undoSnapshot` schreiben (Vorbereitung Undo – keine Ausführung),
+  2. `commandQueue.enqueue(deviceId, capabilityId, targetValue, { optimistic: true, correlationId: executionId })`,
+  3. `delayMs` respektieren, `parallel`-Aktionen bündeln, `priority` sortiert.
+- Fortschritt wird über `commandQueue.on('completed'|'failed'|'cancelled')` per `correlationId` fortgeschrieben (`progress.completed`, `progress.failed`). Emittiert `sceneExecutionStarted`, `sceneExecutionProgress`, `sceneExecutionCompleted|Failed`. **Keine Änderungen an der Command Queue** – nur Listener auf vorhandene Events.
+- `undoable: true` wird gesetzt, sobald ein vollständiger `undoSnapshot` erfasst wurde. Ein `SceneExecutor.undo(executionId)`-Methodenkopf existiert und ist als „prepared" markiert (throw `NotImplemented` bis Teil 9/10). Die Datenstruktur ist vollständig.
+- `errorStrategy`: `abort` bricht die Restplanung ab, `continue` markiert die Aktion als `failed` und macht weiter, `retry` re-enqueued einmalig via `commandQueue.enqueue` (kein Eingriff in die Queue-Retry-Logik selbst).
 
-- `src/models/deviceProperty.ts` – `DevicePropertyDescriptor { id, label, group, priority, read(device) → string|number|boolean|undefined, format?, icon?, sensitive?, tone? }`; `DevicePropertyGroup = "identity" | "network" | "firmware" | "hardware" | "diagnostics" | "custom"`.
-- `src/services/deviceProperties/DevicePropertyRegistry.ts` – Plugin-Registry.
-- `src/services/deviceProperties/builtin.ts` – Built-ins für alle bereits in `Device` vorhandenen Felder (`name/type/manufacturer/model/firmware/hardwareVersion/softwareVersion/uuid/mac/serial/lifecycle/version/serverVersion/floor/description`) + dynamische Ausgabe von `device.customProperties`.
-- `src/components/devices/properties/PropertyList.tsx` – rendert eine Gruppe: DS-`GlassListItem`-artige Zeilen, mit Icon, Label, Wert. Filtert leere Werte, hides sensitive.
+### Gruppenaktionen
 
-Panels konsumieren `devicePropertyRegistry.byGroup("identity" | "network" | …)`.
+- `GroupExecutor.apply(groupId, capabilityId, value)` löst per `GroupResolver` auf, filtert Geräte über `capabilityRegistry.supports(device, capabilityId)` und ruft für jedes Gerät `commandQueue.enqueue(...)`. Kein zweites Ausführungsmodell.
 
-## Command-Historien-Panel (Diagnose)
+### Templates
 
-`diagnosticsPanel.tsx` liest `useCommandsStore().history` gefiltert per `byDevice(device.id)` und rendert die letzten N Commands mit DS-`StatusBadge` (Zustand aus 7A: queued/sending/…/completed/failed). Framer-Motion `AnimatePresence` beim Eintreffen neuer Einträge.
+- `SceneTemplateRegistry` verwaltet Built-in und importierte Templates (`register`, `unregister`, `get`, `listByCategory`).
+- `SceneTemplateManager.instantiate(templateId, params)` erzeugt eine reguläre `Scene` (mit Referenz `templateId`), löst `parameterRef`-Platzhalter beim Erstellen der Actions bereits auf und persistiert über `SceneManager.create()`. Keine UI erforderlich; API ist bereit für Teil 9+.
 
-## Hero + Status (registry-Panels ersetzen Inline-JSX)
+## 3. Stores (`src/store/slices/`)
 
-Der aktuelle Inline-Hero in `_app.devices.$deviceId.tsx` zieht in `heroPanel.tsx` um – unverändertes visuelles Ergebnis (`HeroCard`, `layoutIds.deviceCard`, Favorit-IconButton, Signal/Battery/Discovery/Version MetricCards). Der neue Status-Panel-Bereich zeigt zusätzlich aktive Commands als animierte Chips (Queued/Sending/Retrying/Failed).
+Ersetzen den heutigen dünnen `scenesStore` (Migration übernimmt vorhandene Szenen). Alle Selectors memoisiert, O(1)-Lookups über `byId`.
 
-## Universal Controls – neue Capability-Descriptoren
+- `scenesStore.ts` – `scenes`, `byId`, `byCategory`, `favorites`, `recentIds`, CRUD-Actions, `revision`.
+- `sceneTemplatesStore.ts` – Templates (byId, byCategory).
+- `sceneVersionsStore.ts` – Versionen je Szene.
+- `sceneExecutionsStore.ts` – aktive und historische Ausführungen, `byScene`, aktueller `progress`, `undoSnapshot`.
+- `groupsStore.ts` – `byId`, `byKind`, `favorites`, `expandedById` (Cache der aufgelösten Gerätemenge).
+- `groupExecutionsStore.ts` – Live-Status der Fan-out-Kommandos (verlinkt auf `useCommandsStore` per `correlationId`).
 
-Für die in 7A noch fehlenden Capabilities registriert werden in `src/services/capabilities/builtin.ts` (nur Zusätze, bestehende Descriptors bleiben):
+Kein Duplizieren von Command-State – die Ausführungs-Stores speichern nur Metadaten und referenzieren `useCommandsStore`.
 
-- `colorTemperature` (kind bereits vorbereitbar; neue optional Capability, `slider.color-temperature`).
-- `fanSpeed` (dimmer-ähnlich, `slider.percentage`).
-- `tilt` (`slider.tilt`).
-- `volume`, `mute` (Media-Kontext, `slider.volume`, `toggle.mute`).
-- `seek` (`slider.percentage`, unit `s`).
-- `powerConsumption`, `voltage`, `current` (readonly, `readout.number` mit Units W/V/A).
-- Generische `boolean`, `number`, `text`, `enum` (Fallbacks für dynamische `DeviceFunction`-Werte).
+## 4. Intelligence Layer
 
-Wichtig: Der bestehende `Capability`-Union in `src/models/capability.ts` bleibt unangetastet. Neue Capabilities werden über `"custom"`-Kind + `capability.id` diskriminiert und über den bereits vorhandenen `CapabilityDescriptor.kind` (`string & {}` Anteil) registriert. Die Universal Control Engine liest ausschließlich `cap.kind` → RegistryLookup, daher keine Union-Erweiterung nötig.
+Neue schlanke Contributors ohne Änderung der bestehenden Aggregatoren:
 
-Zusätzlich: Der Control-Factory-Loop wird erweitert, um auch `device.functions[]` (protokoll-agnostische generische Funktionen) durchzureichen, indem für jede `DeviceFunction` ein synthetischer Capability-artiger Eintrag erzeugt wird (`kind = function.kind`, `id = function.id`, `value = function.value`, `readonly = function.readonly`). Das aktiviert automatisch `boolean/number/text/enum/custom`-Controls für alle generischen Funktionen ohne UI-Änderung.
+- `SceneContributor` – aggregiert Szenen pro Raum (via Aktions-Devices) und Haus. Ergänzt `roomMetrics.custom.scenes`.
+- `GroupContributor` – dito für (expandierte) Gruppen.
+- Registrierung in `registerBuiltinContributors()` – bestehender Erweiterungspunkt, keine neue Architektur.
 
-Neue Control-Komponenten sind nicht nötig – die Slider/Stepper/Readout-Bausteine aus 7A decken alle neuen Descriptoren ab. Nur zwei kleine Ergänzungen in `src/components/devices/controls/builtin.tsx`:
-- `toggle.mute` (Alias auf `PowerToggle`, Icon `VolumeX`).
-- `readout.text` bleibt Fallback.
+## 5. Universal Control Engine
 
-## Shared-Element-Transitions
+Keine Änderungen. Zwei neue **Descriptor-Sources** über bestehende Registries:
 
-- `HeroCard` nutzt bereits `layoutIds.deviceCard(device.id)` – bleibt.
-- Panels erscheinen gestaffelt: `motion.section` mit `initial={{opacity:0, y:8}} animate={{opacity:1, y:0}} transition={{delay: i * 0.04}}`.
-- Controls-Panel: `AnimatePresence` bereits in `UniversalControlRenderer`/`ControlFeedback`.
-- Werte animieren via `motion.span` mit `layout` in Readouts (bereits in 7A ProgressReadout).
+- `SceneControlSource` – synthetischer `buttonControl`-`ControlSpec`, damit Szenen im Universal Control Renderer als Quick Action erscheinen.
+- `GroupControlSource` – meldet für Gruppen die gemeinsamen Capabilities (Schnittmenge über expandierte Geräte) an die `CapabilityRegistry`; der Renderer erzeugt automatisch passende Controls. Neue Gerätetypen funktionieren dadurch ohne UI-Anpassung.
 
-## Gesten (vorbereitet, nicht aktiviert)
+## 6. Widgets (Widget Registry)
 
-Neuer Hook `src/hooks/useDeviceGestures.ts` – exportiert bewusst leere/no-op Handler mit klaren TODO-Kommentaren:
-- `onSwipeBack` → hookt später in Router zurück.
-- `onPullToRefresh` → ruft später `discoveryEngine.refresh(device.id)`.
-- `onLongPress` → öffnet später `DeviceQuickActions` (existiert bereits).
+Registrierung ausschließlich über `widgetRegistry.register(defineWidget(...))` in `src/services/widgets/builtin/scenes.tsx` und `groups.tsx`, aufgerufen aus `services/widgets/builtin/index.ts`.
 
-Damit ist die API vorhanden, aber keine Verhaltensänderung. Kein neuer Library-Import.
+Neue Widgets: `scene.button`, `scene.grid`, `scene.favorites`, `scene.status` (nutzt `progress.completed/total`), `group.control`, `group.status`, `quick.actions`. Alle bauen ausschließlich auf `GlassCard`, `IconButton`, `SegmentedControl`, `PageTransition` – kein neues Styling.
 
-## Dashboard- & Room-Integration
+## 7. UI (Design System)
 
-Kein Codepfad-Umbau nötig: Widgets und Room-Views lesen bereits aus `devicesStore`/`roomMetricsStore`, die durch die Command-Queue (Optimistic Updates aus 7A) live aktualisiert werden. Änderung nur:
-- `src/services/widgets/builtin/devices.tsx` – prüfen, dass Widget-Renderer `React.memo` und selektive Selektoren nutzen (Fixups wenn nötig, keine neuen Widgets).
-- `src/routes/_app.rooms.$roomId.tsx` – bleibt (Teil 6B).
+- `src/routes/_app.scenes.tsx` – Bibliothek: Suche, Kategorie-Chips, Favoriten, „Zuletzt verwendet", Glass Grid mit Framer-Motion Stagger.
+- `src/routes/_app.scenes.$sceneId.tsx` – Detail: Ausführung mit Progress (completed/total), Versionsliste, Restore, Export. Undo-Button wird gerendert, aber `disabled` mit Tooltip „vorbereitet" bis Teil 9/10.
+- `src/routes/_app.scenes.$sceneId.edit.tsx` – Editor mit Drag & Drop (DnD-Hook aus dem Dashboard-Editor wiederverwenden), Aktions-Reihenfolge, Delay/Priority/errorStrategy, Geräte- und Gruppen-Picker.
+- `src/routes/_app.groups.tsx` + `_app.groups.$groupId.tsx` – Gruppenbibliothek und -Editor. Editor erlaubt Auswahl von Kind-Geräten **und** Kind-Gruppen; ein Zyklus wird per Live-Validierung verhindert und mit klarer Fehlermeldung angezeigt.
+- `src/components/scenes/*`, `src/components/groups/*` – nur Kompositionen bestehender DS-Komponenten (`GlassCard`, `GlassPanel`, `SegmentedControl`, `IconButton`, `PageTransition`, `HeroTransition`, `SharedLayout`).
+- Bestehende Routen (`_app.rooms.$roomId`, `_app.devices.$deviceId`) bekommen neue Panels über die vorhandene `DevicePanelRegistry`/`RoomPanelRegistry`: Mitgliedschaften, Gruppen, verwendete Szenen, Quick Actions.
 
-## Neue/geänderte Dateien
+## 8. Import / Export
 
-**Neu**
-- `src/models/devicePanel.ts`
-- `src/models/deviceProperty.ts`
-- `src/services/devicePanels/DevicePanelRegistry.ts`
-- `src/services/devicePanels/index.ts`
-- `src/services/devicePanels/builtin/heroPanel.tsx`
-- `src/services/devicePanels/builtin/statusPanel.tsx`
-- `src/services/devicePanels/builtin/controlsPanel.tsx`
-- `src/services/devicePanels/builtin/informationPanel.tsx`
-- `src/services/devicePanels/builtin/networkPanel.tsx`
-- `src/services/devicePanels/builtin/sensorsPanel.tsx`
-- `src/services/devicePanels/builtin/diagnosticsPanel.tsx`
-- `src/services/devicePanels/builtin/firmwarePanel.tsx`
-- `src/services/devicePanels/builtin/developerPanel.tsx`
-- `src/services/deviceProperties/DevicePropertyRegistry.ts`
-- `src/services/deviceProperties/builtin.ts`
-- `src/services/deviceProperties/index.ts`
-- `src/components/devices/properties/PropertyList.tsx`
-- `src/components/devices/detail/DevicePanelRenderer.tsx` – iteriert Registry, staffelt Framer-Motion.
-- `src/hooks/useDeviceGestures.ts`
+`sceneSerialization.ts` / `groupSerialization.ts` liefern versionsstabiles JSON (`schemaVersion`, `exportedAt`, `scenes[]`, `templates[]`, `groups[]`, `versions{}`). Import validiert per Zod und wählt `merge` | `replace`. Import berücksichtigt Templates und Versionen.
 
-**Bearbeitet**
-- `src/services/capabilities/builtin.ts` – zusätzliche Descriptors (colorTemperature, fanSpeed, tilt, volume, mute, seek, powerConsumption, voltage, current, generic boolean/number/text/enum).
-- `src/services/controls/ControlFactory.ts` – zusätzlich `device.functions[]` als synthetische Capabilities.
-- `src/components/devices/controls/builtin.tsx` – `toggle.mute` Registrierung.
-- `src/services/bootstrap.ts` – `bootstrapDevicePanels()` und `bootstrapDevicePropertyRegistry()`.
-- `src/routes/_app.devices.$deviceId.tsx` – ersetzt Inline-Sections durch `<DevicePanelRenderer device={device} />` (Route-String, `notFoundComponent`, `layoutIds` bleiben unverändert). Alte JSX-Blocks werden gelöscht.
-- `src/models/index.ts` – neue Exporte.
+## 9. Vorbereitung Teil 9 (Automationen)
 
-## Performance
-- Panels: `React.memo`, `isVisible(device)` einmalig pro Render.
-- Property-Zeilen: memoized nach `device.id + property.id + value`.
-- Controls: bereits in 7A optimiert.
-- Renderer subscribed nur zur ID: `useDevicesStore((s) => s.byId(deviceId))` → identity-basiert.
+- `sceneAction.condition?: ConditionRef` bleibt typisiert (`unknown`) mit Namespace-Kommentar.
+- Leere Registries unter `src/services/automations/`: `TriggerRegistry`, `ConditionRegistry`, `ActionRegistry` mit definierten Descriptor-Typen. Keine Ausführungslogik, keine Routen.
+- `SceneParameterRegistry` ist bereits einsetzbar für spätere Automations-Parameter.
 
-## Accessibility
-- Panels als `<section aria-labelledby>`.
-- Große Touchflächen bleiben durch DS-Komponenten (>=44px).
-- Fokusreihenfolge: Hero → Status → Controls → Info → Network → Diagnostics.
-- Screenreader-Landmarks via `role="region"` + Panel-Title.
+## 10. Performance & Accessibility
 
-## Was NICHT gebaut wird
-Keine Szenen, keine Automationen, keine Historie-Diagramme, keine Kamera-Streams, keine gerätespezifischen Komponenten.
+- Alle Listen: `React.memo`, `useMemo`-Selectors, stabile Keys, Slice-fähige Renderer als Virtualisierungs-Vorbereitung.
+- Große Touchflächen (≥ 44 px), `aria-label`, `role="list"/"listitem"`, Fokusreihenfolge im Editor, Screenreader-Ansagen bei Execution-Statuswechsel und Progress-Updates.
 
-## Verifikation
-- `bunx tsgo --noEmit`
-- Playwright auf `/devices/$id`: Hero rendert, Panels erscheinen gestaffelt, Universal Controls funktionieren mit Command-Feedback, Netzwerk/Firmware-Panels verstecken sich bei fehlenden Werten, Diagnose zeigt Command-Historie.
+## 11. Was **nicht** passiert
+
+Keine Zeitpläne, Kalender, Geofencing, Benachrichtigungen, Historie, Diagramme, keine Automationen. **Keine Änderungen an der Command Queue oder der Universal Control Engine** – alle Erweiterungen laufen über bestehende Registries, Stores und Event-Kanäle.
+
+```text
+Scene UI ──▶ SceneManager ──▶ SceneExecutor ──▶ CommandQueue ──▶ wsManager
+Group UI ──▶ GroupManager ──▶ GroupExecutor ──▶ CommandQueue ──▶ wsManager
+Templates ─▶ TemplateManager ─▶ SceneManager (instantiate)
+Intelligence / Widgets / Rooms lesen ausschließlich Stores
+```
+
+Ergebnis: versionierte Szenen mit Parameter- und Template-Vorbereitung, verschachtelte Gerätegruppen mit Zyklenerkennung, Progress- und Undo-Vorbereitung, komplette Bibliothek + Editor, Room/Device/Dashboard-Integration und Quick Actions – ausschließlich über vorhandene Registry-, Store- und Event-Architektur.

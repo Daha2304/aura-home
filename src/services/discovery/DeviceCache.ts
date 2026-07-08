@@ -1,4 +1,5 @@
-import type { Device, DeviceGroup } from "@/models/device";
+import type { Device } from "@/models/device";
+import type { DeviceGroup } from "@/models/deviceGroup";
 import { AppError } from "@/services/errors/AppError";
 import { errorBus } from "@/services/errors/ErrorBus";
 import { createLogger } from "@/services/logger/Logger";
