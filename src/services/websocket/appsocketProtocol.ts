@@ -203,23 +203,23 @@ function stateToCapabilityAndFunction(
   return { cap, fn };
 }
 
-function pickDeviceType(raw: RawDevice): string {
+function pickDeviceType(raw: RawDevice): Device["type"] {
   const t = asString(raw.type) ?? asString(raw.role);
-  if (t && deviceRegistry.has(t)) return t;
+  if (t && deviceRegistry.has(t as Device["type"])) return t as Device["type"];
   // Bekannte appsocket-Rollen grob auf unsere Kategorien mappen.
   const map: Record<string, string> = {
     light: "light",
     dimmer: "dimmer",
     ceiling: "light",
     lamp: "light",
-    blind: "blind",
-    shutter: "blind",
+    blind: "blinds",
+    shutter: "blinds",
     thermostat: "thermostat",
-    temperature: "temperatureSensor",
-    humidity: "humiditySensor",
-    motion: "motionSensor",
-    door: "doorSensor",
-    window: "windowSensor",
+    temperature: "temperature",
+    humidity: "humidity",
+    motion: "motion",
+    door: "doorContact",
+    window: "windowContact",
     lock: "smartLock",
     camera: "camera",
     outlet: "outlet",
@@ -227,10 +227,11 @@ function pickDeviceType(raw: RawDevice): string {
     vacuum: "vacuum",
     media: "mediaPlayer",
   };
-  if (t && map[t.toLowerCase()] && deviceRegistry.has(map[t.toLowerCase()])) {
-    return map[t.toLowerCase()];
+  const mapped = t ? map[t.toLowerCase()] : undefined;
+  if (mapped && deviceRegistry.has(mapped as Device["type"])) {
+    return mapped as Device["type"];
   }
-  return "custom";
+  return "custom" as Device["type"];
 }
 
 export function appsocketNormalizeDevice(raw: unknown): Device | null {
