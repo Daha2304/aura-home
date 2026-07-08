@@ -121,6 +121,7 @@ export function startCommunicationLayer(): void {
   const applyActiveServer = () => {
     const state = useSettingsStore.getState();
     setGlobalLogLevel(state.debugWebSocket ? "debug" : "info");
+    setAppsocketDebug(state.debugWebSocket);
     const server = state.servers.find((s) => s.id === state.activeServerId);
     if (!server) return;
     wsManager.configure({ server, debug: state.debugWebSocket });
