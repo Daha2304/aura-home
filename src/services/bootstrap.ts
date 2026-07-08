@@ -92,6 +92,8 @@ export function startCommunicationLayer(): void {
   bootstrapDevicePresentation();
   bootstrapCapabilityRegistry();
   registerBuiltinControls();
+  bootstrapDevicePropertyRegistry();
+  bootstrapDevicePanels();
 
 
   // Aktiven Server beobachten und Manager entsprechend (neu) konfigurieren.
