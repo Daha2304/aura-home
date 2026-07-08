@@ -16,6 +16,7 @@ import { PageTransition } from "@/components/ds/motion/PageTransition";
 import { DeviceIcon } from "@/components/devices/DeviceIcon";
 import { DeviceStatusChips } from "@/components/devices/renderer/DeviceStatusChips";
 import { layoutIds } from "@/components/ds/motion/SharedLayout";
+import { UniversalControlRenderer } from "@/components/devices/controls";
 
 export const Route = createFileRoute("/_app/devices/$deviceId")({
   component: DeviceDetail,
@@ -108,6 +109,10 @@ function DeviceDetail() {
         />
       </div>
 
+      <SectionCard title="Steuerung" className="mt-4">
+        <UniversalControlRenderer deviceId={device.id} />
+      </SectionCard>
+
       <SectionCard title="Informationen" className="mt-4">
         <dl className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {rows.map((r) => (
@@ -149,9 +154,6 @@ function DeviceDetail() {
         <InfoCard>Historische Werte werden in einem späteren Schritt ergänzt.</InfoCard>
       </SectionCard>
 
-      <p className="mt-6 text-center text-xs text-muted-foreground">
-        Gerätesteuerung wird im nächsten Teil aktiviert.
-      </p>
     </PageTransition>
   );
 }

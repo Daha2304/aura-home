@@ -3,6 +3,9 @@ export * from "./room";
 export * from "./roomCategory";
 export * from "./roomEvents";
 export * from "./capability";
+export * from "./capabilityDescriptor";
+export * from "./controlSpec";
+export * from "./controlType";
 export * from "./device";
 export * from "./deviceType";
 export * from "./deviceCategory";
@@ -33,4 +36,3 @@ export * from "./houseMetrics";
 export * from "./roomHealth";
 export * from "./insight";
 export * from "./intelligenceEvents";
-

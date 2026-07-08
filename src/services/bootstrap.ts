@@ -20,6 +20,8 @@ import { dashboardManager } from "@/services/dashboards/DashboardManager";
 import { registerBuiltinRoomTypes, roomManager } from "@/services/rooms";
 import { bootstrapIntelligence, stopIntelligence } from "@/services/intelligence";
 import { bootstrapDevicePresentation } from "@/services/devices/presentation";
+import { bootstrapCapabilityRegistry } from "@/services/capabilities";
+import { registerBuiltinControls } from "@/components/devices/controls";
 
 
 const log = createLogger("bootstrap");
@@ -86,6 +88,8 @@ export function startCommunicationLayer(): void {
   // Intelligence Layer nach Registry / Rooms / DeviceManager starten.
   bootstrapIntelligence();
   bootstrapDevicePresentation();
+  bootstrapCapabilityRegistry();
+  registerBuiltinControls();
 
 
   // Aktiven Server beobachten und Manager entsprechend (neu) konfigurieren.
