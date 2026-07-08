@@ -12,3 +12,7 @@ export { useHistoryStore } from "./slices/historyStore";
 export { useRegistryStore } from "./slices/registryStore";
 export { useDiscoveryStore } from "./slices/discoveryStore";
 export { useCommandsStore } from "./slices/commandsStore";
+export { useDashboardsStore } from "./slices/dashboardsStore";
+export { useWidgetInstancesStore } from "./slices/widgetInstancesStore";
+export { useLayoutsStore } from "./slices/layoutsStore";
+export { useWidgetRegistryStore } from "./slices/widgetRegistryStore";
