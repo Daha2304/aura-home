@@ -1,5 +1,6 @@
 import { create } from "zustand";
-import type { Device, DeviceGroup } from "@/models/device";
+import type { Device } from "@/models/device";
+import type { DeviceGroup } from "@/models/deviceGroup";
 import type { CapabilityFlag } from "@/models/deviceCapability";
 import type { DeviceCategory } from "@/models/deviceCategory";
 import type { DeviceTypeId } from "@/models/deviceType";

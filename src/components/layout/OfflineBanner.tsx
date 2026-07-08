@@ -4,6 +4,7 @@ import { WifiOff, RefreshCw, Settings2, Terminal } from "lucide-react";
 import { useConnectionStore } from "@/store/slices/connectionStore";
 import { useSettingsStore } from "@/store/slices/settingsStore";
 import { useWebSocketActions } from "@/hooks/useWebSocketStatus";
+import { useHydrated } from "@/hooks/useHydrated";
 import { cn } from "@/lib/utils";
 
 /**
@@ -12,12 +13,14 @@ import { cn } from "@/lib/utils";
  * die Navigation — bietet lediglich Aktionen an.
  */
 export function OfflineBanner() {
+  const hydrated = useHydrated();
   const status = useConnectionStore((s) => s.status);
   const authenticated = useConnectionStore((s) => s.authenticated);
   const lastError = useConnectionStore((s) => s.lastError);
   const activeServer = useSettingsStore((s) => s.activeServer());
   const { reconnect } = useWebSocketActions();
 
+  if (!hydrated) return null;
   if (!activeServer) return null;
 
   const connected = status === "connected" && authenticated;

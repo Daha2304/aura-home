@@ -35,12 +35,14 @@ import { Route as AppSettingsLanguageRouteImport } from './routes/_app.settings.
 import { Route as AppSettingsDeveloperRouteImport } from './routes/_app.settings.developer'
 import { Route as AppSettingsBackupRouteImport } from './routes/_app.settings.backup'
 import { Route as AppSettingsAppearanceRouteImport } from './routes/_app.settings.appearance'
+import { Route as AppScenesSceneIdRouteImport } from './routes/_app.scenes.$sceneId'
 import { Route as AppRoomsRoomIdRouteImport } from './routes/_app.rooms.$roomId'
 import { Route as AppDevicesDeviceIdRouteImport } from './routes/_app.devices.$deviceId'
 import { Route as AppDashboardsDashboardIdRouteImport } from './routes/_app.dashboards.$dashboardId'
 import { Route as AppDashboardsDashboardIdIndexRouteImport } from './routes/_app.dashboards.$dashboardId.index'
 import { Route as AppSettingsServerNewRouteImport } from './routes/_app.settings.server.new'
 import { Route as AppSettingsServerIdRouteImport } from './routes/_app.settings.server.$id'
+import { Route as AppScenesSceneIdEditRouteImport } from './routes/_app.scenes.$sceneId.edit'
 import { Route as AppDashboardsDashboardIdEditRouteImport } from './routes/_app.dashboards.$dashboardId.edit'
 
 const OnboardingRoute = OnboardingRouteImport.update({
@@ -173,6 +175,11 @@ const AppSettingsAppearanceRoute = AppSettingsAppearanceRouteImport.update({
   path: '/appearance',
   getParentRoute: () => AppSettingsRoute,
 } as any)
+const AppScenesSceneIdRoute = AppScenesSceneIdRouteImport.update({
+  id: '/$sceneId',
+  path: '/$sceneId',
+  getParentRoute: () => AppScenesRoute,
+} as any)
 const AppRoomsRoomIdRoute = AppRoomsRoomIdRouteImport.update({
   id: '/$roomId',
   path: '/$roomId',
@@ -205,6 +212,11 @@ const AppSettingsServerIdRoute = AppSettingsServerIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AppSettingsServerRoute,
 } as any)
+const AppScenesSceneIdEditRoute = AppScenesSceneIdEditRouteImport.update({
+  id: '/edit',
+  path: '/edit',
+  getParentRoute: () => AppScenesSceneIdRoute,
+} as any)
 const AppDashboardsDashboardIdEditRoute =
   AppDashboardsDashboardIdEditRouteImport.update({
     id: '/edit',
@@ -220,7 +232,7 @@ export interface FileRoutesByFullPath {
   '/devices': typeof AppDevicesRouteWithChildren
   '/more': typeof AppMoreRoute
   '/rooms': typeof AppRoomsRouteWithChildren
-  '/scenes': typeof AppScenesRoute
+  '/scenes': typeof AppScenesRouteWithChildren
   '/settings': typeof AppSettingsRouteWithChildren
   '/statistics': typeof AppStatisticsRoute
   '/onboarding/configure': typeof OnboardingConfigureRoute
@@ -233,6 +245,7 @@ export interface FileRoutesByFullPath {
   '/dashboards/$dashboardId': typeof AppDashboardsDashboardIdRouteWithChildren
   '/devices/$deviceId': typeof AppDevicesDeviceIdRoute
   '/rooms/$roomId': typeof AppRoomsRoomIdRoute
+  '/scenes/$sceneId': typeof AppScenesSceneIdRouteWithChildren
   '/settings/appearance': typeof AppSettingsAppearanceRoute
   '/settings/backup': typeof AppSettingsBackupRoute
   '/settings/developer': typeof AppSettingsDeveloperRoute
@@ -242,6 +255,7 @@ export interface FileRoutesByFullPath {
   '/settings/users': typeof AppSettingsUsersRoute
   '/dashboards/': typeof AppDashboardsIndexRoute
   '/dashboards/$dashboardId/edit': typeof AppDashboardsDashboardIdEditRoute
+  '/scenes/$sceneId/edit': typeof AppScenesSceneIdEditRoute
   '/settings/server/$id': typeof AppSettingsServerIdRoute
   '/settings/server/new': typeof AppSettingsServerNewRoute
   '/dashboards/$dashboardId/': typeof AppDashboardsDashboardIdIndexRoute
@@ -251,7 +265,7 @@ export interface FileRoutesByTo {
   '/devices': typeof AppDevicesRouteWithChildren
   '/more': typeof AppMoreRoute
   '/rooms': typeof AppRoomsRouteWithChildren
-  '/scenes': typeof AppScenesRoute
+  '/scenes': typeof AppScenesRouteWithChildren
   '/settings': typeof AppSettingsRouteWithChildren
   '/statistics': typeof AppStatisticsRoute
   '/onboarding/configure': typeof OnboardingConfigureRoute
@@ -264,6 +278,7 @@ export interface FileRoutesByTo {
   '/onboarding': typeof OnboardingIndexRoute
   '/devices/$deviceId': typeof AppDevicesDeviceIdRoute
   '/rooms/$roomId': typeof AppRoomsRoomIdRoute
+  '/scenes/$sceneId': typeof AppScenesSceneIdRouteWithChildren
   '/settings/appearance': typeof AppSettingsAppearanceRoute
   '/settings/backup': typeof AppSettingsBackupRoute
   '/settings/developer': typeof AppSettingsDeveloperRoute
@@ -273,6 +288,7 @@ export interface FileRoutesByTo {
   '/settings/users': typeof AppSettingsUsersRoute
   '/dashboards': typeof AppDashboardsIndexRoute
   '/dashboards/$dashboardId/edit': typeof AppDashboardsDashboardIdEditRoute
+  '/scenes/$sceneId/edit': typeof AppScenesSceneIdEditRoute
   '/settings/server/$id': typeof AppSettingsServerIdRoute
   '/settings/server/new': typeof AppSettingsServerNewRoute
   '/dashboards/$dashboardId': typeof AppDashboardsDashboardIdIndexRoute
@@ -286,7 +302,7 @@ export interface FileRoutesById {
   '/_app/devices': typeof AppDevicesRouteWithChildren
   '/_app/more': typeof AppMoreRoute
   '/_app/rooms': typeof AppRoomsRouteWithChildren
-  '/_app/scenes': typeof AppScenesRoute
+  '/_app/scenes': typeof AppScenesRouteWithChildren
   '/_app/settings': typeof AppSettingsRouteWithChildren
   '/_app/statistics': typeof AppStatisticsRoute
   '/onboarding/configure': typeof OnboardingConfigureRoute
@@ -300,6 +316,7 @@ export interface FileRoutesById {
   '/_app/dashboards/$dashboardId': typeof AppDashboardsDashboardIdRouteWithChildren
   '/_app/devices/$deviceId': typeof AppDevicesDeviceIdRoute
   '/_app/rooms/$roomId': typeof AppRoomsRoomIdRoute
+  '/_app/scenes/$sceneId': typeof AppScenesSceneIdRouteWithChildren
   '/_app/settings/appearance': typeof AppSettingsAppearanceRoute
   '/_app/settings/backup': typeof AppSettingsBackupRoute
   '/_app/settings/developer': typeof AppSettingsDeveloperRoute
@@ -309,6 +326,7 @@ export interface FileRoutesById {
   '/_app/settings/users': typeof AppSettingsUsersRoute
   '/_app/dashboards/': typeof AppDashboardsIndexRoute
   '/_app/dashboards/$dashboardId/edit': typeof AppDashboardsDashboardIdEditRoute
+  '/_app/scenes/$sceneId/edit': typeof AppScenesSceneIdEditRoute
   '/_app/settings/server/$id': typeof AppSettingsServerIdRoute
   '/_app/settings/server/new': typeof AppSettingsServerNewRoute
   '/_app/dashboards/$dashboardId/': typeof AppDashboardsDashboardIdIndexRoute
@@ -336,6 +354,7 @@ export interface FileRouteTypes {
     | '/dashboards/$dashboardId'
     | '/devices/$deviceId'
     | '/rooms/$roomId'
+    | '/scenes/$sceneId'
     | '/settings/appearance'
     | '/settings/backup'
     | '/settings/developer'
@@ -345,6 +364,7 @@ export interface FileRouteTypes {
     | '/settings/users'
     | '/dashboards/'
     | '/dashboards/$dashboardId/edit'
+    | '/scenes/$sceneId/edit'
     | '/settings/server/$id'
     | '/settings/server/new'
     | '/dashboards/$dashboardId/'
@@ -367,6 +387,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/devices/$deviceId'
     | '/rooms/$roomId'
+    | '/scenes/$sceneId'
     | '/settings/appearance'
     | '/settings/backup'
     | '/settings/developer'
@@ -376,6 +397,7 @@ export interface FileRouteTypes {
     | '/settings/users'
     | '/dashboards'
     | '/dashboards/$dashboardId/edit'
+    | '/scenes/$sceneId/edit'
     | '/settings/server/$id'
     | '/settings/server/new'
     | '/dashboards/$dashboardId'
@@ -402,6 +424,7 @@ export interface FileRouteTypes {
     | '/_app/dashboards/$dashboardId'
     | '/_app/devices/$deviceId'
     | '/_app/rooms/$roomId'
+    | '/_app/scenes/$sceneId'
     | '/_app/settings/appearance'
     | '/_app/settings/backup'
     | '/_app/settings/developer'
@@ -411,6 +434,7 @@ export interface FileRouteTypes {
     | '/_app/settings/users'
     | '/_app/dashboards/'
     | '/_app/dashboards/$dashboardId/edit'
+    | '/_app/scenes/$sceneId/edit'
     | '/_app/settings/server/$id'
     | '/_app/settings/server/new'
     | '/_app/dashboards/$dashboardId/'
@@ -605,6 +629,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsAppearanceRouteImport
       parentRoute: typeof AppSettingsRoute
     }
+    '/_app/scenes/$sceneId': {
+      id: '/_app/scenes/$sceneId'
+      path: '/$sceneId'
+      fullPath: '/scenes/$sceneId'
+      preLoaderRoute: typeof AppScenesSceneIdRouteImport
+      parentRoute: typeof AppScenesRoute
+    }
     '/_app/rooms/$roomId': {
       id: '/_app/rooms/$roomId'
       path: '/$roomId'
@@ -646,6 +677,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/settings/server/$id'
       preLoaderRoute: typeof AppSettingsServerIdRouteImport
       parentRoute: typeof AppSettingsServerRoute
+    }
+    '/_app/scenes/$sceneId/edit': {
+      id: '/_app/scenes/$sceneId/edit'
+      path: '/edit'
+      fullPath: '/scenes/$sceneId/edit'
+      preLoaderRoute: typeof AppScenesSceneIdEditRouteImport
+      parentRoute: typeof AppScenesSceneIdRoute
     }
     '/_app/dashboards/$dashboardId/edit': {
       id: '/_app/dashboards/$dashboardId/edit'
@@ -711,6 +749,29 @@ const AppRoomsRouteWithChildren = AppRoomsRoute._addFileChildren(
   AppRoomsRouteChildren,
 )
 
+interface AppScenesSceneIdRouteChildren {
+  AppScenesSceneIdEditRoute: typeof AppScenesSceneIdEditRoute
+}
+
+const AppScenesSceneIdRouteChildren: AppScenesSceneIdRouteChildren = {
+  AppScenesSceneIdEditRoute: AppScenesSceneIdEditRoute,
+}
+
+const AppScenesSceneIdRouteWithChildren =
+  AppScenesSceneIdRoute._addFileChildren(AppScenesSceneIdRouteChildren)
+
+interface AppScenesRouteChildren {
+  AppScenesSceneIdRoute: typeof AppScenesSceneIdRouteWithChildren
+}
+
+const AppScenesRouteChildren: AppScenesRouteChildren = {
+  AppScenesSceneIdRoute: AppScenesSceneIdRouteWithChildren,
+}
+
+const AppScenesRouteWithChildren = AppScenesRoute._addFileChildren(
+  AppScenesRouteChildren,
+)
+
 interface AppSettingsServerRouteChildren {
   AppSettingsServerIdRoute: typeof AppSettingsServerIdRoute
   AppSettingsServerNewRoute: typeof AppSettingsServerNewRoute
@@ -754,7 +815,7 @@ interface AppRouteChildren {
   AppDevicesRoute: typeof AppDevicesRouteWithChildren
   AppMoreRoute: typeof AppMoreRoute
   AppRoomsRoute: typeof AppRoomsRouteWithChildren
-  AppScenesRoute: typeof AppScenesRoute
+  AppScenesRoute: typeof AppScenesRouteWithChildren
   AppSettingsRoute: typeof AppSettingsRouteWithChildren
   AppStatisticsRoute: typeof AppStatisticsRoute
   AppIndexRoute: typeof AppIndexRoute
@@ -766,7 +827,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppDevicesRoute: AppDevicesRouteWithChildren,
   AppMoreRoute: AppMoreRoute,
   AppRoomsRoute: AppRoomsRouteWithChildren,
-  AppScenesRoute: AppScenesRoute,
+  AppScenesRoute: AppScenesRouteWithChildren,
   AppSettingsRoute: AppSettingsRouteWithChildren,
   AppStatisticsRoute: AppStatisticsRoute,
   AppIndexRoute: AppIndexRoute,
