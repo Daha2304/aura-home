@@ -9,8 +9,14 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as AppRouteImport } from './routes/_app'
+import { Route as OnboardingIndexRouteImport } from './routes/onboarding.index'
 import { Route as AppIndexRouteImport } from './routes/_app.index'
+import { Route as OnboardingWelcomeRouteImport } from './routes/onboarding.welcome'
+import { Route as OnboardingServerRouteImport } from './routes/onboarding.server'
+import { Route as OnboardingIntroRouteImport } from './routes/onboarding.intro'
+import { Route as OnboardingConfigureRouteImport } from './routes/onboarding.configure'
 import { Route as AppStatisticsRouteImport } from './routes/_app.statistics'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppScenesRouteImport } from './routes/_app.scenes'
@@ -28,14 +34,44 @@ import { Route as AppSettingsAppearanceRouteImport } from './routes/_app.setting
 import { Route as AppRoomsRoomIdRouteImport } from './routes/_app.rooms.$roomId'
 import { Route as AppDevicesDeviceIdRouteImport } from './routes/_app.devices.$deviceId'
 
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppRoute = AppRouteImport.update({
   id: '/_app',
   getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingIndexRoute = OnboardingIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => OnboardingRoute,
 } as any)
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AppRoute,
+} as any)
+const OnboardingWelcomeRoute = OnboardingWelcomeRouteImport.update({
+  id: '/welcome',
+  path: '/welcome',
+  getParentRoute: () => OnboardingRoute,
+} as any)
+const OnboardingServerRoute = OnboardingServerRouteImport.update({
+  id: '/server',
+  path: '/server',
+  getParentRoute: () => OnboardingRoute,
+} as any)
+const OnboardingIntroRoute = OnboardingIntroRouteImport.update({
+  id: '/intro',
+  path: '/intro',
+  getParentRoute: () => OnboardingRoute,
+} as any)
+const OnboardingConfigureRoute = OnboardingConfigureRouteImport.update({
+  id: '/configure',
+  path: '/configure',
+  getParentRoute: () => OnboardingRoute,
 } as any)
 const AppStatisticsRoute = AppStatisticsRouteImport.update({
   id: '/statistics',
@@ -121,6 +157,7 @@ const AppDevicesDeviceIdRoute = AppDevicesDeviceIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
+  '/onboarding': typeof OnboardingRouteWithChildren
   '/automations': typeof AppAutomationsRoute
   '/devices': typeof AppDevicesRouteWithChildren
   '/more': typeof AppMoreRoute
@@ -128,6 +165,11 @@ export interface FileRoutesByFullPath {
   '/scenes': typeof AppScenesRoute
   '/settings': typeof AppSettingsRouteWithChildren
   '/statistics': typeof AppStatisticsRoute
+  '/onboarding/configure': typeof OnboardingConfigureRoute
+  '/onboarding/intro': typeof OnboardingIntroRoute
+  '/onboarding/server': typeof OnboardingServerRoute
+  '/onboarding/welcome': typeof OnboardingWelcomeRoute
+  '/onboarding/': typeof OnboardingIndexRoute
   '/devices/$deviceId': typeof AppDevicesDeviceIdRoute
   '/rooms/$roomId': typeof AppRoomsRoomIdRoute
   '/settings/appearance': typeof AppSettingsAppearanceRoute
@@ -146,7 +188,12 @@ export interface FileRoutesByTo {
   '/scenes': typeof AppScenesRoute
   '/settings': typeof AppSettingsRouteWithChildren
   '/statistics': typeof AppStatisticsRoute
+  '/onboarding/configure': typeof OnboardingConfigureRoute
+  '/onboarding/intro': typeof OnboardingIntroRoute
+  '/onboarding/server': typeof OnboardingServerRoute
+  '/onboarding/welcome': typeof OnboardingWelcomeRoute
   '/': typeof AppIndexRoute
+  '/onboarding': typeof OnboardingIndexRoute
   '/devices/$deviceId': typeof AppDevicesDeviceIdRoute
   '/rooms/$roomId': typeof AppRoomsRoomIdRoute
   '/settings/appearance': typeof AppSettingsAppearanceRoute
@@ -160,6 +207,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
+  '/onboarding': typeof OnboardingRouteWithChildren
   '/_app/automations': typeof AppAutomationsRoute
   '/_app/devices': typeof AppDevicesRouteWithChildren
   '/_app/more': typeof AppMoreRoute
@@ -167,7 +215,12 @@ export interface FileRoutesById {
   '/_app/scenes': typeof AppScenesRoute
   '/_app/settings': typeof AppSettingsRouteWithChildren
   '/_app/statistics': typeof AppStatisticsRoute
+  '/onboarding/configure': typeof OnboardingConfigureRoute
+  '/onboarding/intro': typeof OnboardingIntroRoute
+  '/onboarding/server': typeof OnboardingServerRoute
+  '/onboarding/welcome': typeof OnboardingWelcomeRoute
   '/_app/': typeof AppIndexRoute
+  '/onboarding/': typeof OnboardingIndexRoute
   '/_app/devices/$deviceId': typeof AppDevicesDeviceIdRoute
   '/_app/rooms/$roomId': typeof AppRoomsRoomIdRoute
   '/_app/settings/appearance': typeof AppSettingsAppearanceRoute
@@ -182,6 +235,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/onboarding'
     | '/automations'
     | '/devices'
     | '/more'
@@ -189,6 +243,11 @@ export interface FileRouteTypes {
     | '/scenes'
     | '/settings'
     | '/statistics'
+    | '/onboarding/configure'
+    | '/onboarding/intro'
+    | '/onboarding/server'
+    | '/onboarding/welcome'
+    | '/onboarding/'
     | '/devices/$deviceId'
     | '/rooms/$roomId'
     | '/settings/appearance'
@@ -207,7 +266,12 @@ export interface FileRouteTypes {
     | '/scenes'
     | '/settings'
     | '/statistics'
+    | '/onboarding/configure'
+    | '/onboarding/intro'
+    | '/onboarding/server'
+    | '/onboarding/welcome'
     | '/'
+    | '/onboarding'
     | '/devices/$deviceId'
     | '/rooms/$roomId'
     | '/settings/appearance'
@@ -220,6 +284,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_app'
+    | '/onboarding'
     | '/_app/automations'
     | '/_app/devices'
     | '/_app/more'
@@ -227,7 +292,12 @@ export interface FileRouteTypes {
     | '/_app/scenes'
     | '/_app/settings'
     | '/_app/statistics'
+    | '/onboarding/configure'
+    | '/onboarding/intro'
+    | '/onboarding/server'
+    | '/onboarding/welcome'
     | '/_app/'
+    | '/onboarding/'
     | '/_app/devices/$deviceId'
     | '/_app/rooms/$roomId'
     | '/_app/settings/appearance'
@@ -241,10 +311,18 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
+  OnboardingRoute: typeof OnboardingRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_app': {
       id: '/_app'
       path: ''
@@ -252,12 +330,47 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/onboarding/': {
+      id: '/onboarding/'
+      path: '/'
+      fullPath: '/onboarding/'
+      preLoaderRoute: typeof OnboardingIndexRouteImport
+      parentRoute: typeof OnboardingRoute
+    }
     '/_app/': {
       id: '/_app/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/onboarding/welcome': {
+      id: '/onboarding/welcome'
+      path: '/welcome'
+      fullPath: '/onboarding/welcome'
+      preLoaderRoute: typeof OnboardingWelcomeRouteImport
+      parentRoute: typeof OnboardingRoute
+    }
+    '/onboarding/server': {
+      id: '/onboarding/server'
+      path: '/server'
+      fullPath: '/onboarding/server'
+      preLoaderRoute: typeof OnboardingServerRouteImport
+      parentRoute: typeof OnboardingRoute
+    }
+    '/onboarding/intro': {
+      id: '/onboarding/intro'
+      path: '/intro'
+      fullPath: '/onboarding/intro'
+      preLoaderRoute: typeof OnboardingIntroRouteImport
+      parentRoute: typeof OnboardingRoute
+    }
+    '/onboarding/configure': {
+      id: '/onboarding/configure'
+      path: '/configure'
+      fullPath: '/onboarding/configure'
+      preLoaderRoute: typeof OnboardingConfigureRouteImport
+      parentRoute: typeof OnboardingRoute
     }
     '/_app/statistics': {
       id: '/_app/statistics'
@@ -446,8 +559,29 @@ const AppRouteChildren: AppRouteChildren = {
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
+interface OnboardingRouteChildren {
+  OnboardingConfigureRoute: typeof OnboardingConfigureRoute
+  OnboardingIntroRoute: typeof OnboardingIntroRoute
+  OnboardingServerRoute: typeof OnboardingServerRoute
+  OnboardingWelcomeRoute: typeof OnboardingWelcomeRoute
+  OnboardingIndexRoute: typeof OnboardingIndexRoute
+}
+
+const OnboardingRouteChildren: OnboardingRouteChildren = {
+  OnboardingConfigureRoute: OnboardingConfigureRoute,
+  OnboardingIntroRoute: OnboardingIntroRoute,
+  OnboardingServerRoute: OnboardingServerRoute,
+  OnboardingWelcomeRoute: OnboardingWelcomeRoute,
+  OnboardingIndexRoute: OnboardingIndexRoute,
+}
+
+const OnboardingRouteWithChildren = OnboardingRoute._addFileChildren(
+  OnboardingRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
+  OnboardingRoute: OnboardingRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
