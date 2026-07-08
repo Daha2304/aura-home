@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   BarChart3,
   ChevronRight,
+  Layers,
   Settings as SettingsIcon,
   Workflow,
 } from "lucide-react";
@@ -22,6 +23,7 @@ interface Entry {
 }
 
 const entries: Entry[] = [
+  { to: "/groups", label: "Gerätegruppen", hint: "Verschachtelte Gruppen, Fan-out, Schnellaktionen", icon: Layers },
   { to: "/automations", label: "Automationen", hint: "Auslöser, Bedingungen, Aktionen", icon: Workflow },
   { to: "/statistics", label: "Statistik", hint: "Energie, Klima, Verlauf", icon: BarChart3 },
   { to: "/settings", label: "Einstellungen", hint: "Server, Benutzer, Themes", icon: SettingsIcon },
