@@ -7,3 +7,5 @@ export { useAutomationsStore } from "./slices/automationsStore";
 export { useSettingsStore } from "./slices/settingsStore";
 export { useUsersStore } from "./slices/usersStore";
 export { useConnectionStore } from "./slices/connectionStore";
+export { useNotificationsStore } from "./slices/notificationsStore";
+export { useHistoryStore } from "./slices/historyStore";

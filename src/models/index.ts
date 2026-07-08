@@ -8,3 +8,5 @@ export * from "./user";
 export * from "./server";
 export * from "./widget";
 export * from "./events";
+export * from "./notification";
+export * from "./history";

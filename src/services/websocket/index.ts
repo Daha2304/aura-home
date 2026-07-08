@@ -1,2 +1,4 @@
 export * from "./types";
-export * from "./WebSocketClient";
+export * from "./WebSocketManager";
+export * from "./dispatcher";
+export * from "./protocol";
