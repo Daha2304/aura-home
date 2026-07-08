@@ -1,93 +1,98 @@
 
-# Teil 5A – Dashboard Engine & Widget Framework
+# Teil 5B – Dashboard Editor (visuell)
 
-Reine Architekturebene. Keine sichtbaren Widgets, keine Dashboard-UI, keine Geräteanzeige. Bestehender `dashboardStore` (nur `widgets`/Favorites) und `models/widget.ts` bleiben lauffähig und werden schrittweise auf das neue System gehoben — nichts wird gelöscht oder verschlechtert.
+Voll funktionsfähiger Editor auf Basis der in 5A gebauten Engine. Keine echten Smart-Home-Widgets — der Editor arbeitet mit Registry-Platzhaltern. Legacy `WidgetGrid` bleibt unverändert; die Dashboard-Route wird auf die neue Canvas umgezogen.
 
-## 1. Neue Models (`src/models/`)
+## 1. Services (`src/services/dashboards/editor/`)
 
-- `dashboard.ts` – `Dashboard`, `DashboardId`, `DashboardVisibility`, `DashboardBackground`, `DashboardTags`, `DashboardMeta`
-- `layout.ts` – `LayoutBreakpoint` (`phone-portrait` | `phone-landscape` | `tablet-portrait` | `tablet-landscape` | `desktop`), `LayoutGrid`, `LayoutMode` (`grid` | `snap` | `free` | `responsive`), `WidgetPlacement` (`gridX`, `gridY`, `w`, `h`, `zIndex`, `rotation?`)
-- `widgetInstance.ts` – `WidgetInstance` (id, widgetType, title/subtitle, icon, placement pro Layout, layer, visibility, styling: color/theme/padding/margin/radius/shadow/blur/opacity, animation, refreshInterval, dataSource, config, lifecycle, custom)
-- `widgetDescriptor.ts` – `WidgetDescriptor` (name, category, description, icon, defaultSize, minSize, maxSize, supportedLayouts, settingsSchema, capabilities, version, factory)
-- `widgetCategory.ts` – Enum-Union (`favorites` | `devices` | `rooms` | `scenes` | `automations` | `media` | `energy` | `climate` | `sensors` | `cameras` | `statistics` | `charts` | `system` | `custom`)
-- `widgetLifecycle.ts` – Union (`new` | `loading` | `ready` | `updating` | `error` | `hidden` | `disabled` | `deleted`)
-- `widgetAnimation.ts` – Union (`none` | `fade` | `scale` | `slide` | `blur` | `glass` | `spring`)
-- `dashboardEvents.ts` – Event-Payload-Typen
-- `models/index.ts` – neue Exports einhängen; alter `Widget`-Typ bleibt als Legacy-Alias erhalten.
+- `EditorController.ts` – Singleton, orchestriert Edit-Session (aktives Dashboard, Breakpoint, Selection, Clipboard, Modus). Emitter `editorEvents`.
+- `HistoryStack.ts` – Command-Pattern (`do/undo`), begrenzte Tiefe, coalescing für drag/resize.
+- `Clipboard.ts` – copy/cut/paste/duplicate über `widgetManager`.
+- `Guides.ts` – berechnet magnetische Hilfslinien und Snap-Offsets aus Grid + Nachbar-Placements.
+- `AutoSave.ts` – debounced `dashboardManager.persist()`, mit Version-Bump im Dashboard-Meta.
+- `PlaceholderWidgets.ts` – registriert bei Editor-Mount 6 generische Platzhalter-Descriptors (`placeholder.card`, `placeholder.tile`, `placeholder.wide`, `placeholder.tall`, `placeholder.hero`, `placeholder.mini`) in `widgetRegistry` — reine Layout-Blöcke, keine Smart-Home-Logik.
 
-## 2. Widget Registry (`src/services/widgets/`)
+## 2. Store (`src/store/slices/editorStore.ts`)
 
-- `WidgetRegistry.ts` – Singleton, Map-basiert (O(1)), `register(descriptor)`, `unregister`, `get`, `list`, `listByCategory`, `has`, `versions`. Duplicate/Version-Konflikte → `errorBus`.
-- `WidgetDescriptor.ts` – Helper `defineWidget()` für typsichere Registrierung, `createInstance(descriptor, overrides)`.
-- `builtin/index.ts` – vorbereitete leere Kategorie-Buckets; **noch keine echten Widgets registrieren** (nur Platzhalter-Descriptors optional weglassen). Reine Pluginschnittstelle.
-- `events.ts` – `widgetEvents` Emitter (`registered`, `unregistered`).
-- `index.ts` – Public API.
+`useEditorStore` (nicht persistiert):
+- `mode: "normal" | "edit"`, `activeBreakpoint`, `zoom` (0.5–1.5), `showGrid`, `showGuides`, `showSpacing`, `snap`, `lockAspect`
+- `selection: Set<WidgetInstanceId>`, `hoverId`, `dragging`, `resizing`
+- `clipboard`, `history: { past, future }` (Referenzen; Daten in `HistoryStack`)
+- Actions: `enterEdit`, `exitEdit`, `select`, `toggleSelection`, `clearSelection`, `setBreakpoint`, `setZoom`, `toggleGrid`/`Guides`/`Spacing`/`Snap`/`LockAspect`, `setDragging`, `setResizing`
 
-## 3. Widget Manager (`src/services/widgets/WidgetManager.ts`)
+## 3. Hooks (`src/hooks/`)
 
-Verwaltet Instanzen unabhängig vom Dashboard:
-- `create(widgetType, overrides)`, `update`, `remove`, `duplicate`
-- `move(instanceId, layout, placement)`, `resize`
-- Lifecycle-Transitions (FSM analog `LifecycleMachine`)
-- Import/Export (JSON), Versionierung, Migrationssystem (`migrations/v1_to_v2.ts` Skeleton)
-- Reagiert nicht auf UI; feuert Events über `dashboardEvents`.
+- `useDashboardEditor.ts` – öffentliche API für Routen (Selektoren + Actions gebündelt, memoisiert).
+- `useDragWidget.ts` – Pointer Events, 60 FPS via `requestAnimationFrame`, Touch + Mouse + Pen. Meldet an `EditorController`, ruft `widgetManager.move` beim Drop.
+- `useResizeWidget.ts` – 8 Griffe, `lockAspect`-Support, Min/Max aus Descriptor, Snap.
+- `useLongPressEdit.ts` – Long-Press (500 ms) auf Widget aktiviert Edit-Mode + Selection.
+- `useEditorKeyboard.ts` – Delete, Cmd/Ctrl+C/X/V/D/Z/Shift-Z, Pfeiltasten (1 Zelle), Esc.
+- `useAutoSave.ts` – bindet Store-Änderungen an `AutoSave`.
 
-## 4. Dashboard Manager (`src/services/dashboards/DashboardManager.ts`)
+## 4. Komponenten (`src/components/dashboard/editor/`)
 
-- `create`, `remove`, `duplicate`, `import`, `export`, `activate`, `switch`, `reorder`, `update`
-- Verwaltet aktive Dashboard-ID
-- Emittiert: `dashboardCreated|Deleted|Updated|Selected`, `widgetCreated|Deleted|Moved|Resized|Updated`, `layoutChanged`
-- Delegiert Widgets an `WidgetManager`.
+- `DashboardCanvas.tsx` – Haupt-Container, rendert Grid + Widgets, verwaltet Zoom-Transform, Breakpoint-Viewport-Skalierung. Nutzt Framer-Motion `layout`-Animationen.
+- `GridBackground.tsx` – SVG-Raster, sichtbar nur im Edit-Mode oder wenn `showGrid`.
+- `GuidesOverlay.tsx` – renderbare Hilfslinien während drag/resize (aus `Guides`).
+- `SpacingOverlay.tsx` – Abstands-Badges zu Nachbarn.
+- `WidgetFrame.tsx` – wrappt jede Instanz, zeigt Selection-Border, Resize-Handles, Kontextmenü-Trigger; delegiert Rendering an `WidgetRenderer`.
+- `WidgetRenderer.tsx` – löst Descriptor über `widgetRegistry` auf; wenn `render` fehlt → `PlaceholderTile` mit Icon/Titel/Grid-Info.
+- `PlaceholderTile.tsx` – hübscher Glass-Block für Platzhalter-Descriptors.
+- `ResizeHandles.tsx` – 8 Griffe (N/E/S/W + Ecken) mit großen Touch-Zielflächen.
+- `SelectionBox.tsx` – Rahmen + Tool-Chips (duplicate, delete, more).
+- `EditorTopBar.tsx` – Fertig / Undo / Redo / Zoom / Breakpoint-Switcher / Hilfen-Toggles / Import-Export.
+- `BreakpointSwitcher.tsx` – Chips für die 5 Breakpoints, feedbackt aktiven Viewport.
+- `ZoomControl.tsx` – Steps 50/75/100/125/150 %.
+- `WidgetToolbox.tsx` – seitliches Sheet (rechts auf Desktop, Bottom Sheet auf Mobile) mit Kategorie-Tabs, Suche, Favoriten (Prep), Drag-Source für Canvas.
+- `ToolboxItem.tsx` – draggable Descriptor-Kachel.
+- `PropertyEditor.tsx` – Sheet für ausgewählte Instanz: Titel, Untertitel, Icon-Picker, Farb-Picker, Opacity/Blur/Shadow-Slider, Padding/Margin/Radius, Animation-Select, Layer, Visibility.
+- `PropertyField.tsx`, `SliderField.tsx`, `ColorField.tsx`, `IconField.tsx`, `AnimationField.tsx` – Bausteine.
+- `ContextMenu.tsx` – rechtsklick / long-press: duplicate, delete, cut, copy, bring-to-front/back.
+- `EmptyDashboardHint.tsx` – Aufforderung im Edit-Mode.
 
-## 5. Layout Engine (`src/services/dashboards/LayoutEngine.ts`)
+## 5. Routen
 
-Vorbereitung (keine Rendering-Logik):
-- Grid-Berechnung, Snap, Kollisionserkennung (Skelett), Responsive-Mapping zwischen Breakpoints
-- Utility `resolvePlacement(instance, breakpoint)` mit Fallback-Kaskade
-- `autoFit(size, grid)`
+- Bestehendes `_app.index.tsx` bleibt Landing, aber leitet auf aktives Dashboard weiter.
+- Neu: `_app.dashboards.$dashboardId.tsx` – Live-Ansicht (Normal-Mode) mit Toggle in Edit-Mode.
+- Neu: `_app.dashboards.tsx` – Listen-Route (Dashboards-Übersicht mit Create/Duplicate/Import/Export/Reorder).
+- Neu: `_app.dashboards.index.tsx` – Redirect zu aktivem Dashboard.
+- `BottomNav`/`layout` erhalten keinen neuen Eintrag (nur Verlinkung aus Home).
 
-## 6. Persistenz (`src/services/dashboards/DashboardCache.ts`)
+## 6. Import / Export
 
-- Versioniertes LocalStorage-Schema (`SCHEMA_VERSION`, `migrate()`)
-- Debounced Persist analog `DeviceCache`
-- Getrennt gespeichert: Dashboards, Widget-Instanzen, Layouts pro Breakpoint.
+`Export` erzeugt Datei über `dashboardManager.export`. `Import` per `<input type="file">` → `dashboardManager.import`. Fehler über bestehenden `errorBus`/`ErrorDialog` (Onboarding-Komponente wiederverwendbar oder minimaler neuer Dialog).
 
-## 7. Stores (`src/store/slices/`)
+## 7. Animationen
 
-Neue Slices (Zustand + persist mit versionierten migrations):
-- `dashboardsStore.ts` – `Map<DashboardId, Dashboard>`, `order`, `activeId`, Selectors (`byId`, `favorites`, `visible`)
-- `widgetInstancesStore.ts` – `Map<InstanceId, WidgetInstance>`, `byDashboard`, `byType`, `byLifecycle`
-- `layoutsStore.ts` – `Map<DashboardId, Record<Breakpoint, LayoutGrid>>`
-- `widgetRegistryStore.ts` – reaktiver Snapshot der Registry (analog `registryStore`)
+- Framer Motion `layout`, `AnimatePresence` für Widget-Enter/Exit
+- `whileTap`/`whileHover` für Toolbox-Items
+- Spring-Presets aus `themes/motion`
+- Keine CSS-Keyframe-Tricks
 
-Bestehender `dashboardStore.ts` bleibt bestehen und wird intern als Legacy-Adapter markiert (nicht entfernt); neue Screens verwenden ausschließlich die neuen Slices.
+## 8. Performance
 
-## 8. Events (`src/services/dashboards/DashboardEvents.ts`)
+- `WidgetFrame` mit `React.memo` + gezielten Zustand-Selektoren
+- Placements aus `useLayoutsStore` via `useShallow`
+- Drag/Resize läuft in `useRef`-basierter Delta-Berechnung ohne State-Setzen pro Frame; State wird erst am Drop-Ende committet
+- `HistoryStack`-Einträge coalescen aufeinander folgende move/resize innerhalb 200 ms
 
-Öffentlicher `dashboardEvents` Emitter mit exakt den geforderten Events. Subscriptions unabhängig von React.
+## 9. Touch
 
-## 9. Bootstrap-Integration
+- Long-Press (500 ms) → Edit-Mode + Selection + Haptic
+- Touch-Handles ≥ 32 px, mit größerer unsichtbarer Hitbox
+- Passive-listener-Regeln beachtet, `touchAction: "none"` nur während drag
 
-`src/services/bootstrap.ts`: nach Registry/Discovery-Init zusätzlich:
-- `widgetRegistry.hydrateBuiltin()` (leer, aber ruft Plugin-Hook)
-- `dashboardCache.load()` → Stores hydratisieren
-- Keine Widgets erzeugen, keine Default-Dashboards (nur wenn Cache leer: ein leeres „Home"-Dashboard als Platzhalter, keine Widgets).
+## 10. i18n
 
-## 10. Performance
+Neue Keys `editor.*` (Buttons, Property-Labels, Breakpoint-Namen, Toolbox-Kategorien) in `en.ts` + `de.ts`.
 
-- Alle Lookups über `Map` (O(1))
-- Selectors mit `zustand`-`shallow`, memoisierte Derivate
-- Keine React-Komponenten in diesem Schritt.
+## 11. Verifikation
 
-## Nicht enthalten (explizit)
+- `bunx tsgo --noEmit`
+- Manuell: Dashboard erstellen → Widgets aus Toolbox ziehen (Platzhalter) → verschieben, resizen, Property-Editor, Undo/Redo, Copy/Paste, Import/Export, Breakpoint-Wechsel.
 
-- Keine echten Widget-Implementierungen (Licht, Klima, Kamera, …)
-- Keine Dashboard-UI/Routes/Editor
-- Keine Änderungen am Onboarding, an Discovery oder am WebSocket-Layer
-- Keine Löschung bestehender Legacy-Strukturen.
+## Nicht enthalten
 
-## Verifikation
-
-- `bunx tsgo --noEmit` grün
-- `bootstrap` läuft ohne Fehler, Cache Round-Trip getestet via kleinem Dev-Log
-- Registry akzeptiert Test-Descriptor via Plugin-API (nur intern verifiziert, nicht gerendert).
+- Keine echten Smart-Home-Widgets, Geräte, Räume, Szenen, Kameras
+- Keine Server-Sync-Änderungen
+- Bestehender `dashboardStore` (Legacy) und `WidgetGrid` bleiben unangetastet
