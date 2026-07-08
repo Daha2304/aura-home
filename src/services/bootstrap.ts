@@ -19,6 +19,7 @@ import "@/store/slices/widgetRegistryStore";
 import { dashboardManager } from "@/services/dashboards/DashboardManager";
 import { registerBuiltinRoomTypes, roomManager } from "@/services/rooms";
 import { bootstrapIntelligence, stopIntelligence } from "@/services/intelligence";
+import { bootstrapDevicePresentation } from "@/services/devices/presentation";
 
 
 const log = createLogger("bootstrap");
