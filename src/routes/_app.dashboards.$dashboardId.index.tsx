@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useDashboardsStore } from "@/store/slices/dashboardsStore";
 import { dashboardManager } from "@/services/dashboards/DashboardManager";
 import { registerSystemWidgets } from "@/services/widgets/builtin/system";
@@ -15,10 +15,17 @@ function DashboardRuntimeRoute() {
   const { dashboardId } = Route.useParams();
   const dashboard = useDashboardsStore((s) => s.dashboards.get(dashboardId));
   const navigate = useNavigate();
+  const seeded = useRef<string | null>(null);
 
   useEffect(() => {
     registerSystemWidgets();
-    if (dashboard) ensureRuntimeDefaults(dashboard);
+  }, []);
+
+  useEffect(() => {
+    if (dashboard && seeded.current !== dashboard.id) {
+      seeded.current = dashboard.id;
+      ensureRuntimeDefaults(dashboard);
+    }
   }, [dashboard]);
 
   useEffect(() => {
@@ -31,3 +38,4 @@ function DashboardRuntimeRoute() {
   if (!dashboard) return null;
   return <DashboardRuntime dashboard={dashboard} />;
 }
+
