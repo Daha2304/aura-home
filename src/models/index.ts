@@ -28,3 +28,9 @@ export * from "./widgetAnimation";
 export * from "./widgetInstance";
 export * from "./widgetDescriptor";
 export * from "./dashboardEvents";
+export * from "./roomMetrics";
+export * from "./houseMetrics";
+export * from "./roomHealth";
+export * from "./insight";
+export * from "./intelligenceEvents";
+
