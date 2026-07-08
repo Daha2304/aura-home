@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { BottomNav } from "./BottomNav";
+import { OfflineBanner } from "./OfflineBanner";
 
 interface Props {
   children: ReactNode;
@@ -12,6 +13,7 @@ export function AppShell({ children }: Props) {
         className="mx-auto w-full max-w-md px-4 pt-[max(env(safe-area-inset-top),1rem)] pb-32"
         style={{ minHeight: "100dvh" }}
       >
+        <OfflineBanner />
         {children}
       </main>
       <BottomNav />
