@@ -1,10 +1,10 @@
 import { useSyncExternalStore } from "react";
 import { breakpointDetector } from "@/services/runtime/BreakpointDetector";
+import type { LayoutBreakpoint } from "@/models/layout";
 
-export function useBreakpoint() {
-  return useSyncExternalStore(
-    (l) => breakpointDetector.subscribe(l),
-    () => breakpointDetector.get(),
-    () => breakpointDetector.get(),
-  );
+const subscribe = (l: () => void) => breakpointDetector.subscribe(l);
+const getSnapshot = (): LayoutBreakpoint => breakpointDetector.get();
+
+export function useBreakpoint(): LayoutBreakpoint {
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
