@@ -67,6 +67,10 @@ export function startCommunicationLayer(): void {
     }),
   );
 
+  // Dashboards aus Cache hydratisieren und Bootstrap-Dashboard sicherstellen.
+  dashboardManager.hydrate();
+  dashboardManager.ensureBootstrapDashboard();
+
   deviceManager.start();
   discoveryEngine.start();
   commandQueue.start();
