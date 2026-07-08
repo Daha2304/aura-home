@@ -28,6 +28,8 @@ export const en: Dictionary = {
     idle: "Not connected",
     connecting: "Connecting …",
     connected: "Connected",
+    authenticating: "Authenticating …",
+    authenticated: "Authenticated",
     reconnecting: "Reconnecting …",
     disconnected: "Disconnected",
     error: "Error",

@@ -4,7 +4,8 @@
  * externes Emitter-Package einschleppen.
  */
 
-export type EventMap = Record<string, unknown>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type EventMap = Record<string, any>;
 export type Listener<T> = (payload: T) => void;
 export type Unsubscribe = () => void;
 
