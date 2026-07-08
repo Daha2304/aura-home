@@ -1,6 +1,12 @@
 import { createLogger, setGlobalLogLevel } from "@/services/logger/Logger";
 import { errorBus } from "@/services/errors/ErrorBus";
 import { wsManager } from "@/services/websocket/WebSocketManager";
+import {
+  appsocketProtocol,
+  appsocketCollectStateIds,
+  appsocketResetIndex,
+  setAppsocketDebug,
+} from "@/services/websocket/appsocketProtocol";
 import { deviceManager } from "@/services/deviceManager/DeviceManager";
 import { discoveryEngine } from "@/services/discovery/DiscoveryEngine";
 import { commandQueue } from "@/services/commands/CommandQueue";
