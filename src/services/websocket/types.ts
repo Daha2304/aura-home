@@ -22,6 +22,7 @@ export interface WsManagerEventMap {
   authentication_failed: { reason?: string };
   message: WsIncomingEvent;
   raw: unknown;
+  sent: WsOutgoingMessage;
   heartbeat: { latencyMs: number };
   error: AppErrorPayload;
   reconnecting: { attempt: number; delayMs: number };
