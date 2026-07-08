@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { Heart, Info, MapPin, Tag, Eye } from "lucide-react";
 import type { Device } from "@/models/device";
 import { BottomSheet } from "@/components/ds/cards/BottomSheet";
@@ -11,10 +11,6 @@ interface Props {
   onClose: () => void;
 }
 
-/**
- * Quick-Actions BottomSheet. Enthält KEINE Gerätesteuerung — nur
- * Navigations- und Metadaten-Aktionen.
- */
 export function DeviceQuickActions({ device, onClose }: Props) {
   if (!device) return null;
   const store = useDevicesStore.getState();
