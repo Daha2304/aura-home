@@ -35,6 +35,8 @@ import { Route as AppSettingsBackupRouteImport } from './routes/_app.settings.ba
 import { Route as AppSettingsAppearanceRouteImport } from './routes/_app.settings.appearance'
 import { Route as AppRoomsRoomIdRouteImport } from './routes/_app.rooms.$roomId'
 import { Route as AppDevicesDeviceIdRouteImport } from './routes/_app.devices.$deviceId'
+import { Route as AppSettingsServerNewRouteImport } from './routes/_app.settings.server.new'
+import { Route as AppSettingsServerIdRouteImport } from './routes/_app.settings.server.$id'
 
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
@@ -166,6 +168,16 @@ const AppDevicesDeviceIdRoute = AppDevicesDeviceIdRouteImport.update({
   path: '/$deviceId',
   getParentRoute: () => AppDevicesRoute,
 } as any)
+const AppSettingsServerNewRoute = AppSettingsServerNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AppSettingsServerRoute,
+} as any)
+const AppSettingsServerIdRoute = AppSettingsServerIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AppSettingsServerRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
@@ -191,8 +203,10 @@ export interface FileRoutesByFullPath {
   '/settings/developer': typeof AppSettingsDeveloperRoute
   '/settings/language': typeof AppSettingsLanguageRoute
   '/settings/notifications': typeof AppSettingsNotificationsRoute
-  '/settings/server': typeof AppSettingsServerRoute
+  '/settings/server': typeof AppSettingsServerRouteWithChildren
   '/settings/users': typeof AppSettingsUsersRoute
+  '/settings/server/$id': typeof AppSettingsServerIdRoute
+  '/settings/server/new': typeof AppSettingsServerNewRoute
 }
 export interface FileRoutesByTo {
   '/automations': typeof AppAutomationsRoute
@@ -217,8 +231,10 @@ export interface FileRoutesByTo {
   '/settings/developer': typeof AppSettingsDeveloperRoute
   '/settings/language': typeof AppSettingsLanguageRoute
   '/settings/notifications': typeof AppSettingsNotificationsRoute
-  '/settings/server': typeof AppSettingsServerRoute
+  '/settings/server': typeof AppSettingsServerRouteWithChildren
   '/settings/users': typeof AppSettingsUsersRoute
+  '/settings/server/$id': typeof AppSettingsServerIdRoute
+  '/settings/server/new': typeof AppSettingsServerNewRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -246,8 +262,10 @@ export interface FileRoutesById {
   '/_app/settings/developer': typeof AppSettingsDeveloperRoute
   '/_app/settings/language': typeof AppSettingsLanguageRoute
   '/_app/settings/notifications': typeof AppSettingsNotificationsRoute
-  '/_app/settings/server': typeof AppSettingsServerRoute
+  '/_app/settings/server': typeof AppSettingsServerRouteWithChildren
   '/_app/settings/users': typeof AppSettingsUsersRoute
+  '/_app/settings/server/$id': typeof AppSettingsServerIdRoute
+  '/_app/settings/server/new': typeof AppSettingsServerNewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -277,6 +295,8 @@ export interface FileRouteTypes {
     | '/settings/notifications'
     | '/settings/server'
     | '/settings/users'
+    | '/settings/server/$id'
+    | '/settings/server/new'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/automations'
@@ -303,6 +323,8 @@ export interface FileRouteTypes {
     | '/settings/notifications'
     | '/settings/server'
     | '/settings/users'
+    | '/settings/server/$id'
+    | '/settings/server/new'
   id:
     | '__root__'
     | '/_app'
@@ -331,6 +353,8 @@ export interface FileRouteTypes {
     | '/_app/settings/notifications'
     | '/_app/settings/server'
     | '/_app/settings/users'
+    | '/_app/settings/server/$id'
+    | '/_app/settings/server/new'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -522,6 +546,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDevicesDeviceIdRouteImport
       parentRoute: typeof AppDevicesRoute
     }
+    '/_app/settings/server/new': {
+      id: '/_app/settings/server/new'
+      path: '/new'
+      fullPath: '/settings/server/new'
+      preLoaderRoute: typeof AppSettingsServerNewRouteImport
+      parentRoute: typeof AppSettingsServerRoute
+    }
+    '/_app/settings/server/$id': {
+      id: '/_app/settings/server/$id'
+      path: '/$id'
+      fullPath: '/settings/server/$id'
+      preLoaderRoute: typeof AppSettingsServerIdRouteImport
+      parentRoute: typeof AppSettingsServerRoute
+    }
   }
 }
 
@@ -549,13 +587,26 @@ const AppRoomsRouteWithChildren = AppRoomsRoute._addFileChildren(
   AppRoomsRouteChildren,
 )
 
+interface AppSettingsServerRouteChildren {
+  AppSettingsServerIdRoute: typeof AppSettingsServerIdRoute
+  AppSettingsServerNewRoute: typeof AppSettingsServerNewRoute
+}
+
+const AppSettingsServerRouteChildren: AppSettingsServerRouteChildren = {
+  AppSettingsServerIdRoute: AppSettingsServerIdRoute,
+  AppSettingsServerNewRoute: AppSettingsServerNewRoute,
+}
+
+const AppSettingsServerRouteWithChildren =
+  AppSettingsServerRoute._addFileChildren(AppSettingsServerRouteChildren)
+
 interface AppSettingsRouteChildren {
   AppSettingsAppearanceRoute: typeof AppSettingsAppearanceRoute
   AppSettingsBackupRoute: typeof AppSettingsBackupRoute
   AppSettingsDeveloperRoute: typeof AppSettingsDeveloperRoute
   AppSettingsLanguageRoute: typeof AppSettingsLanguageRoute
   AppSettingsNotificationsRoute: typeof AppSettingsNotificationsRoute
-  AppSettingsServerRoute: typeof AppSettingsServerRoute
+  AppSettingsServerRoute: typeof AppSettingsServerRouteWithChildren
   AppSettingsUsersRoute: typeof AppSettingsUsersRoute
 }
 
@@ -565,7 +616,7 @@ const AppSettingsRouteChildren: AppSettingsRouteChildren = {
   AppSettingsDeveloperRoute: AppSettingsDeveloperRoute,
   AppSettingsLanguageRoute: AppSettingsLanguageRoute,
   AppSettingsNotificationsRoute: AppSettingsNotificationsRoute,
-  AppSettingsServerRoute: AppSettingsServerRoute,
+  AppSettingsServerRoute: AppSettingsServerRouteWithChildren,
   AppSettingsUsersRoute: AppSettingsUsersRoute,
 }
 
