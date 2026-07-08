@@ -133,12 +133,8 @@ function RoomDetail() {
         />
       </div>
 
-      <SectionCard title="Geräte" description="Geräte-Liste folgt in Teil 6B/7.">
-        <EmptyStateCard
-          icon={Home}
-          title="Noch keine Geräte in diesem Raum"
-          description="Sobald Geräte gefunden werden, erscheinen sie hier."
-        />
+      <SectionCard title="Geräte" description="Live aus Discovery und Intelligence Layer.">
+        <DeviceCatalog roomId={room.id} />
       </SectionCard>
 
       <div className="mt-4">
