@@ -16,6 +16,7 @@ import { PageTransition } from "@/components/ds/motion/PageTransition";
 import { DeviceIcon } from "@/components/devices/DeviceIcon";
 import { DeviceStatusChips } from "@/components/devices/renderer/DeviceStatusChips";
 import { layoutIds } from "@/components/ds/motion/SharedLayout";
+import { UniversalControlRenderer } from "@/components/devices/controls";
 
 export const Route = createFileRoute("/_app/devices/$deviceId")({
   component: DeviceDetail,
