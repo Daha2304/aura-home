@@ -1,69 +1,136 @@
-## Teil 6A – Design System + Room Management
+## Teil 6A.5 — Smart Home Intelligence Layer
 
-Aufbauend auf existierender Architektur (bestehende `roomsStore`, `RoomCard`, `glass/*`, `runtime`, `widgetRegistry`, `dashboardManager`). Nichts wird ersetzt – alles wird erweitert.
+Neue Service-Ebene `src/services/intelligence/` als zentrale Rechenschicht. Keine Änderung bestehender Architektur — nur zusätzliche Services, Stores, Events. Widgets/Komponenten/Stores rechnen nicht mehr selbst.
 
-### 1. Design Tokens (`src/themes/`)
-Zentrale Tokens als TS-Konstanten + CSS-Variablen-Erweiterung in `src/styles.css`:
-- `themes/tokens.ts` — colors, blur, shadows, radii, spacing, typography scale, glass intensity, motion duration, icon sizes
-- `themes/motion.ts` — Erweiterung: spring, fade, scale, swipe, hover, touch presets (Framer Motion Variants)
-- `styles.css` — zusätzliche CSS-Variablen (`--glass-blur-sm/md/xl`, `--shadow-glass-*`, `--radius-hero`, `--motion-spring`)
+### 1. Verzeichnisstruktur
 
-### 2. Design-System Komponenten (`src/components/ds/`)
-Alle als reine Präsentations-Komponenten mit `cva`-Varianten. Wo eine Basis existiert (`GlassCard`, `GlassButton`), werden Wrapper darauf aufgebaut, ohne die Originale zu entfernen.
+```text
+src/services/intelligence/
+  index.ts                       Public API + bootstrap()
+  IntelligenceController.ts      Orchestrator, abonniert device/room/discovery events
+  aggregation/
+    RoomAggregator.ts            pro Raum: Metrics berechnen (inkrementell)
+    HouseAggregator.ts           gesamtes Haus
+    MetricContributors.ts        Plugin-Registry (contributor pattern)
+    contributors/
+      countContributor.ts        Geräteanzahl, online/offline/warn/fav
+      climateContributor.ts      temp/humidity/co2/voc/airQuality (avg)
+      openingsContributor.ts     Fenster/Türen offen
+      lightingContributor.ts     Lampen aktiv
+      outletContributor.ts       Steckdosen aktiv
+      shadingContributor.ts      Rolläden
+      climateControlContributor.ts Heizung/Klima aktiv
+      mediaContributor.ts        Medien aktiv
+      energyContributor.ts       power/energy sum, PV, wallbox
+      healthContributor.ts       battery/signal avg
+      activityContributor.ts     lastSeen max, discovery/sync
+  status/
+    RoomStatusEngine.ts          normal/warn/error/offline/sync/discovery/empty
+    HouseStatusEngine.ts
+  assignment/
+    DeviceAssignmentEngine.ts    move device room/group/floor/virtual
+  filter/
+    DeviceFilterEngine.ts        composable predicates (room/cat/type/online/…)
+    filters/*.ts                 pluginfähige Einzelfilter
+  search/
+    SearchEngine.ts              tokenized, alias/synonyms, cross-entity
+    SearchIndex.ts               inverted index (Map<token,Set<id>>)
+    synonyms.ts
+  insights/
+    RoomInsightsEngine.ts        rendert Metrics → Insight[]
+    HouseInsightsEngine.ts
+    InsightTypes.ts
+  cache/
+    MemoCache.ts                 keyed memo (revision+roomId)
+    Selectors.ts                 reselect-artige createSelector
+  events/
+    IntelligenceEvents.ts        typed EventEmitter (roomMetricsUpdated, …)
+  types.ts                       RoomMetrics, HouseMetrics, RoomStatus, Insight
+```
 
-Cards: `GlassCard` (Re-Export/Erweiterung), `HeroCard`, `SectionCard`, `StatusCard`, `MetricCard`, `ActionCard`, `RoomCard` (Re-Export bestehender + neue Variante `RoomHeroCard`), `InfoCard`, `EmptyStateCard`, `LoadingCard`, `SkeletonCard`, `DialogCard`, `BottomSheet`.
+### 2. Neue Modelle (`src/models/`)
 
-Controls: `GlassButton` (Re-Export), `IconButton`, `FloatingButton`, `SegmentedControl`, `StatusBadge`, `GlassInput`, `GlassSwitch`, `GlassSlider`, `GlassListItem`.
+- `roomMetrics.ts` — `RoomMetrics` interface (alle im Prompt genannten Felder, alle optional außer counts).
+- `houseMetrics.ts` — `HouseMetrics`.
+- `roomStatus.ts` — `type RoomStatus = "normal"|"warning"|"error"|"offline"|"syncing"|"discovering"|"empty"`.
+- `insight.ts` — `Insight { id, scope: "room"|"house", roomId?, kind, label, value, icon?, severity? }`.
+- `intelligenceEvents.ts` — Event-Namen als Konstanten + Payload-Typen.
 
-Barrel: `src/components/ds/index.ts`.
+### 3. Neue Stores (`src/store/slices/`, nur Vorbereitung)
 
-### 3. Animation Framework (`src/components/ds/motion/`)
-- `PageTransition.tsx`, `HeroTransition.tsx`, `CardTransition.tsx`
-- `SharedLayout.tsx` (Wrapper um `LayoutGroup` mit stabilen `layoutId`-Konventionen: `room-hero-${roomId}`)
-- `TouchFeedback.tsx` (whileTap/whileHover Wrapper)
-- Vorbereitung Shared-Element Dashboard → RoomCard → RoomDetail über `layoutId`.
+- `roomMetricsStore.ts` — `Map<roomId, RoomMetrics>`, `revision`, `setRoom`, `patchRoom`, `byId`.
+- `houseMetricsStore.ts` — `HouseMetrics | null`, `set`, `revision`.
+- `insightsStore.ts` — `Map<scopeKey, Insight[]>`.
+- `assignmentStore.ts` — pending assignments queue (später mit Command Queue verknüpfbar).
 
-### 4. Room Model Erweiterung (`src/models/room.ts`)
-Erweitern (nicht ersetzen) um: `description?`, `category?` (= erweiterte `RoomType`), `favorite?: boolean`, `tags?: string[]`, `status?: RoomStatus`, `customProps?: Record<string, unknown>`. `RoomType` erweitern: `dining`, `kids`, `wc`, `stairway`, `garden`, `terrace`, `balcony`, `laundry`, `technical`, `other`. Bestehende Werte bleiben erhalten.
+Alle mit O(1) `Map`-Index; Selektoren memoisiert.
 
-Neu: `src/models/roomCategory.ts` (Katalog aus Icon, Farbvorschlag, Default-Name, Sort-Group), `src/models/roomEvents.ts`.
+### 4. Contributor-Pattern (Plugin-System)
 
-### 5. Room Registry (`src/services/rooms/`)
-- `RoomRegistry.ts` — plugin-fähiger Katalog von Raumtypen (`registerRoomType`, `getRoomType`, `listRoomTypes`), pre-registriert mit den 18 Typen.
-- `RoomManager.ts` — CRUD: `create/update/delete/move/reorder/duplicate`, `export/import` (JSON), `mergePrepare` (nur Vorbereitung), delegiert an `roomsStore`. Persistenz via bestehender Storage-Layer.
-- `RoomEvents.ts` — `TypedEmitter` (`roomCreated`, `roomUpdated`, `roomDeleted`, `roomsReordered`).
-- `index.ts` (Barrel).
+```ts
+interface MetricContributor {
+  id: string;
+  contribute(ctx: { device: Device; acc: MutableRoomMetrics }): void;
+  reset?(acc: MutableRoomMetrics): void;
+  finalize?(acc: MutableRoomMetrics): void; // averages
+}
+```
 
-Bootstrap: `services/bootstrap.ts` erweitern → `roomRegistry` initialisieren.
+`MetricContributors.register(c)` — neue Gerätetypen fügen einfach neue Contributor hinzu; Aggregatoren iterieren blind über die Registry. Damit: **keine** Aggregator-Änderung bei neuen Device-Types.
 
-### 6. Room Store Erweiterung
-`store/slices/roomsStore.ts` behält Signatur, wird ergänzt um:
-- Selectors: `selectRoomById`, `selectRoomsSorted`, `selectFavoriteRooms`, `selectRoomsByFloor` — memoisiert via `zustand` shallow + `useMemo`-Selectors in `hooks/rooms/`.
-- Index-Map `byId` für O(1)-Lookup (intern; API abwärtskompatibel).
-- Actions: `reorder`, `toggleFavorite`, `setRooms` (bereits vorhanden), `merge` Vorbereitung.
+### 5. Inkrementelle Berechnung
 
-### 7. Room Widgets (System-Registrierung)
-Neue Widget-Descriptors via `widgetRegistry.register` (analog zu `system.tsx`):
-- `room.overview`, `room.hero`, `room.status`, `room.summary` — verwenden `useRoomsStore`, zeigen Platzhalter-Metriken (Geräteanzahl = 0, wird in 6B/7 real gefüllt).
-Datei: `src/services/widgets/builtin/rooms.tsx`, registriert in `builtin/index.ts`.
+`IntelligenceController` abonniert:
+- `devicesStore` (via zustand subscribe — vergleicht `revision` und diffed `index`)
+- `roomsStore`
+- `DiscoveryEvents`, `RoomEvents`
 
-### 8. Routen / UI
-- `_app.rooms.tsx` — neue Übersicht: `HeroCard` (Header, Discovery-Status), Grid aus `RoomCard`s (Shared-Layout `layoutId="room-card-${id}"`), Empty-State, FAB „Raum erstellen" (`BottomSheet` mit `RoomForm`).
-- `_app.rooms.$roomId.tsx` — Detail: `HeroCard` mit Raumbild/Farbe/Icon, `MetricCard`s (Geräteanzahl 0, Online 0, Offline 0, Favoriten 0), `StatusCard` (Discovery), Placeholder-Slot „Geräte folgen in Teil 6B/7". Edit-Sheet + Delete-Confirm.
-- Beide nutzen ausschließlich `components/ds/*`.
+Bei Device-Update: nur betroffenen Raum (alt+neu) neu berechnen → `RoomAggregator.recompute(roomId)`. HouseAggregator aggregiert über RoomMetrics (nicht über alle Devices erneut). Ergebnisse werden in Stores geschrieben + Event emittiert.
 
-Formulare: `components/rooms/RoomForm.tsx` (BottomSheet-Content) mit Icon-Picker, Farb-Picker, Typ-Picker, Etage, Tags.
+### 6. Status-Engine
 
-### 9. Performance & A11y
-- Grid virtualisiert vorbereitet (Wrapper `VirtualGrid` als No-Op-Placeholder → später ersetzbar).
-- `React.memo` auf allen DS-Cards, `useMemo` für Listen-Selectors.
-- `content-visibility: auto` auf Karten außerhalb Viewport.
-- Alle Buttons ≥ 44×44, `aria-label` auf IconButtons, sichtbare Focus-Ringe über `--ring`.
+`RoomStatusEngine.derive(metrics, room, discovery)` → deterministischer Status. Priorität: error > offline > warning > syncing > discovering > empty > normal.
 
-### Nicht enthalten
-Keine Gerätesteuerung, keine Szenen, keine echten Metriken, keine Diagramme, keine Automationen.
+### 7. Assignment-Engine
 
-### Verifikation
+`DeviceAssignmentEngine.assign(deviceId, { roomId?, groupIds?, floor?, virtualRoomId? })`
+- validiert
+- mutiert `devicesStore` (upsertDevice) und ggf. `roomsStore`
+- triggert Recompute alter + neuer Raum
+- emittet `deviceAssigned`/`deviceUnassigned`
+
+### 8. Filter- & Search-Engine (nur vorbereitet)
+
+- Filter: `DeviceFilterEngine.apply(devices, criteria)` mit pluginbaren Prädikaten (`registerFilter`).
+- Search: `SearchIndex` baut invertierten Index über Devices/Rooms/Dashboards/Widgets/Scenes/Automations/Tags/Aliases. Synonym-Map (`de` initial leer/Skeleton).
+
+### 9. Insights
+
+`RoomInsightsEngine.build(roomId)` transformiert Metrics + Status in Liste kurzer, UI-fertiger `Insight`-Objekte (Text kommt aus einem `InsightFormatter`, i18n-ready via bestehendem `services/i18n`).
+
+### 10. Events
+
+Neues Emitter-Modul `IntelligenceEvents` (nutzt `services/events/EventEmitter`):
+`roomMetricsUpdated`, `houseMetricsUpdated`, `roomStatusChanged`, `deviceAssigned`, `deviceUnassigned`, `aggregationUpdated`, `insightUpdated`.
+
+### 11. Bootstrap
+
+`src/services/bootstrap.ts` erweitern: nach Registry/Rooms Init → `intelligence.bootstrap()` (registriert Standard-Contributors, abonniert Stores, initiale Voll-Berechnung).
+
+### 12. Caching / Performance
+
+- `MemoCache` keyed auf `(roomId, devicesRevision, roomsRevision)`.
+- Aggregator hält mutable Akkumulatoren pro Raum, tauscht nur bei Änderung.
+- HouseMetrics = Reduktion über RoomMetrics-Map, nicht über Devices.
+- Selektoren mit strukturellem Sharing für Zustand-Konsumenten.
+
+### 13. Nicht enthalten
+
+Keine UI-Anbindung, keine Widgets ändern, keine Devices/Scenes/Automations-Features, keine Charts.
+
+### 14. Verifikation
+
 - `bunx tsgo --noEmit`
-- Manueller Klickpfad `/rooms` → Create → Detail → Edit → Delete
-- Screenshot Empty-State + gefüllte Liste + Detail via Playwright
+- Kurzer Smoke: In DevTools `intelligence.debug.snapshot()` liefert leere RoomMetrics für alle bestehenden Räume (keine Devices vorhanden) ohne Fehler.
+
+Bereit zur Umsetzung — bei Freigabe implementiere ich alle o. g. Dateien in einem Batch.
