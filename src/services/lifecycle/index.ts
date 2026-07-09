@@ -1,0 +1,1 @@
+export { appLifecycle } from "./AppLifecycle";
