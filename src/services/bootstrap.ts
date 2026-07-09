@@ -77,6 +77,13 @@ export function startCommunicationLayer(): void {
   started = true;
   log.info("starting communication layer");
 
+  // Frühe Fehler-/Log-Verkabelung. installGlobalErrorHandlers ist idempotent.
+  const removeGlobalErrors = installGlobalErrorHandlers();
+  const removeLogSink = addLogSink((entry) => {
+    useLogStore.getState().push(entry);
+  });
+  unsubscribers.push(removeGlobalErrors, removeLogSink);
+
   // Protokoll-Adapter: ioBroker appsocket. Muss vor jedem connect() gesetzt sein,
   // damit die allererste Nachricht ein "hello" ist.
   wsManager.setProtocol(appsocketProtocol);
