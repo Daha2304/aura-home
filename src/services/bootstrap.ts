@@ -38,6 +38,7 @@ import { bootstrapAutomations, stopAutomations } from "@/services/automations";
 import { bootstrapTimeline, stopTimeline } from "@/services/timeline";
 import { automationDebugger } from "@/services/automations/AutomationDebugger";
 import { startEventCenter, stopEventCenter } from "@/services/notifications";
+import { bootstrapUsers } from "@/services/users";
 
 
 const log = createLogger("bootstrap");
@@ -186,6 +187,11 @@ export function startCommunicationLayer(): void {
   // die Notification-Timeline-Source. Neue Ereignisquellen kommen ausschließlich
   // über NotificationRegistry.registerProducer(...) hinzu — keine Änderung hier.
   startEventCenter();
+
+  // Users, Profile, Rollen & Berechtigungen (Teil 12). Registriert Built-in
+  // Rollen/Profile/Permission-Resources und Ownership-Sources. Neue Ressourcen
+  // erweitern ausschließlich die Registries — keine Änderung hier.
+  bootstrapUsers();
 
 
 

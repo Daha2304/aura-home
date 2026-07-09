@@ -7,6 +7,9 @@ import {
   Layers,
   LineChart,
   Settings as SettingsIcon,
+  ShieldCheck,
+  UserCog,
+  Users,
   Workflow,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -34,6 +37,10 @@ const entries: Entry[] = [
   { to: "/history", label: "Historie", hint: "Abgeschlossene Ausführungen", icon: History },
   { to: "/analytics", label: "Analytics", hint: "Kennzahlen und Diagramme", icon: LineChart },
   { to: "/statistics", label: "Statistik", hint: "Energie, Klima, Verlauf", icon: BarChart3 },
+  { to: "/users", label: "Benutzer", hint: "Benutzer, Favoriten, Rollen", icon: Users },
+  { to: "/profiles", label: "Profile", hint: "Familie, Kinder, Gast, Techniker", icon: UserCog },
+  { to: "/roles", label: "Rollen", hint: "Rollen und Berechtigungen", icon: ShieldCheck },
+  { to: "/permissions", label: "Berechtigungen", hint: "Effektive Zugriffsrechte", icon: ShieldCheck },
   { to: "/settings", label: "Einstellungen", hint: "Server, Benutzer, Themes", icon: SettingsIcon },
 ];
 

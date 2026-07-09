@@ -118,4 +118,7 @@ export interface Scene {
   parameters?: SceneParameter[];
   /** If instantiated from a template, keep the reference. */
   templateId?: ID;
+  /** User binding (Teil 12). All optional. */
+  ownerUserId?: ID;
+  sharedUserIds?: ID[];
 }

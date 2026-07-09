@@ -43,4 +43,7 @@ export interface DeviceGroup {
   createdBy?: string;
   updatedBy?: string;
   order: number;
+  /** User binding (Teil 12). All optional. */
+  ownerUserId?: ID;
+  sharedUserIds?: ID[];
 }

@@ -89,4 +89,8 @@ export interface Automation {
   archived: boolean;
   /** Behalten für Bibliotheks-Ordnung. */
   order: number;
+  /** User binding (Teil 12). All optional. */
+  ownerUserId?: ID;
+  sharedUserIds?: ID[];
+  editorUserIds?: ID[];
 }

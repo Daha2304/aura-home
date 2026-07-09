@@ -43,4 +43,8 @@ export interface Room {
   customProps?: Record<string, unknown>;
   createdAt?: number;
   updatedAt?: number;
+  /** User binding (Teil 12). All optional — legacy rooms remain valid. */
+  ownerUserId?: ID;
+  memberUserIds?: ID[];
+  guestUserIds?: ID[];
 }

@@ -19,11 +19,15 @@ import { Route as OnboardingIntroRouteImport } from './routes/onboarding.intro'
 import { Route as OnboardingDoneRouteImport } from './routes/onboarding.done'
 import { Route as OnboardingConnectRouteImport } from './routes/onboarding.connect'
 import { Route as OnboardingConfigureRouteImport } from './routes/onboarding.configure'
+import { Route as AppUsersRouteImport } from './routes/_app.users'
 import { Route as AppTimelineRouteImport } from './routes/_app.timeline'
 import { Route as AppStatisticsRouteImport } from './routes/_app.statistics'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppScenesRouteImport } from './routes/_app.scenes'
 import { Route as AppRoomsRouteImport } from './routes/_app.rooms'
+import { Route as AppRolesRouteImport } from './routes/_app.roles'
+import { Route as AppProfilesRouteImport } from './routes/_app.profiles'
+import { Route as AppPermissionsRouteImport } from './routes/_app.permissions'
 import { Route as AppMoreRouteImport } from './routes/_app.more'
 import { Route as AppInboxRouteImport } from './routes/_app.inbox'
 import { Route as AppHistoryRouteImport } from './routes/_app.history'
@@ -32,7 +36,9 @@ import { Route as AppDevicesRouteImport } from './routes/_app.devices'
 import { Route as AppDashboardsRouteImport } from './routes/_app.dashboards'
 import { Route as AppAutomationsRouteImport } from './routes/_app.automations'
 import { Route as AppAnalyticsRouteImport } from './routes/_app.analytics'
+import { Route as AppUsersIndexRouteImport } from './routes/_app.users.index'
 import { Route as AppDashboardsIndexRouteImport } from './routes/_app.dashboards.index'
+import { Route as AppUsersUserIdRouteImport } from './routes/_app.users.$userId'
 import { Route as AppSettingsUsersRouteImport } from './routes/_app.settings.users'
 import { Route as AppSettingsServerRouteImport } from './routes/_app.settings.server'
 import { Route as AppSettingsNotificationsRouteImport } from './routes/_app.settings.notifications'
@@ -48,7 +54,9 @@ import { Route as AppDevicesDeviceIdRouteImport } from './routes/_app.devices.$d
 import { Route as AppDashboardsDashboardIdRouteImport } from './routes/_app.dashboards.$dashboardId'
 import { Route as AppAutomationsNewRouteImport } from './routes/_app.automations.new'
 import { Route as AppAutomationsAutomationIdRouteImport } from './routes/_app.automations.$automationId'
+import { Route as AppUsersUserIdIndexRouteImport } from './routes/_app.users.$userId.index'
 import { Route as AppDashboardsDashboardIdIndexRouteImport } from './routes/_app.dashboards.$dashboardId.index'
+import { Route as AppUsersUserIdEditRouteImport } from './routes/_app.users.$userId.edit'
 import { Route as AppSettingsServerNewRouteImport } from './routes/_app.settings.server.new'
 import { Route as AppSettingsServerIdRouteImport } from './routes/_app.settings.server.$id'
 import { Route as AppScenesSceneIdEditRouteImport } from './routes/_app.scenes.$sceneId.edit'
@@ -104,6 +112,11 @@ const OnboardingConfigureRoute = OnboardingConfigureRouteImport.update({
   path: '/configure',
   getParentRoute: () => OnboardingRoute,
 } as any)
+const AppUsersRoute = AppUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppTimelineRoute = AppTimelineRouteImport.update({
   id: '/timeline',
   path: '/timeline',
@@ -127,6 +140,21 @@ const AppScenesRoute = AppScenesRouteImport.update({
 const AppRoomsRoute = AppRoomsRouteImport.update({
   id: '/rooms',
   path: '/rooms',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppRolesRoute = AppRolesRouteImport.update({
+  id: '/roles',
+  path: '/roles',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppProfilesRoute = AppProfilesRouteImport.update({
+  id: '/profiles',
+  path: '/profiles',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPermissionsRoute = AppPermissionsRouteImport.update({
+  id: '/permissions',
+  path: '/permissions',
   getParentRoute: () => AppRoute,
 } as any)
 const AppMoreRoute = AppMoreRouteImport.update({
@@ -169,10 +197,20 @@ const AppAnalyticsRoute = AppAnalyticsRouteImport.update({
   path: '/analytics',
   getParentRoute: () => AppRoute,
 } as any)
+const AppUsersIndexRoute = AppUsersIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppUsersRoute,
+} as any)
 const AppDashboardsIndexRoute = AppDashboardsIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AppDashboardsRoute,
+} as any)
+const AppUsersUserIdRoute = AppUsersUserIdRouteImport.update({
+  id: '/$userId',
+  path: '/$userId',
+  getParentRoute: () => AppUsersRoute,
 } as any)
 const AppSettingsUsersRoute = AppSettingsUsersRouteImport.update({
   id: '/users',
@@ -252,12 +290,22 @@ const AppAutomationsAutomationIdRoute =
     path: '/$automationId',
     getParentRoute: () => AppAutomationsRoute,
   } as any)
+const AppUsersUserIdIndexRoute = AppUsersUserIdIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppUsersUserIdRoute,
+} as any)
 const AppDashboardsDashboardIdIndexRoute =
   AppDashboardsDashboardIdIndexRouteImport.update({
     id: '/',
     path: '/',
     getParentRoute: () => AppDashboardsDashboardIdRoute,
   } as any)
+const AppUsersUserIdEditRoute = AppUsersUserIdEditRouteImport.update({
+  id: '/edit',
+  path: '/edit',
+  getParentRoute: () => AppUsersUserIdRoute,
+} as any)
 const AppSettingsServerNewRoute = AppSettingsServerNewRouteImport.update({
   id: '/new',
   path: '/new',
@@ -297,11 +345,15 @@ export interface FileRoutesByFullPath {
   '/history': typeof AppHistoryRoute
   '/inbox': typeof AppInboxRouteWithChildren
   '/more': typeof AppMoreRoute
+  '/permissions': typeof AppPermissionsRoute
+  '/profiles': typeof AppProfilesRoute
+  '/roles': typeof AppRolesRoute
   '/rooms': typeof AppRoomsRouteWithChildren
   '/scenes': typeof AppScenesRouteWithChildren
   '/settings': typeof AppSettingsRouteWithChildren
   '/statistics': typeof AppStatisticsRoute
   '/timeline': typeof AppTimelineRoute
+  '/users': typeof AppUsersRouteWithChildren
   '/onboarding/configure': typeof OnboardingConfigureRoute
   '/onboarding/connect': typeof OnboardingConnectRoute
   '/onboarding/done': typeof OnboardingDoneRoute
@@ -324,13 +376,17 @@ export interface FileRoutesByFullPath {
   '/settings/notifications': typeof AppSettingsNotificationsRoute
   '/settings/server': typeof AppSettingsServerRouteWithChildren
   '/settings/users': typeof AppSettingsUsersRoute
+  '/users/$userId': typeof AppUsersUserIdRouteWithChildren
   '/dashboards/': typeof AppDashboardsIndexRoute
+  '/users/': typeof AppUsersIndexRoute
   '/automations/$automationId/edit': typeof AppAutomationsAutomationIdEditRoute
   '/dashboards/$dashboardId/edit': typeof AppDashboardsDashboardIdEditRoute
   '/scenes/$sceneId/edit': typeof AppScenesSceneIdEditRoute
   '/settings/server/$id': typeof AppSettingsServerIdRoute
   '/settings/server/new': typeof AppSettingsServerNewRoute
+  '/users/$userId/edit': typeof AppUsersUserIdEditRoute
   '/dashboards/$dashboardId/': typeof AppDashboardsDashboardIdIndexRoute
+  '/users/$userId/': typeof AppUsersUserIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/analytics': typeof AppAnalyticsRoute
@@ -340,6 +396,9 @@ export interface FileRoutesByTo {
   '/history': typeof AppHistoryRoute
   '/inbox': typeof AppInboxRouteWithChildren
   '/more': typeof AppMoreRoute
+  '/permissions': typeof AppPermissionsRoute
+  '/profiles': typeof AppProfilesRoute
+  '/roles': typeof AppRolesRoute
   '/rooms': typeof AppRoomsRouteWithChildren
   '/scenes': typeof AppScenesRouteWithChildren
   '/settings': typeof AppSettingsRouteWithChildren
@@ -368,12 +427,15 @@ export interface FileRoutesByTo {
   '/settings/server': typeof AppSettingsServerRouteWithChildren
   '/settings/users': typeof AppSettingsUsersRoute
   '/dashboards': typeof AppDashboardsIndexRoute
+  '/users': typeof AppUsersIndexRoute
   '/automations/$automationId/edit': typeof AppAutomationsAutomationIdEditRoute
   '/dashboards/$dashboardId/edit': typeof AppDashboardsDashboardIdEditRoute
   '/scenes/$sceneId/edit': typeof AppScenesSceneIdEditRoute
   '/settings/server/$id': typeof AppSettingsServerIdRoute
   '/settings/server/new': typeof AppSettingsServerNewRoute
+  '/users/$userId/edit': typeof AppUsersUserIdEditRoute
   '/dashboards/$dashboardId': typeof AppDashboardsDashboardIdIndexRoute
+  '/users/$userId': typeof AppUsersUserIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -387,11 +449,15 @@ export interface FileRoutesById {
   '/_app/history': typeof AppHistoryRoute
   '/_app/inbox': typeof AppInboxRouteWithChildren
   '/_app/more': typeof AppMoreRoute
+  '/_app/permissions': typeof AppPermissionsRoute
+  '/_app/profiles': typeof AppProfilesRoute
+  '/_app/roles': typeof AppRolesRoute
   '/_app/rooms': typeof AppRoomsRouteWithChildren
   '/_app/scenes': typeof AppScenesRouteWithChildren
   '/_app/settings': typeof AppSettingsRouteWithChildren
   '/_app/statistics': typeof AppStatisticsRoute
   '/_app/timeline': typeof AppTimelineRoute
+  '/_app/users': typeof AppUsersRouteWithChildren
   '/onboarding/configure': typeof OnboardingConfigureRoute
   '/onboarding/connect': typeof OnboardingConnectRoute
   '/onboarding/done': typeof OnboardingDoneRoute
@@ -415,13 +481,17 @@ export interface FileRoutesById {
   '/_app/settings/notifications': typeof AppSettingsNotificationsRoute
   '/_app/settings/server': typeof AppSettingsServerRouteWithChildren
   '/_app/settings/users': typeof AppSettingsUsersRoute
+  '/_app/users/$userId': typeof AppUsersUserIdRouteWithChildren
   '/_app/dashboards/': typeof AppDashboardsIndexRoute
+  '/_app/users/': typeof AppUsersIndexRoute
   '/_app/automations/$automationId/edit': typeof AppAutomationsAutomationIdEditRoute
   '/_app/dashboards/$dashboardId/edit': typeof AppDashboardsDashboardIdEditRoute
   '/_app/scenes/$sceneId/edit': typeof AppScenesSceneIdEditRoute
   '/_app/settings/server/$id': typeof AppSettingsServerIdRoute
   '/_app/settings/server/new': typeof AppSettingsServerNewRoute
+  '/_app/users/$userId/edit': typeof AppUsersUserIdEditRoute
   '/_app/dashboards/$dashboardId/': typeof AppDashboardsDashboardIdIndexRoute
+  '/_app/users/$userId/': typeof AppUsersUserIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -436,11 +506,15 @@ export interface FileRouteTypes {
     | '/history'
     | '/inbox'
     | '/more'
+    | '/permissions'
+    | '/profiles'
+    | '/roles'
     | '/rooms'
     | '/scenes'
     | '/settings'
     | '/statistics'
     | '/timeline'
+    | '/users'
     | '/onboarding/configure'
     | '/onboarding/connect'
     | '/onboarding/done'
@@ -463,13 +537,17 @@ export interface FileRouteTypes {
     | '/settings/notifications'
     | '/settings/server'
     | '/settings/users'
+    | '/users/$userId'
     | '/dashboards/'
+    | '/users/'
     | '/automations/$automationId/edit'
     | '/dashboards/$dashboardId/edit'
     | '/scenes/$sceneId/edit'
     | '/settings/server/$id'
     | '/settings/server/new'
+    | '/users/$userId/edit'
     | '/dashboards/$dashboardId/'
+    | '/users/$userId/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/analytics'
@@ -479,6 +557,9 @@ export interface FileRouteTypes {
     | '/history'
     | '/inbox'
     | '/more'
+    | '/permissions'
+    | '/profiles'
+    | '/roles'
     | '/rooms'
     | '/scenes'
     | '/settings'
@@ -507,12 +588,15 @@ export interface FileRouteTypes {
     | '/settings/server'
     | '/settings/users'
     | '/dashboards'
+    | '/users'
     | '/automations/$automationId/edit'
     | '/dashboards/$dashboardId/edit'
     | '/scenes/$sceneId/edit'
     | '/settings/server/$id'
     | '/settings/server/new'
+    | '/users/$userId/edit'
     | '/dashboards/$dashboardId'
+    | '/users/$userId'
   id:
     | '__root__'
     | '/_app'
@@ -525,11 +609,15 @@ export interface FileRouteTypes {
     | '/_app/history'
     | '/_app/inbox'
     | '/_app/more'
+    | '/_app/permissions'
+    | '/_app/profiles'
+    | '/_app/roles'
     | '/_app/rooms'
     | '/_app/scenes'
     | '/_app/settings'
     | '/_app/statistics'
     | '/_app/timeline'
+    | '/_app/users'
     | '/onboarding/configure'
     | '/onboarding/connect'
     | '/onboarding/done'
@@ -553,13 +641,17 @@ export interface FileRouteTypes {
     | '/_app/settings/notifications'
     | '/_app/settings/server'
     | '/_app/settings/users'
+    | '/_app/users/$userId'
     | '/_app/dashboards/'
+    | '/_app/users/'
     | '/_app/automations/$automationId/edit'
     | '/_app/dashboards/$dashboardId/edit'
     | '/_app/scenes/$sceneId/edit'
     | '/_app/settings/server/$id'
     | '/_app/settings/server/new'
+    | '/_app/users/$userId/edit'
     | '/_app/dashboards/$dashboardId/'
+    | '/_app/users/$userId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -639,6 +731,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OnboardingConfigureRouteImport
       parentRoute: typeof OnboardingRoute
     }
+    '/_app/users': {
+      id: '/_app/users'
+      path: '/users'
+      fullPath: '/users'
+      preLoaderRoute: typeof AppUsersRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/timeline': {
       id: '/_app/timeline'
       path: '/timeline'
@@ -672,6 +771,27 @@ declare module '@tanstack/react-router' {
       path: '/rooms'
       fullPath: '/rooms'
       preLoaderRoute: typeof AppRoomsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/roles': {
+      id: '/_app/roles'
+      path: '/roles'
+      fullPath: '/roles'
+      preLoaderRoute: typeof AppRolesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/profiles': {
+      id: '/_app/profiles'
+      path: '/profiles'
+      fullPath: '/profiles'
+      preLoaderRoute: typeof AppProfilesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/permissions': {
+      id: '/_app/permissions'
+      path: '/permissions'
+      fullPath: '/permissions'
+      preLoaderRoute: typeof AppPermissionsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/more': {
@@ -730,12 +850,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAnalyticsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/users/': {
+      id: '/_app/users/'
+      path: '/'
+      fullPath: '/users/'
+      preLoaderRoute: typeof AppUsersIndexRouteImport
+      parentRoute: typeof AppUsersRoute
+    }
     '/_app/dashboards/': {
       id: '/_app/dashboards/'
       path: '/'
       fullPath: '/dashboards/'
       preLoaderRoute: typeof AppDashboardsIndexRouteImport
       parentRoute: typeof AppDashboardsRoute
+    }
+    '/_app/users/$userId': {
+      id: '/_app/users/$userId'
+      path: '/$userId'
+      fullPath: '/users/$userId'
+      preLoaderRoute: typeof AppUsersUserIdRouteImport
+      parentRoute: typeof AppUsersRoute
     }
     '/_app/settings/users': {
       id: '/_app/settings/users'
@@ -842,12 +976,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAutomationsAutomationIdRouteImport
       parentRoute: typeof AppAutomationsRoute
     }
+    '/_app/users/$userId/': {
+      id: '/_app/users/$userId/'
+      path: '/'
+      fullPath: '/users/$userId/'
+      preLoaderRoute: typeof AppUsersUserIdIndexRouteImport
+      parentRoute: typeof AppUsersUserIdRoute
+    }
     '/_app/dashboards/$dashboardId/': {
       id: '/_app/dashboards/$dashboardId/'
       path: '/'
       fullPath: '/dashboards/$dashboardId/'
       preLoaderRoute: typeof AppDashboardsDashboardIdIndexRouteImport
       parentRoute: typeof AppDashboardsDashboardIdRoute
+    }
+    '/_app/users/$userId/edit': {
+      id: '/_app/users/$userId/edit'
+      path: '/edit'
+      fullPath: '/users/$userId/edit'
+      preLoaderRoute: typeof AppUsersUserIdEditRouteImport
+      parentRoute: typeof AppUsersUserIdRoute
     }
     '/_app/settings/server/new': {
       id: '/_app/settings/server/new'
@@ -1053,6 +1201,34 @@ const AppSettingsRouteWithChildren = AppSettingsRoute._addFileChildren(
   AppSettingsRouteChildren,
 )
 
+interface AppUsersUserIdRouteChildren {
+  AppUsersUserIdEditRoute: typeof AppUsersUserIdEditRoute
+  AppUsersUserIdIndexRoute: typeof AppUsersUserIdIndexRoute
+}
+
+const AppUsersUserIdRouteChildren: AppUsersUserIdRouteChildren = {
+  AppUsersUserIdEditRoute: AppUsersUserIdEditRoute,
+  AppUsersUserIdIndexRoute: AppUsersUserIdIndexRoute,
+}
+
+const AppUsersUserIdRouteWithChildren = AppUsersUserIdRoute._addFileChildren(
+  AppUsersUserIdRouteChildren,
+)
+
+interface AppUsersRouteChildren {
+  AppUsersUserIdRoute: typeof AppUsersUserIdRouteWithChildren
+  AppUsersIndexRoute: typeof AppUsersIndexRoute
+}
+
+const AppUsersRouteChildren: AppUsersRouteChildren = {
+  AppUsersUserIdRoute: AppUsersUserIdRouteWithChildren,
+  AppUsersIndexRoute: AppUsersIndexRoute,
+}
+
+const AppUsersRouteWithChildren = AppUsersRoute._addFileChildren(
+  AppUsersRouteChildren,
+)
+
 interface AppRouteChildren {
   AppAnalyticsRoute: typeof AppAnalyticsRoute
   AppAutomationsRoute: typeof AppAutomationsRouteWithChildren
@@ -1062,11 +1238,15 @@ interface AppRouteChildren {
   AppHistoryRoute: typeof AppHistoryRoute
   AppInboxRoute: typeof AppInboxRouteWithChildren
   AppMoreRoute: typeof AppMoreRoute
+  AppPermissionsRoute: typeof AppPermissionsRoute
+  AppProfilesRoute: typeof AppProfilesRoute
+  AppRolesRoute: typeof AppRolesRoute
   AppRoomsRoute: typeof AppRoomsRouteWithChildren
   AppScenesRoute: typeof AppScenesRouteWithChildren
   AppSettingsRoute: typeof AppSettingsRouteWithChildren
   AppStatisticsRoute: typeof AppStatisticsRoute
   AppTimelineRoute: typeof AppTimelineRoute
+  AppUsersRoute: typeof AppUsersRouteWithChildren
   AppIndexRoute: typeof AppIndexRoute
 }
 
@@ -1079,11 +1259,15 @@ const AppRouteChildren: AppRouteChildren = {
   AppHistoryRoute: AppHistoryRoute,
   AppInboxRoute: AppInboxRouteWithChildren,
   AppMoreRoute: AppMoreRoute,
+  AppPermissionsRoute: AppPermissionsRoute,
+  AppProfilesRoute: AppProfilesRoute,
+  AppRolesRoute: AppRolesRoute,
   AppRoomsRoute: AppRoomsRouteWithChildren,
   AppScenesRoute: AppScenesRouteWithChildren,
   AppSettingsRoute: AppSettingsRouteWithChildren,
   AppStatisticsRoute: AppStatisticsRoute,
   AppTimelineRoute: AppTimelineRoute,
+  AppUsersRoute: AppUsersRouteWithChildren,
   AppIndexRoute: AppIndexRoute,
 }
 

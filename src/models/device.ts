@@ -105,6 +105,12 @@ export interface Device {
 
   // Serverseitige Zusatzattribute
   attributes?: Record<string, unknown>;
+
+  // User binding (Teil 12). All optional — legacy devices remain valid.
+  ownerUserId?: ID;
+  visibleToUserIds?: ID[];
+  controlUserIds?: ID[];
+  favoriteUserIds?: ID[];
 }
 
 // NOTE: `DeviceGroup` moved to `./deviceGroup` (Teil 8). The Registry-based
