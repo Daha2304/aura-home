@@ -236,6 +236,12 @@ export function startCommunicationLayer(): void {
   deepLinkRouter.start();
   void updateManager.start();
 
+  // Produktions-Diagnose (Teil 15). Health-Checks + Recovery + Self-Check.
+  registerBuiltinHealthChecks();
+  healthManager.start();
+  recoveryManager.start();
+  void runStartupValidation();
+
 
 
 
