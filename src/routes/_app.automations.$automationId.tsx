@@ -46,7 +46,7 @@ function AutomationDetail() {
   if (!a) {
     return (
       <>
-        <PageHeader title="Automation" leading={<Link to="/automations"><ChevronLeft /></Link>} />
+        <PageHeader title="Automation" />
         <EmptyState title="Nicht gefunden" description="Diese Automation existiert nicht mehr." />
       </>
     );
