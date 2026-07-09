@@ -38,6 +38,7 @@ import { Route as AppAutomationsRouteImport } from './routes/_app.automations'
 import { Route as AppAnalyticsRouteImport } from './routes/_app.analytics'
 import { Route as AppUsersIndexRouteImport } from './routes/_app.users.index'
 import { Route as AppDashboardsIndexRouteImport } from './routes/_app.dashboards.index'
+import { Route as AppUsersUserIdRouteImport } from './routes/_app.users.$userId'
 import { Route as AppSettingsUsersRouteImport } from './routes/_app.settings.users'
 import { Route as AppSettingsServerRouteImport } from './routes/_app.settings.server'
 import { Route as AppSettingsNotificationsRouteImport } from './routes/_app.settings.notifications'
@@ -206,6 +207,11 @@ const AppDashboardsIndexRoute = AppDashboardsIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppDashboardsRoute,
 } as any)
+const AppUsersUserIdRoute = AppUsersUserIdRouteImport.update({
+  id: '/$userId',
+  path: '/$userId',
+  getParentRoute: () => AppUsersRoute,
+} as any)
 const AppSettingsUsersRoute = AppSettingsUsersRouteImport.update({
   id: '/users',
   path: '/users',
@@ -285,9 +291,9 @@ const AppAutomationsAutomationIdRoute =
     getParentRoute: () => AppAutomationsRoute,
   } as any)
 const AppUsersUserIdIndexRoute = AppUsersUserIdIndexRouteImport.update({
-  id: '/$userId/',
-  path: '/$userId/',
-  getParentRoute: () => AppUsersRoute,
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppUsersUserIdRoute,
 } as any)
 const AppDashboardsDashboardIdIndexRoute =
   AppDashboardsDashboardIdIndexRouteImport.update({
@@ -296,9 +302,9 @@ const AppDashboardsDashboardIdIndexRoute =
     getParentRoute: () => AppDashboardsDashboardIdRoute,
   } as any)
 const AppUsersUserIdEditRoute = AppUsersUserIdEditRouteImport.update({
-  id: '/$userId/edit',
-  path: '/$userId/edit',
-  getParentRoute: () => AppUsersRoute,
+  id: '/edit',
+  path: '/edit',
+  getParentRoute: () => AppUsersUserIdRoute,
 } as any)
 const AppSettingsServerNewRoute = AppSettingsServerNewRouteImport.update({
   id: '/new',
@@ -370,6 +376,7 @@ export interface FileRoutesByFullPath {
   '/settings/notifications': typeof AppSettingsNotificationsRoute
   '/settings/server': typeof AppSettingsServerRouteWithChildren
   '/settings/users': typeof AppSettingsUsersRoute
+  '/users/$userId': typeof AppUsersUserIdRouteWithChildren
   '/dashboards/': typeof AppDashboardsIndexRoute
   '/users/': typeof AppUsersIndexRoute
   '/automations/$automationId/edit': typeof AppAutomationsAutomationIdEditRoute
@@ -474,6 +481,7 @@ export interface FileRoutesById {
   '/_app/settings/notifications': typeof AppSettingsNotificationsRoute
   '/_app/settings/server': typeof AppSettingsServerRouteWithChildren
   '/_app/settings/users': typeof AppSettingsUsersRoute
+  '/_app/users/$userId': typeof AppUsersUserIdRouteWithChildren
   '/_app/dashboards/': typeof AppDashboardsIndexRoute
   '/_app/users/': typeof AppUsersIndexRoute
   '/_app/automations/$automationId/edit': typeof AppAutomationsAutomationIdEditRoute
@@ -529,6 +537,7 @@ export interface FileRouteTypes {
     | '/settings/notifications'
     | '/settings/server'
     | '/settings/users'
+    | '/users/$userId'
     | '/dashboards/'
     | '/users/'
     | '/automations/$automationId/edit'
@@ -632,6 +641,7 @@ export interface FileRouteTypes {
     | '/_app/settings/notifications'
     | '/_app/settings/server'
     | '/_app/settings/users'
+    | '/_app/users/$userId'
     | '/_app/dashboards/'
     | '/_app/users/'
     | '/_app/automations/$automationId/edit'
@@ -854,6 +864,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDashboardsIndexRouteImport
       parentRoute: typeof AppDashboardsRoute
     }
+    '/_app/users/$userId': {
+      id: '/_app/users/$userId'
+      path: '/$userId'
+      fullPath: '/users/$userId'
+      preLoaderRoute: typeof AppUsersUserIdRouteImport
+      parentRoute: typeof AppUsersRoute
+    }
     '/_app/settings/users': {
       id: '/_app/settings/users'
       path: '/users'
@@ -961,10 +978,10 @@ declare module '@tanstack/react-router' {
     }
     '/_app/users/$userId/': {
       id: '/_app/users/$userId/'
-      path: '/$userId'
+      path: '/'
       fullPath: '/users/$userId/'
       preLoaderRoute: typeof AppUsersUserIdIndexRouteImport
-      parentRoute: typeof AppUsersRoute
+      parentRoute: typeof AppUsersUserIdRoute
     }
     '/_app/dashboards/$dashboardId/': {
       id: '/_app/dashboards/$dashboardId/'
@@ -975,10 +992,10 @@ declare module '@tanstack/react-router' {
     }
     '/_app/users/$userId/edit': {
       id: '/_app/users/$userId/edit'
-      path: '/$userId/edit'
+      path: '/edit'
       fullPath: '/users/$userId/edit'
       preLoaderRoute: typeof AppUsersUserIdEditRouteImport
-      parentRoute: typeof AppUsersRoute
+      parentRoute: typeof AppUsersUserIdRoute
     }
     '/_app/settings/server/new': {
       id: '/_app/settings/server/new'
@@ -1184,16 +1201,28 @@ const AppSettingsRouteWithChildren = AppSettingsRoute._addFileChildren(
   AppSettingsRouteChildren,
 )
 
-interface AppUsersRouteChildren {
-  AppUsersIndexRoute: typeof AppUsersIndexRoute
+interface AppUsersUserIdRouteChildren {
   AppUsersUserIdEditRoute: typeof AppUsersUserIdEditRoute
   AppUsersUserIdIndexRoute: typeof AppUsersUserIdIndexRoute
 }
 
-const AppUsersRouteChildren: AppUsersRouteChildren = {
-  AppUsersIndexRoute: AppUsersIndexRoute,
+const AppUsersUserIdRouteChildren: AppUsersUserIdRouteChildren = {
   AppUsersUserIdEditRoute: AppUsersUserIdEditRoute,
   AppUsersUserIdIndexRoute: AppUsersUserIdIndexRoute,
+}
+
+const AppUsersUserIdRouteWithChildren = AppUsersUserIdRoute._addFileChildren(
+  AppUsersUserIdRouteChildren,
+)
+
+interface AppUsersRouteChildren {
+  AppUsersUserIdRoute: typeof AppUsersUserIdRouteWithChildren
+  AppUsersIndexRoute: typeof AppUsersIndexRoute
+}
+
+const AppUsersRouteChildren: AppUsersRouteChildren = {
+  AppUsersUserIdRoute: AppUsersUserIdRouteWithChildren,
+  AppUsersIndexRoute: AppUsersIndexRoute,
 }
 
 const AppUsersRouteWithChildren = AppUsersRoute._addFileChildren(
