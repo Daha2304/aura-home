@@ -41,6 +41,7 @@ function AppLayout() {
         </motion.div>
       </AnimatePresence>
       <ToastHost />
+      <CommandPaletteHost />
     </AppShell>
   );
 }
