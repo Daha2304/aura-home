@@ -22,6 +22,10 @@ export interface Backup {
   };
 }
 
+/**
+ * Legacy quick-backup export. The full registry-driven backup lives in
+ * `src/services/backup/BackupManager.ts` — this helper stays for compatibility.
+ */
 export function exportBackup(): Backup {
   return {
     version: BACKUP_VERSION,
@@ -39,9 +43,9 @@ export function exportBackup(): Backup {
 }
 
 export function importBackup(_backup: Backup): void {
-  // Contract only — real merge/validate logic added when persistence
-  // format is finalized.
-  throw new Error("importBackup is not implemented yet in this scaffold.");
+  throw new Error(
+    "Legacy importBackup is deprecated — nutze BackupManager.importAll().",
+  );
 }
 
 export function downloadBackupFile(backup: Backup): void {
