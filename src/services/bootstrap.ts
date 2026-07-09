@@ -216,6 +216,7 @@ export function stopCommunicationLayer(): void {
   unsubActiveServer?.();
   unsubActiveServer = null;
   stopIntelligence();
+  stopTimeline();
   stopAutomations();
   stopGroups();
   commandQueue.stop();
