@@ -37,6 +37,7 @@ import { bootstrapGroups, stopGroups } from "@/services/groups";
 import { bootstrapAutomations, stopAutomations } from "@/services/automations";
 import { bootstrapTimeline, stopTimeline } from "@/services/timeline";
 import { automationDebugger } from "@/services/automations/AutomationDebugger";
+import { startEventCenter, stopEventCenter } from "@/services/notifications";
 
 
 const log = createLogger("bootstrap");
