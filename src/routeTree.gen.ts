@@ -48,6 +48,7 @@ import { Route as AppSettingsRestoreRouteImport } from './routes/_app.settings.r
 import { Route as AppSettingsOfflineRouteImport } from './routes/_app.settings.offline'
 import { Route as AppSettingsNotificationsRouteImport } from './routes/_app.settings.notifications'
 import { Route as AppSettingsLanguageRouteImport } from './routes/_app.settings.language'
+import { Route as AppSettingsDiagnosticsRouteImport } from './routes/_app.settings.diagnostics'
 import { Route as AppSettingsDeveloperRouteImport } from './routes/_app.settings.developer'
 import { Route as AppSettingsBackupRouteImport } from './routes/_app.settings.backup'
 import { Route as AppSettingsAppearanceRouteImport } from './routes/_app.settings.appearance'
@@ -267,6 +268,11 @@ const AppSettingsLanguageRoute = AppSettingsLanguageRouteImport.update({
   path: '/language',
   getParentRoute: () => AppSettingsRoute,
 } as any)
+const AppSettingsDiagnosticsRoute = AppSettingsDiagnosticsRouteImport.update({
+  id: '/diagnostics',
+  path: '/diagnostics',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
 const AppSettingsDeveloperRoute = AppSettingsDeveloperRouteImport.update({
   id: '/developer',
   path: '/developer',
@@ -431,6 +437,7 @@ export interface FileRoutesByFullPath {
   '/settings/appearance': typeof AppSettingsAppearanceRoute
   '/settings/backup': typeof AppSettingsBackupRoute
   '/settings/developer': typeof AppSettingsDeveloperRoute
+  '/settings/diagnostics': typeof AppSettingsDiagnosticsRoute
   '/settings/language': typeof AppSettingsLanguageRoute
   '/settings/notifications': typeof AppSettingsNotificationsRoute
   '/settings/offline': typeof AppSettingsOfflineRoute
@@ -490,6 +497,7 @@ export interface FileRoutesByTo {
   '/settings/appearance': typeof AppSettingsAppearanceRoute
   '/settings/backup': typeof AppSettingsBackupRoute
   '/settings/developer': typeof AppSettingsDeveloperRoute
+  '/settings/diagnostics': typeof AppSettingsDiagnosticsRoute
   '/settings/language': typeof AppSettingsLanguageRoute
   '/settings/notifications': typeof AppSettingsNotificationsRoute
   '/settings/offline': typeof AppSettingsOfflineRoute
@@ -554,6 +562,7 @@ export interface FileRoutesById {
   '/_app/settings/appearance': typeof AppSettingsAppearanceRoute
   '/_app/settings/backup': typeof AppSettingsBackupRoute
   '/_app/settings/developer': typeof AppSettingsDeveloperRoute
+  '/_app/settings/diagnostics': typeof AppSettingsDiagnosticsRoute
   '/_app/settings/language': typeof AppSettingsLanguageRoute
   '/_app/settings/notifications': typeof AppSettingsNotificationsRoute
   '/_app/settings/offline': typeof AppSettingsOfflineRoute
@@ -619,6 +628,7 @@ export interface FileRouteTypes {
     | '/settings/appearance'
     | '/settings/backup'
     | '/settings/developer'
+    | '/settings/diagnostics'
     | '/settings/language'
     | '/settings/notifications'
     | '/settings/offline'
@@ -678,6 +688,7 @@ export interface FileRouteTypes {
     | '/settings/appearance'
     | '/settings/backup'
     | '/settings/developer'
+    | '/settings/diagnostics'
     | '/settings/language'
     | '/settings/notifications'
     | '/settings/offline'
@@ -741,6 +752,7 @@ export interface FileRouteTypes {
     | '/_app/settings/appearance'
     | '/_app/settings/backup'
     | '/_app/settings/developer'
+    | '/_app/settings/diagnostics'
     | '/_app/settings/language'
     | '/_app/settings/notifications'
     | '/_app/settings/offline'
@@ -1040,6 +1052,13 @@ declare module '@tanstack/react-router' {
       path: '/language'
       fullPath: '/settings/language'
       preLoaderRoute: typeof AppSettingsLanguageRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/settings/diagnostics': {
+      id: '/_app/settings/diagnostics'
+      path: '/diagnostics'
+      fullPath: '/settings/diagnostics'
+      preLoaderRoute: typeof AppSettingsDiagnosticsRouteImport
       parentRoute: typeof AppSettingsRoute
     }
     '/_app/settings/developer': {
@@ -1369,6 +1388,7 @@ interface AppSettingsRouteChildren {
   AppSettingsAppearanceRoute: typeof AppSettingsAppearanceRoute
   AppSettingsBackupRoute: typeof AppSettingsBackupRoute
   AppSettingsDeveloperRoute: typeof AppSettingsDeveloperRoute
+  AppSettingsDiagnosticsRoute: typeof AppSettingsDiagnosticsRoute
   AppSettingsLanguageRoute: typeof AppSettingsLanguageRoute
   AppSettingsNotificationsRoute: typeof AppSettingsNotificationsRoute
   AppSettingsOfflineRoute: typeof AppSettingsOfflineRoute
@@ -1384,6 +1404,7 @@ const AppSettingsRouteChildren: AppSettingsRouteChildren = {
   AppSettingsAppearanceRoute: AppSettingsAppearanceRoute,
   AppSettingsBackupRoute: AppSettingsBackupRoute,
   AppSettingsDeveloperRoute: AppSettingsDeveloperRoute,
+  AppSettingsDiagnosticsRoute: AppSettingsDiagnosticsRoute,
   AppSettingsLanguageRoute: AppSettingsLanguageRoute,
   AppSettingsNotificationsRoute: AppSettingsNotificationsRoute,
   AppSettingsOfflineRoute: AppSettingsOfflineRoute,
