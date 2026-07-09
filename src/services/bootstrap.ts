@@ -35,6 +35,8 @@ import { bootstrapDevicePropertyRegistry } from "@/services/deviceProperties";
 import { bootstrapScenes } from "@/services/scenes";
 import { bootstrapGroups, stopGroups } from "@/services/groups";
 import { bootstrapAutomations, stopAutomations } from "@/services/automations";
+import { bootstrapTimeline, stopTimeline } from "@/services/timeline";
+import { automationDebugger } from "@/services/automations/AutomationDebugger";
 
 
 const log = createLogger("bootstrap");
