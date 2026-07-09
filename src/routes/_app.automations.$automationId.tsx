@@ -69,13 +69,13 @@ function AutomationDetail() {
       <PageHeader
         title={a.name}
         subtitle={`${a.triggers.length} Auslöser · ${a.actions.length} Aktionen`}
-        leading={
-          <Link to="/automations" aria-label="Zurück">
-            <ChevronLeft className="h-5 w-5" />
-          </Link>
-        }
         trailing={
           <div className="flex items-center gap-1.5">
+            <Link to="/automations" aria-label="Zurück">
+              <GlassButton variant="ghost" size="sm">
+                <ChevronLeft className="h-4 w-4" />
+              </GlassButton>
+            </Link>
             <GlassButton
               variant="ghost"
               size="sm"
