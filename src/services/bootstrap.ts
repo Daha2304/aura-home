@@ -35,6 +35,8 @@ import { bootstrapDevicePropertyRegistry } from "@/services/deviceProperties";
 import { bootstrapScenes } from "@/services/scenes";
 import { bootstrapGroups, stopGroups } from "@/services/groups";
 import { bootstrapAutomations, stopAutomations } from "@/services/automations";
+import { bootstrapTimeline, stopTimeline } from "@/services/timeline";
+import { automationDebugger } from "@/services/automations/AutomationDebugger";
 
 
 const log = createLogger("bootstrap");
@@ -172,6 +174,13 @@ export function startCommunicationLayer(): void {
   // startet Scheduler + Executor. Nutzt ausschließlich CommandQueue.
   bootstrapAutomations();
 
+  // Timeline / History / Analytics (Teil 10). Registriert Built-in
+  // TimelineSourceDescriptors und verbindet sie mit dem TimelineStore.
+  // Neue Quellen (z. B. Notifications in Teil 11) benötigen ausschließlich
+  // einen weiteren Descriptor — keine Änderung an dieser Datei.
+  bootstrapTimeline();
+  automationDebugger.register();
+
 
 
 
@@ -207,6 +216,7 @@ export function stopCommunicationLayer(): void {
   unsubActiveServer?.();
   unsubActiveServer = null;
   stopIntelligence();
+  stopTimeline();
   stopAutomations();
   stopGroups();
   commandQueue.stop();

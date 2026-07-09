@@ -19,15 +19,18 @@ import { Route as OnboardingIntroRouteImport } from './routes/onboarding.intro'
 import { Route as OnboardingDoneRouteImport } from './routes/onboarding.done'
 import { Route as OnboardingConnectRouteImport } from './routes/onboarding.connect'
 import { Route as OnboardingConfigureRouteImport } from './routes/onboarding.configure'
+import { Route as AppTimelineRouteImport } from './routes/_app.timeline'
 import { Route as AppStatisticsRouteImport } from './routes/_app.statistics'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppScenesRouteImport } from './routes/_app.scenes'
 import { Route as AppRoomsRouteImport } from './routes/_app.rooms'
 import { Route as AppMoreRouteImport } from './routes/_app.more'
+import { Route as AppHistoryRouteImport } from './routes/_app.history'
 import { Route as AppGroupsRouteImport } from './routes/_app.groups'
 import { Route as AppDevicesRouteImport } from './routes/_app.devices'
 import { Route as AppDashboardsRouteImport } from './routes/_app.dashboards'
 import { Route as AppAutomationsRouteImport } from './routes/_app.automations'
+import { Route as AppAnalyticsRouteImport } from './routes/_app.analytics'
 import { Route as AppDashboardsIndexRouteImport } from './routes/_app.dashboards.index'
 import { Route as AppSettingsUsersRouteImport } from './routes/_app.settings.users'
 import { Route as AppSettingsServerRouteImport } from './routes/_app.settings.server'
@@ -99,6 +102,11 @@ const OnboardingConfigureRoute = OnboardingConfigureRouteImport.update({
   path: '/configure',
   getParentRoute: () => OnboardingRoute,
 } as any)
+const AppTimelineRoute = AppTimelineRouteImport.update({
+  id: '/timeline',
+  path: '/timeline',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppStatisticsRoute = AppStatisticsRouteImport.update({
   id: '/statistics',
   path: '/statistics',
@@ -124,6 +132,11 @@ const AppMoreRoute = AppMoreRouteImport.update({
   path: '/more',
   getParentRoute: () => AppRoute,
 } as any)
+const AppHistoryRoute = AppHistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppGroupsRoute = AppGroupsRouteImport.update({
   id: '/groups',
   path: '/groups',
@@ -142,6 +155,11 @@ const AppDashboardsRoute = AppDashboardsRouteImport.update({
 const AppAutomationsRoute = AppAutomationsRouteImport.update({
   id: '/automations',
   path: '/automations',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAnalyticsRoute = AppAnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
   getParentRoute: () => AppRoute,
 } as any)
 const AppDashboardsIndexRoute = AppDashboardsIndexRouteImport.update({
@@ -259,15 +277,18 @@ const AppAutomationsAutomationIdEditRoute =
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/onboarding': typeof OnboardingRouteWithChildren
+  '/analytics': typeof AppAnalyticsRoute
   '/automations': typeof AppAutomationsRouteWithChildren
   '/dashboards': typeof AppDashboardsRouteWithChildren
   '/devices': typeof AppDevicesRouteWithChildren
   '/groups': typeof AppGroupsRouteWithChildren
+  '/history': typeof AppHistoryRoute
   '/more': typeof AppMoreRoute
   '/rooms': typeof AppRoomsRouteWithChildren
   '/scenes': typeof AppScenesRouteWithChildren
   '/settings': typeof AppSettingsRouteWithChildren
   '/statistics': typeof AppStatisticsRoute
+  '/timeline': typeof AppTimelineRoute
   '/onboarding/configure': typeof OnboardingConfigureRoute
   '/onboarding/connect': typeof OnboardingConnectRoute
   '/onboarding/done': typeof OnboardingDoneRoute
@@ -298,14 +319,17 @@ export interface FileRoutesByFullPath {
   '/dashboards/$dashboardId/': typeof AppDashboardsDashboardIdIndexRoute
 }
 export interface FileRoutesByTo {
+  '/analytics': typeof AppAnalyticsRoute
   '/automations': typeof AppAutomationsRouteWithChildren
   '/devices': typeof AppDevicesRouteWithChildren
   '/groups': typeof AppGroupsRouteWithChildren
+  '/history': typeof AppHistoryRoute
   '/more': typeof AppMoreRoute
   '/rooms': typeof AppRoomsRouteWithChildren
   '/scenes': typeof AppScenesRouteWithChildren
   '/settings': typeof AppSettingsRouteWithChildren
   '/statistics': typeof AppStatisticsRoute
+  '/timeline': typeof AppTimelineRoute
   '/onboarding/configure': typeof OnboardingConfigureRoute
   '/onboarding/connect': typeof OnboardingConnectRoute
   '/onboarding/done': typeof OnboardingDoneRoute
@@ -339,15 +363,18 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
   '/onboarding': typeof OnboardingRouteWithChildren
+  '/_app/analytics': typeof AppAnalyticsRoute
   '/_app/automations': typeof AppAutomationsRouteWithChildren
   '/_app/dashboards': typeof AppDashboardsRouteWithChildren
   '/_app/devices': typeof AppDevicesRouteWithChildren
   '/_app/groups': typeof AppGroupsRouteWithChildren
+  '/_app/history': typeof AppHistoryRoute
   '/_app/more': typeof AppMoreRoute
   '/_app/rooms': typeof AppRoomsRouteWithChildren
   '/_app/scenes': typeof AppScenesRouteWithChildren
   '/_app/settings': typeof AppSettingsRouteWithChildren
   '/_app/statistics': typeof AppStatisticsRoute
+  '/_app/timeline': typeof AppTimelineRoute
   '/onboarding/configure': typeof OnboardingConfigureRoute
   '/onboarding/connect': typeof OnboardingConnectRoute
   '/onboarding/done': typeof OnboardingDoneRoute
@@ -383,15 +410,18 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/onboarding'
+    | '/analytics'
     | '/automations'
     | '/dashboards'
     | '/devices'
     | '/groups'
+    | '/history'
     | '/more'
     | '/rooms'
     | '/scenes'
     | '/settings'
     | '/statistics'
+    | '/timeline'
     | '/onboarding/configure'
     | '/onboarding/connect'
     | '/onboarding/done'
@@ -422,14 +452,17 @@ export interface FileRouteTypes {
     | '/dashboards/$dashboardId/'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/analytics'
     | '/automations'
     | '/devices'
     | '/groups'
+    | '/history'
     | '/more'
     | '/rooms'
     | '/scenes'
     | '/settings'
     | '/statistics'
+    | '/timeline'
     | '/onboarding/configure'
     | '/onboarding/connect'
     | '/onboarding/done'
@@ -462,15 +495,18 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_app'
     | '/onboarding'
+    | '/_app/analytics'
     | '/_app/automations'
     | '/_app/dashboards'
     | '/_app/devices'
     | '/_app/groups'
+    | '/_app/history'
     | '/_app/more'
     | '/_app/rooms'
     | '/_app/scenes'
     | '/_app/settings'
     | '/_app/statistics'
+    | '/_app/timeline'
     | '/onboarding/configure'
     | '/onboarding/connect'
     | '/onboarding/done'
@@ -579,6 +615,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OnboardingConfigureRouteImport
       parentRoute: typeof OnboardingRoute
     }
+    '/_app/timeline': {
+      id: '/_app/timeline'
+      path: '/timeline'
+      fullPath: '/timeline'
+      preLoaderRoute: typeof AppTimelineRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/statistics': {
       id: '/_app/statistics'
       path: '/statistics'
@@ -614,6 +657,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppMoreRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/history': {
+      id: '/_app/history'
+      path: '/history'
+      fullPath: '/history'
+      preLoaderRoute: typeof AppHistoryRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/groups': {
       id: '/_app/groups'
       path: '/groups'
@@ -640,6 +690,13 @@ declare module '@tanstack/react-router' {
       path: '/automations'
       fullPath: '/automations'
       preLoaderRoute: typeof AppAutomationsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/analytics': {
+      id: '/_app/analytics'
+      path: '/analytics'
+      fullPath: '/analytics'
+      preLoaderRoute: typeof AppAnalyticsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/dashboards/': {
@@ -947,28 +1004,34 @@ const AppSettingsRouteWithChildren = AppSettingsRoute._addFileChildren(
 )
 
 interface AppRouteChildren {
+  AppAnalyticsRoute: typeof AppAnalyticsRoute
   AppAutomationsRoute: typeof AppAutomationsRouteWithChildren
   AppDashboardsRoute: typeof AppDashboardsRouteWithChildren
   AppDevicesRoute: typeof AppDevicesRouteWithChildren
   AppGroupsRoute: typeof AppGroupsRouteWithChildren
+  AppHistoryRoute: typeof AppHistoryRoute
   AppMoreRoute: typeof AppMoreRoute
   AppRoomsRoute: typeof AppRoomsRouteWithChildren
   AppScenesRoute: typeof AppScenesRouteWithChildren
   AppSettingsRoute: typeof AppSettingsRouteWithChildren
   AppStatisticsRoute: typeof AppStatisticsRoute
+  AppTimelineRoute: typeof AppTimelineRoute
   AppIndexRoute: typeof AppIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAnalyticsRoute: AppAnalyticsRoute,
   AppAutomationsRoute: AppAutomationsRouteWithChildren,
   AppDashboardsRoute: AppDashboardsRouteWithChildren,
   AppDevicesRoute: AppDevicesRouteWithChildren,
   AppGroupsRoute: AppGroupsRouteWithChildren,
+  AppHistoryRoute: AppHistoryRoute,
   AppMoreRoute: AppMoreRoute,
   AppRoomsRoute: AppRoomsRouteWithChildren,
   AppScenesRoute: AppScenesRouteWithChildren,
   AppSettingsRoute: AppSettingsRouteWithChildren,
   AppStatisticsRoute: AppStatisticsRoute,
+  AppTimelineRoute: AppTimelineRoute,
   AppIndexRoute: AppIndexRoute,
 }
 
