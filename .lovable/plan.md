@@ -1,135 +1,150 @@
-# Teil 10 von 18 – Timeline, History, Analytics (mit Ergänzungen)
 
-Vollständig generische Timeline-, Historien- und Analytics-Plattform auf Basis der bestehenden Architektur. Alle Quellen registrieren sich ausschließlich über `TimelineSourceDescriptor` / `TimelineSourceRegistry`. Keine parallelen Datenmodelle, keine direkten WebSocket-Aufrufe, keine Sonderlogik.
+# Teil 11 von 18 — Event Center
 
-## 1. Gemeinsame Datenmodelle (Vorbereitung)
+Vollständig generisches Event Center als Aufsatz auf der Timeline-Plattform (Teil 10). Kein paralleles Notification-System: jede Notification ist eine Timeline-Quelle über `TimelineSourceDescriptor`, alle Farben/Icons kommen aus `SeverityRegistry` und `EventCategoryRegistry`. Der bestehende `notificationsStore` (aus Onboarding) und `TimelineSourceKind = "notification"` (Platzhalter aus Teil 10) werden zum vollwertigen System ausgebaut, nicht ersetzt.
 
-Neue, projektweit wiederverwendbare Modelle in `src/models/`:
+## 1. Datenmodelle (`src/models/`)
 
-### 1.1 Severity (`src/models/severity.ts`)
-Generisches Severity-Modell, später gemeinsam genutzt von Timeline, Event Center, Notifications, Discovery, WebSocket, Automationen, Systemmeldungen.
-
-```ts
-export type Severity = 'info' | 'success' | 'warning' | 'error' | 'critical';
-export const SEVERITY_ORDER: Record<Severity, number> = { info:0, success:1, warning:2, error:3, critical:4 };
-export interface SeverityDescriptor { severity: Severity; label: string; color: string; icon: string; }
-```
-Nur Datenmodell + Descriptor-Tabelle. Keine Engine, keine UI.
-
-### 1.2 EventCategory (`src/models/eventCategory.ts`)
-Gemeinsames Kategorien-Modell für Event Center, Timeline, Notifications.
+### 1.1 `notification.ts` (erweitert, nicht ersetzt)
+Bestehendes `AppNotification` wird ergänzt (alle neuen Felder optional, `NotificationSeverity` bleibt als Alias erhalten für Rückwärtskompatibilität, intern aber auf `Severity` gemappt):
 
 ```ts
-export type EventCategory =
-  | 'system' | 'device' | 'room' | 'scene' | 'automation'
-  | 'group'  | 'security' | 'energy' | 'network' | 'user' | 'custom';
-export interface EventCategoryDescriptor { category: EventCategory; label: string; icon: string; color: string; }
-```
-Nur Datenmodell + Descriptor-Tabelle.
-
-### 1.3 Timeline-Erweiterungen (`src/models/timeline.ts`)
-Bestehendes `TimelineEntry` aus Teil 9 wird um **optionale** Felder erweitert (keine bestehenden Einträge werden invalidiert):
-
-```ts
-severity?: Severity;
+uuid: string;
 category?: EventCategory;
-acknowledged?: boolean;
-pinned?: boolean;
-archived?: boolean;
-sourceVersion?: string;
+severity: Severity;            // ersetzt intern NotificationSeverity, alt bleibt kompatibel
+priority?: 'low' | 'normal' | 'high' | 'urgent';
+icon?: string; color?: string;
+refType?: 'device'|'room'|'scene'|'automation'|'group'|'system'|'custom';
+refId?: ID;
+status?: 'active'|'resolved'|'dismissed';
+acknowledged?: boolean; pinned?: boolean; archived?: boolean; favorite?: boolean;
+tags?: string[];
+actions?: NotificationAction[];
+custom?: Record<string, unknown>;
+userId?: ID;                    // Vorbereitung Teil 12 (Benutzerbindung)
+templateId?: string;
 ```
 
-Ebenso erweiterter `TimelineFilter` (severity, category, acknowledged, pinned, archived – alle optional).
+- `NotificationAction`: `{ id; label; icon?; kind: 'navigate'|'run-scene'|'run-automation'|'open-device'|'open-room'|'open-group'|'open-log'|'custom'; target?; payload? }`
+- `NotificationRule`, `NotificationTemplate`, `NotificationPreferences` als neue Modelle (`src/models/notificationRule.ts`, `notificationTemplate.ts`, `notificationPreferences.ts`).
 
-### 1.4 Weitere Modelle
-- `HistoryEntry` (Alias von TimelineEntry für persistente Historie)
-- `StatisticsSnapshot`, `EnergyStatistics` (nur Modell)
-- `ChartDescriptor`, `ChartSeries`, `ChartPoint`
-- `AutomationDebugTrace`, `AutomationSimulationResult`
+### 1.2 Regeln (Vorbereitung, kein Runtime-Enforcement über Push)
+`NotificationRule` — quietHours, muteCategories, muteSeverityBelow, mutedRefs (device/room/group/automation/user IDs), enabled. Rein Datenmodell + Auswertungsfunktion `matchesRule(notification, rule): boolean`.
 
-## 2. Registries (generisch, offen erweiterbar)
+### 1.3 Templates
+`NotificationTemplate` — id, title/description-Templates mit `{{placeholders}}`, defaultSeverity, defaultCategory, defaultActions, refType.
 
-Unter `src/services/timeline/` bzw. `src/services/charts/`:
+## 2. Registries & Manager (`src/services/notifications/`)
 
-- `TimelineSourceRegistry` – einzige Registrierungsstelle für neue Quellen. Kein Switch/If in der Timeline-Engine; die Engine iteriert nur über registrierte Descriptoren.
-- `ChartRegistry` – Linie, Balken, Fläche, Kreis, Donut; Heatmap als Descriptor vorbereitet.
-- `StatisticsRegistry` – Contributoren (Anzahl Geräte, Online/Offline, Schaltvorgänge, Szenen-, Automations-Läufe, Fehler, Warnungen, Ø-Laufzeiten).
-- `EnergyRegistry` – Vorbereitung (leer, kein Sonderweg).
-- `SeverityRegistry` (leichtgewichtig) – Descriptor-Mapping, damit UI-Konsumenten Farben/Icons konsistent auflösen.
-- `EventCategoryRegistry` (leichtgewichtig) – analog.
+Bestehende Muster (WidgetRegistry, SceneRegistry, AutomationRegistry) 1:1 übernehmen:
 
-Alle Registries folgen dem bestehenden Muster (Widget-, Scene-, Group-, Automation-Registries).
+- `NotificationRegistry` — Registry für **Producer-Descriptoren**: `{ id, label, category, defaultSeverity, subscribe(emit) }`. Producer sind die Punkte, an denen Domänen (Automations, Discovery, Scenes, Groups, System) Notifications erzeugen. Kein Switch/If — der Manager iteriert über Descriptoren.
+- `NotificationTemplateRegistry` — Descriptor-Tabelle, `render(templateId, data): AppNotification`.
+- `NotificationRuleEngine` — reine Auswertungsschicht über `notificationRulesStore`. Filtert eingehende Notifications (drop/soften), verändert nichts an der Timeline-Persistenz.
+- `NotificationManager` — Fassade: `push(input)`, `markRead`, `markAllRead`, `pin`, `archive`, `favorite`, `acknowledge`, `remove`, `runAction(notification, actionId, router)`. Schreibt in `notificationsStore` **und** emittiert einen `TimelineEntry` über den registrierten Timeline-Source-Adapter.
+- `EventCenter` — Orchestrator; startet bei Bootstrap, sammelt Producer, verbindet mit TimelineSourceRegistry, hält Preferences.
 
-## 3. Timeline Sources (Selbstregistrierung)
+## 3. Timeline-Integration (Erweiterungspunkt-Garantie)
 
-Adapter je Domäne, ausschließlich auf bestehende Event-Emitter/Stores zugreifend:
+- Aktivierung des in Teil 10 vorbereiteten `notificationTimelineSource` (Descriptor bereits vorhanden, `enabled: true` schalten).
+- Der Source-Adapter mapped `AppNotification -> TimelineEntry` (source: `"notification"`, category/severity aus der Notification, refId/refType übernommen, sourceVersion gesetzt).
+- Keine zusätzlichen Switch/If in der Timeline-Engine. Neue Ereignisquellen (später) registrieren sich weiterhin nur über `TimelineSourceRegistry`.
 
-- `deviceTimelineSource` – Device-Events / devicesStore
-- `sceneTimelineSource` – SceneEvents + sceneExecutionsStore
-- `groupTimelineSource` – GroupEvents + groupExecutionsStore
-- `automationTimelineSource` – AutomationEvents + automationExecutionsStore
-- `systemTimelineSource` – App-Lifecycle, Discovery-Status, WebSocket-Status
-- Descriptor-Platzhalter `notificationTimelineSource` (disabled, Teil 11)
-- Descriptor-Platzhalter `userTimelineSource` (disabled)
+## 4. Stores (`src/store/slices/`)
 
-Registrierung ausnahmslos über `TimelineSourceRegistry.register(descriptor)` in `bootstrap.ts`.
+- `notificationsStore` (vorhanden) — erweitert um: byId-Map (O(1)), Indexe nach category/severity/refId/pinned/favorite/archived/unread; Selectors `selectUnreadCount`, `selectCritical`, `selectByRoom`, `selectByDevice`, `selectPinned`, `selectFavorites`, `selectArchived`. Ringpuffer bleibt bei 200, wird konfigurierbar.
+- `notificationRulesStore` — Rules + `activeRuleId`, Import/Export-fähig.
+- `notificationTemplatesStore` — Templates, Import/Export.
+- `notificationPreferencesStore` — global Preferences (Ruhezeiten, Toast-Verhalten, Badge-Verhalten, Filter). Bestehende Settings in `settingsStore.notifications` bleiben; neue Preferences ergänzen, alte Keys werden weitergelesen.
 
-## 4. Stores
+Alle Stores mit memoized Selektoren, O(1)-Lookups.
 
-- `timelineStore` – zeitlich sortierter Ringpuffer, indexiert nach source/reference/category/severity
-- `historyStore` – In-Memory-Persistenz + Export
-- `statisticsStore` – berechnete Snapshots
-- `energyStore` – Vorbereitung
-- `chartStore` – aktive Diagramm-Definitionen
+## 5. Toast-System (`src/components/notifications/`)
 
-O(1)-Lookups, memoized Selectors, kompatibel zu bestehender Store-Architektur.
+- `ToastHost` — global gemountet in `__root.tsx` neben bestehendem `<Toaster />` (sonner bleibt für Ad-hoc-UI-Toasts; das Event-Toast-System zeigt **nur** Notifications, die Preferences erlauben).
+- `NotificationToast` — Glass-Design (GlassCard/GlassPanel), Framer-Motion (`AnimatePresence`, `layout`, shared layout), severity-abhängige Farb-Tokens aus SeverityRegistry, Auto-Dismiss (Dauer priority-abhängig), Aktionen (rendern `NotificationAction`), `aria-live="assertive"` bei critical/error, sonst `polite`.
+- Queue mit max. sichtbaren Toasts (Priorität-basiert, Stapeln), Pause bei Hover/Focus.
 
-## 5. Chart Engine
+## 6. Inbox & Routen (`src/routes/`)
 
-`src/services/charts/`: generischer `ChartRenderer`, Typen ausschließlich über `ChartRegistry`. Nutzung vorhandener Chart-Primitives des Projekts.
+Neue Routen, ausschließlich Glass-Design und bestehende UI-Primitives:
 
-## 6. Automation Debugger + Simulation
+- `/_app/inbox` — Hauptansicht mit Tabs: Alle, Ungelesen, Favoriten, Angeheftet, Archiv. Filter-Sheet: Kategorie (aus `EventCategoryRegistry`), Severity (aus `SeverityRegistry`), Zeitraum, Suche, Referenz-Typ. Virtualisiert.
+- `/_app/inbox/$notificationId` — Detailansicht: Quelle, Zeit, Referenz (Link zu device/room/scene/automation/group), Beschreibung, eingebettete Timeline (gefiltert auf `refId`), Aktionen (Quick Actions), Zusammenhang (verwandte Einträge).
+- `/_app/settings/notifications` (vorhanden) — erweitert um Ruhezeiten, Kategorien-/Severity-Filter, Regel-Verwaltung, Templates. Alte Rows bleiben.
 
-- `AutomationDebugger` – schreibt Traces via `automationTimelineSource` (Trigger, Bedingungen, Aktionen, Dauer, Fehler, Retry, Rollback).
-- `AutomationSimulator` – optionaler `dryRun: true` im `ExecutionContext` (additiv, ändert keine bestehende Signatur). Trigger/Conditions/Actions werden ausgewertet, `CommandQueue` sendet nichts an Geräte.
+Bottom-Nav / `_app.more.tsx`: Eintrag „Ereignisse" mit Badge (Ungelesen-Anzahl).
 
-Keine Änderungen an CommandQueue oder Universal Control Engine.
+## 7. Quick Actions
 
-## 7. Widgets (Widget Registry)
+`NotificationActionExecutor` — kennt die generischen Kinds und delegiert an bestehende Manager:
+- `navigate` → `router.navigate({ to: target })`
+- `open-device`/`open-room`/`open-group`/`open-scene`/`open-automation` → typisierte Routen
+- `run-scene` → `SceneManager.run(id, ctx)`
+- `run-automation` → `AutomationManager.trigger(id, ctx)`
+- `open-log` → `/timeline?refId=...`
+- `custom` → registrierbarer Handler via `NotificationRegistry.registerActionHandler(kind, fn)`
 
-Neu in `src/services/widgets/builtin/analytics.tsx`:
-`timeline`, `recent.activity`, `statistics`, `energy` (Platzhalter), `automation.debug`, `execution.history`, `system.status`.
+## 8. Widgets (`src/services/widgets/builtin/notifications.tsx`)
 
-## 8. Routen / UI (nur Erweiterungen)
+Registriert via `WidgetRegistry.register(...)`:
+- `notification.center` — kompakte Inbox
+- `notification.unread` — Zähler
+- `notification.critical` — kritische Ereignisse
+- `notification.warnings` — Warnungen
+- `notification.recent` — letzte N
+- `notification.pinned` — angeheftete
+Alle konsumieren Store-Selectors, keine eigene Datenlogik.
 
-- Neu: `/_app/timeline`, `/_app/history`, `/_app/analytics`
-- Erweitert: Detail-Tabs bei Devices, Rooms, Scenes, Automations (Historie, Diagramme, Timeline, Debugger, Simulation).
+## 9. Integration in bestehende Domänen
 
-Ausschließlich bestehendes Glass-Design-System.
+Über **Producer-Descriptoren** (Notification Registry), keine Sonderpfade:
 
-## 9. Import / Export
+- `automationNotificationProducer` — hört auf `AutomationEvents` (executed/failed), erzeugt Notifications über Templates.
+- `discoveryNotificationProducer` — Discovery-Status-Ereignisse.
+- `deviceNotificationProducer` — offline/online/error via bestehende Device-Events.
+- `sceneNotificationProducer`, `groupNotificationProducer` — Ausführungsergebnisse/Fehler.
+- `systemNotificationProducer` — WebSocket-Status, App-Lifecycle.
 
-JSON-Export für Timeline, History, Statistics; Import vorbereitet.
+Producer sind rein optional-abonnierbar; Producer-Descriptoren registrieren sich zentral in `bootstrap.ts`. Room-/Device-/Automation-Detailseiten binden Store-Selectors (`selectByRoom(id)` etc.) und zeigen bestehende Karten — keine Änderung an deren Datenpfad.
 
-## 10. Performance & Accessibility
+## 10. Import / Export
 
-Virtualisierung, Memoization, Selectors, Lazy Loading, Code Splitting. Große Touchflächen, ARIA-Labels, `aria-live="polite"` bei neuen Einträgen.
+`src/services/notifications/serialization.ts` — JSON-Export/-Import für Preferences, Rules, Templates. Fügt sich in bestehende Backup-Route ein.
 
-## 11. Bootstrap-Integration
+## 11. Vorbereitung Teil 12 (Benutzer)
 
-`bootstrap.ts`: Registrierung aller Registries und Timeline Sources, `stopTimeline()` im Lifecycle.
+- `AppNotification.userId?` und `NotificationRule.userId?` optional.
+- `NotificationManager.push` akzeptiert optional `userId` (falls in Zukunft gesetzt).
+- `notificationsStore`-Selectors erhalten optionalen `userId`-Filter.
+- Keine Auth-, keine Rollenlogik in diesem Teil.
 
-## 12. Erweiterungspunkt-Garantie
+## 12. Performance & Accessibility
 
-Die Timeline-Engine besitzt **keine** quellenspezifische Switch/If-Logik. Neue Quellen (z. B. Notifications in Teil 11) benötigen ausschließlich einen `TimelineSourceDescriptor` und `TimelineSourceRegistry.register(...)` – keine Änderung an Engine, Stores oder UI.
+- `React.memo`, memoized Selectors, virtualisierte Inbox-Liste, Lazy-Load der Inbox-Route.
+- ARIA-Live-Region im ToastHost, `role="status"`/`role="alert"` je nach Severity.
+- Touchflächen ≥ 44px, Fokus-Management in Detail-Sheets.
 
-## Nicht enthalten
+## 13. Bootstrap
 
-Keine Cloud, KI, Push, Benutzerverwaltung, Notification Engine, neue Auth-Flows. Severity und EventCategory werden **nur als Datenmodell** vorbereitet.
+`src/services/bootstrap.ts`: Registrierung der Producer-Descriptoren, Aktivierung `notificationTimelineSource`, Start `EventCenter`, `stopEventCenter()` im Lifecycle.
+
+## 14. Nicht enthalten
+
+Kein Push, keine Cloud, kein E-Mail, kein SMS, keine externe Dienste, keine Auth. Kein Ersatz für sonner (bleibt für UI-Toasts). Kein neuer WebSocket-Kanal.
+
+## 15. Erweiterungspunkt-Garantie
+
+Neue Ereignisquellen kommen ausschließlich über:
+1. `TimelineSourceRegistry.register(descriptor)` (falls eigene Timeline-Quelle) und/oder
+2. `NotificationRegistry.registerProducer(descriptor)` (falls Notifications erzeugt werden).
+
+Kein Code in Manager, Store, Toast, Inbox oder Widgets muss dafür geändert werden.
 
 ## Technische Details
 
-- Neue optionale Timeline-Felder brechen keine bestehende Persistenz/Serialisierung; Serialisierer ignorieren `undefined`.
-- `SeverityRegistry` und `EventCategoryRegistry` sind rein deklarative Descriptor-Tabellen; kein Runtime-Verhalten.
-- `TimelineSourceDescriptor` erhält Felder: `id`, `label`, `icon`, `color`, `category?: EventCategory`, `defaultSeverity?: Severity`, `enabled`, `subscribe(emit)`, `unsubscribe()`, `sourceVersion?: string`.
-- Refaktorierungen sind erlaubt, entfernen aber keine bestehende Funktion.
+- `NotificationSeverity` (alt) bleibt exportiert als Alias auf `Severity`-Teilmenge; Migration in Store transparent (`"info"|"success"|"warning"|"error"` unverändert, `"critical"` neu unterstützt).
+- `notificationsStore.push` ruft intern `NotificationManager.push`; direkter Store-Aufruf bleibt kompatibel, wird aber via Wrapper an Manager delegiert.
+- Timeline-Adapter für Notifications ist **die einzige** Stelle, die Notifications in die Timeline schreibt — kein Domain-Code emittiert Timeline-Einträge parallel.
+- Rules werden vor `push` ausgewertet; abgelehnte Notifications können optional dennoch als Timeline-Eintrag (severity `info`) archiviert werden (per Preference).
+- Refactoring erlaubt: Konsolidierung von `settingsStore.notifications` in `notificationPreferencesStore` möglich, alte Keys werden weitergelesen; keine bestehende Funktion entfällt.
