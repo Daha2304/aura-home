@@ -104,5 +104,9 @@ export interface TimelineSourceDescriptor {
   subscribe(emit: (entry: TimelineEntry) => void): () => void;
 }
 
-/** Persistenter Historien-Eintrag — strukturell identisch zu {@link TimelineEntry}. */
-export type HistoryEntry = TimelineEntry;
+/**
+ * Persistenter Timeline-Historien-Eintrag — strukturell identisch zu
+ * {@link TimelineEntry}. Nicht zu verwechseln mit dem Geräte-Historien-Eintrag
+ * aus `models/history.ts`, der einzelne Zustands-Deltas beschreibt.
+ */
+export type TimelineHistoryEntry = TimelineEntry;
