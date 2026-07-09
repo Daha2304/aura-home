@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   BarChart3,
+  Bell,
   ChevronRight,
   History,
   Layers,
@@ -11,6 +12,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { GlassCard } from "@/components/glass/GlassCard";
+import { useNotificationsStore, selectUnreadCount } from "@/store/slices/notificationsStore";
 
 export const Route = createFileRoute("/_app/more")({
   head: () => ({ meta: [{ title: "Mehr · Smart Home" }] }),
