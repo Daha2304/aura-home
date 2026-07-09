@@ -39,6 +39,7 @@ import { bootstrapTimeline, stopTimeline } from "@/services/timeline";
 import { automationDebugger } from "@/services/automations/AutomationDebugger";
 import { startEventCenter, stopEventCenter } from "@/services/notifications";
 import { bootstrapUsers } from "@/services/users";
+import { startSearchPlatform, stopSearchPlatform } from "@/services/search";
 
 
 const log = createLogger("bootstrap");
