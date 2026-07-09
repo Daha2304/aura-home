@@ -52,6 +52,9 @@ const entries: Entry[] = [
   { to: "/settings/update", label: "App-Update", hint: "Aktualisierungen", icon: Sparkles },
   { to: "/settings/storage", label: "Speicher", hint: "Caches verwalten", icon: HardDrive },
   { to: "/settings/app", label: "App-Informationen", hint: "Versionen", icon: Info },
+  { to: "/settings/diagnostics", label: "Diagnose", hint: "System-Gesundheit", icon: HeartPulse },
+  { to: "/settings/performance", label: "Performance", hint: "FPS, Flags", icon: Activity },
+  { to: "/settings/logs", label: "Logs", hint: "Filter & Export", icon: FileText },
   { to: "/settings/developer", label: "Entwickler", hint: "Diagnose, Logs", icon: TerminalSquare },
 ];
 
