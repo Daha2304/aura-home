@@ -19,7 +19,6 @@ import { Route as OnboardingIntroRouteImport } from './routes/onboarding.intro'
 import { Route as OnboardingDoneRouteImport } from './routes/onboarding.done'
 import { Route as OnboardingConnectRouteImport } from './routes/onboarding.connect'
 import { Route as OnboardingConfigureRouteImport } from './routes/onboarding.configure'
-import { Route as AppUsersRouteImport } from './routes/_app.users'
 import { Route as AppTimelineRouteImport } from './routes/_app.timeline'
 import { Route as AppStatisticsRouteImport } from './routes/_app.statistics'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
@@ -36,6 +35,7 @@ import { Route as AppDevicesRouteImport } from './routes/_app.devices'
 import { Route as AppDashboardsRouteImport } from './routes/_app.dashboards'
 import { Route as AppAutomationsRouteImport } from './routes/_app.automations'
 import { Route as AppAnalyticsRouteImport } from './routes/_app.analytics'
+import { Route as AppUsersIndexRouteImport } from './routes/_app.users.index'
 import { Route as AppDashboardsIndexRouteImport } from './routes/_app.dashboards.index'
 import { Route as AppUsersUserIdRouteImport } from './routes/_app.users.$userId'
 import { Route as AppSettingsUsersRouteImport } from './routes/_app.settings.users'
@@ -109,11 +109,6 @@ const OnboardingConfigureRoute = OnboardingConfigureRouteImport.update({
   id: '/configure',
   path: '/configure',
   getParentRoute: () => OnboardingRoute,
-} as any)
-const AppUsersRoute = AppUsersRouteImport.update({
-  id: '/users',
-  path: '/users',
-  getParentRoute: () => AppRoute,
 } as any)
 const AppTimelineRoute = AppTimelineRouteImport.update({
   id: '/timeline',
@@ -195,15 +190,20 @@ const AppAnalyticsRoute = AppAnalyticsRouteImport.update({
   path: '/analytics',
   getParentRoute: () => AppRoute,
 } as any)
+const AppUsersIndexRoute = AppUsersIndexRouteImport.update({
+  id: '/users/',
+  path: '/users/',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppDashboardsIndexRoute = AppDashboardsIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AppDashboardsRoute,
 } as any)
 const AppUsersUserIdRoute = AppUsersUserIdRouteImport.update({
-  id: '/$userId',
-  path: '/$userId',
-  getParentRoute: () => AppUsersRoute,
+  id: '/users/$userId',
+  path: '/users/$userId',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppSettingsUsersRoute = AppSettingsUsersRouteImport.update({
   id: '/users',
@@ -341,7 +341,6 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AppSettingsRouteWithChildren
   '/statistics': typeof AppStatisticsRoute
   '/timeline': typeof AppTimelineRoute
-  '/users': typeof AppUsersRouteWithChildren
   '/onboarding/configure': typeof OnboardingConfigureRoute
   '/onboarding/connect': typeof OnboardingConnectRoute
   '/onboarding/done': typeof OnboardingDoneRoute
@@ -366,6 +365,7 @@ export interface FileRoutesByFullPath {
   '/settings/users': typeof AppSettingsUsersRoute
   '/users/$userId': typeof AppUsersUserIdRouteWithChildren
   '/dashboards/': typeof AppDashboardsIndexRoute
+  '/users/': typeof AppUsersIndexRoute
   '/automations/$automationId/edit': typeof AppAutomationsAutomationIdEditRoute
   '/dashboards/$dashboardId/edit': typeof AppDashboardsDashboardIdEditRoute
   '/scenes/$sceneId/edit': typeof AppScenesSceneIdEditRoute
@@ -390,7 +390,6 @@ export interface FileRoutesByTo {
   '/settings': typeof AppSettingsRouteWithChildren
   '/statistics': typeof AppStatisticsRoute
   '/timeline': typeof AppTimelineRoute
-  '/users': typeof AppUsersRouteWithChildren
   '/onboarding/configure': typeof OnboardingConfigureRoute
   '/onboarding/connect': typeof OnboardingConnectRoute
   '/onboarding/done': typeof OnboardingDoneRoute
@@ -415,6 +414,7 @@ export interface FileRoutesByTo {
   '/settings/users': typeof AppSettingsUsersRoute
   '/users/$userId': typeof AppUsersUserIdRouteWithChildren
   '/dashboards': typeof AppDashboardsIndexRoute
+  '/users': typeof AppUsersIndexRoute
   '/automations/$automationId/edit': typeof AppAutomationsAutomationIdEditRoute
   '/dashboards/$dashboardId/edit': typeof AppDashboardsDashboardIdEditRoute
   '/scenes/$sceneId/edit': typeof AppScenesSceneIdEditRoute
@@ -443,7 +443,6 @@ export interface FileRoutesById {
   '/_app/settings': typeof AppSettingsRouteWithChildren
   '/_app/statistics': typeof AppStatisticsRoute
   '/_app/timeline': typeof AppTimelineRoute
-  '/_app/users': typeof AppUsersRouteWithChildren
   '/onboarding/configure': typeof OnboardingConfigureRoute
   '/onboarding/connect': typeof OnboardingConnectRoute
   '/onboarding/done': typeof OnboardingDoneRoute
@@ -469,6 +468,7 @@ export interface FileRoutesById {
   '/_app/settings/users': typeof AppSettingsUsersRoute
   '/_app/users/$userId': typeof AppUsersUserIdRouteWithChildren
   '/_app/dashboards/': typeof AppDashboardsIndexRoute
+  '/_app/users/': typeof AppUsersIndexRoute
   '/_app/automations/$automationId/edit': typeof AppAutomationsAutomationIdEditRoute
   '/_app/dashboards/$dashboardId/edit': typeof AppDashboardsDashboardIdEditRoute
   '/_app/scenes/$sceneId/edit': typeof AppScenesSceneIdEditRoute
@@ -498,7 +498,6 @@ export interface FileRouteTypes {
     | '/settings'
     | '/statistics'
     | '/timeline'
-    | '/users'
     | '/onboarding/configure'
     | '/onboarding/connect'
     | '/onboarding/done'
@@ -523,6 +522,7 @@ export interface FileRouteTypes {
     | '/settings/users'
     | '/users/$userId'
     | '/dashboards/'
+    | '/users/'
     | '/automations/$automationId/edit'
     | '/dashboards/$dashboardId/edit'
     | '/scenes/$sceneId/edit'
@@ -547,7 +547,6 @@ export interface FileRouteTypes {
     | '/settings'
     | '/statistics'
     | '/timeline'
-    | '/users'
     | '/onboarding/configure'
     | '/onboarding/connect'
     | '/onboarding/done'
@@ -572,6 +571,7 @@ export interface FileRouteTypes {
     | '/settings/users'
     | '/users/$userId'
     | '/dashboards'
+    | '/users'
     | '/automations/$automationId/edit'
     | '/dashboards/$dashboardId/edit'
     | '/scenes/$sceneId/edit'
@@ -599,7 +599,6 @@ export interface FileRouteTypes {
     | '/_app/settings'
     | '/_app/statistics'
     | '/_app/timeline'
-    | '/_app/users'
     | '/onboarding/configure'
     | '/onboarding/connect'
     | '/onboarding/done'
@@ -625,6 +624,7 @@ export interface FileRouteTypes {
     | '/_app/settings/users'
     | '/_app/users/$userId'
     | '/_app/dashboards/'
+    | '/_app/users/'
     | '/_app/automations/$automationId/edit'
     | '/_app/dashboards/$dashboardId/edit'
     | '/_app/scenes/$sceneId/edit'
@@ -710,13 +710,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/onboarding/configure'
       preLoaderRoute: typeof OnboardingConfigureRouteImport
       parentRoute: typeof OnboardingRoute
-    }
-    '/_app/users': {
-      id: '/_app/users'
-      path: '/users'
-      fullPath: '/users'
-      preLoaderRoute: typeof AppUsersRouteImport
-      parentRoute: typeof AppRoute
     }
     '/_app/timeline': {
       id: '/_app/timeline'
@@ -830,6 +823,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAnalyticsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/users/': {
+      id: '/_app/users/'
+      path: '/users'
+      fullPath: '/users/'
+      preLoaderRoute: typeof AppUsersIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/dashboards/': {
       id: '/_app/dashboards/'
       path: '/'
@@ -839,10 +839,10 @@ declare module '@tanstack/react-router' {
     }
     '/_app/users/$userId': {
       id: '/_app/users/$userId'
-      path: '/$userId'
+      path: '/users/$userId'
       fullPath: '/users/$userId'
       preLoaderRoute: typeof AppUsersUserIdRouteImport
-      parentRoute: typeof AppUsersRoute
+      parentRoute: typeof AppRoute
     }
     '/_app/settings/users': {
       id: '/_app/settings/users'
@@ -1179,18 +1179,6 @@ const AppUsersUserIdRouteWithChildren = AppUsersUserIdRoute._addFileChildren(
   AppUsersUserIdRouteChildren,
 )
 
-interface AppUsersRouteChildren {
-  AppUsersUserIdRoute: typeof AppUsersUserIdRouteWithChildren
-}
-
-const AppUsersRouteChildren: AppUsersRouteChildren = {
-  AppUsersUserIdRoute: AppUsersUserIdRouteWithChildren,
-}
-
-const AppUsersRouteWithChildren = AppUsersRoute._addFileChildren(
-  AppUsersRouteChildren,
-)
-
 interface AppRouteChildren {
   AppAnalyticsRoute: typeof AppAnalyticsRoute
   AppAutomationsRoute: typeof AppAutomationsRouteWithChildren
@@ -1208,8 +1196,9 @@ interface AppRouteChildren {
   AppSettingsRoute: typeof AppSettingsRouteWithChildren
   AppStatisticsRoute: typeof AppStatisticsRoute
   AppTimelineRoute: typeof AppTimelineRoute
-  AppUsersRoute: typeof AppUsersRouteWithChildren
   AppIndexRoute: typeof AppIndexRoute
+  AppUsersUserIdRoute: typeof AppUsersUserIdRouteWithChildren
+  AppUsersIndexRoute: typeof AppUsersIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -1229,8 +1218,9 @@ const AppRouteChildren: AppRouteChildren = {
   AppSettingsRoute: AppSettingsRouteWithChildren,
   AppStatisticsRoute: AppStatisticsRoute,
   AppTimelineRoute: AppTimelineRoute,
-  AppUsersRoute: AppUsersRouteWithChildren,
   AppIndexRoute: AppIndexRoute,
+  AppUsersUserIdRoute: AppUsersUserIdRouteWithChildren,
+  AppUsersIndexRoute: AppUsersIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

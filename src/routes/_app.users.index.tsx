@@ -11,7 +11,7 @@ import {
 } from "@/store/slices/usersStore";
 import { userManager } from "@/services/users";
 
-export const Route = createFileRoute("/_app/users")({
+export const Route = createFileRoute("/_app/users/")({
   head: () => ({
     meta: [
       { title: "Benutzer · Smart Home" },
