@@ -40,6 +40,13 @@ import { automationDebugger } from "@/services/automations/AutomationDebugger";
 import { startEventCenter, stopEventCenter } from "@/services/notifications";
 import { bootstrapUsers } from "@/services/users";
 import { startSearchPlatform, stopSearchPlatform } from "@/services/search";
+import { versionManager, migrationManager } from "@/services/version";
+import { cacheManager } from "@/services/cache";
+import { registerBuiltinBackupProviders } from "@/services/backup";
+import { offlineEngine, backgroundSync } from "@/services/offline";
+import { appLifecycle } from "@/services/lifecycle";
+import { deepLinkRouter } from "@/services/deeplinks";
+import { updateManager } from "@/services/pwa";
 
 
 const log = createLogger("bootstrap");
