@@ -233,6 +233,7 @@ export function stopCommunicationLayer(): void {
   unsubscribers = [];
   unsubActiveServer?.();
   unsubActiveServer = null;
+  stopSearchPlatform();
   stopIntelligence();
   stopEventCenter();
   stopTimeline();
