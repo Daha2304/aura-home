@@ -51,6 +51,10 @@ export interface RoomMetrics {
   lastActivity?: Timestamp;
   discoveryPending?: number;
   syncPending?: number;
+
+  // Automations (Teil 9)
+  automationCount?: number;
+  automationsRunning?: number;
 }
 
 export type MutableRoomMetrics = RoomMetrics;

@@ -41,11 +41,14 @@ import { Route as AppRoomsRoomIdRouteImport } from './routes/_app.rooms.$roomId'
 import { Route as AppGroupsGroupIdRouteImport } from './routes/_app.groups.$groupId'
 import { Route as AppDevicesDeviceIdRouteImport } from './routes/_app.devices.$deviceId'
 import { Route as AppDashboardsDashboardIdRouteImport } from './routes/_app.dashboards.$dashboardId'
+import { Route as AppAutomationsNewRouteImport } from './routes/_app.automations.new'
+import { Route as AppAutomationsAutomationIdRouteImport } from './routes/_app.automations.$automationId'
 import { Route as AppDashboardsDashboardIdIndexRouteImport } from './routes/_app.dashboards.$dashboardId.index'
 import { Route as AppSettingsServerNewRouteImport } from './routes/_app.settings.server.new'
 import { Route as AppSettingsServerIdRouteImport } from './routes/_app.settings.server.$id'
 import { Route as AppScenesSceneIdEditRouteImport } from './routes/_app.scenes.$sceneId.edit'
 import { Route as AppDashboardsDashboardIdEditRouteImport } from './routes/_app.dashboards.$dashboardId.edit'
+import { Route as AppAutomationsAutomationIdEditRouteImport } from './routes/_app.automations.$automationId.edit'
 
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
@@ -208,6 +211,17 @@ const AppDashboardsDashboardIdRoute =
     path: '/$dashboardId',
     getParentRoute: () => AppDashboardsRoute,
   } as any)
+const AppAutomationsNewRoute = AppAutomationsNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AppAutomationsRoute,
+} as any)
+const AppAutomationsAutomationIdRoute =
+  AppAutomationsAutomationIdRouteImport.update({
+    id: '/$automationId',
+    path: '/$automationId',
+    getParentRoute: () => AppAutomationsRoute,
+  } as any)
 const AppDashboardsDashboardIdIndexRoute =
   AppDashboardsDashboardIdIndexRouteImport.update({
     id: '/',
@@ -235,11 +249,17 @@ const AppDashboardsDashboardIdEditRoute =
     path: '/edit',
     getParentRoute: () => AppDashboardsDashboardIdRoute,
   } as any)
+const AppAutomationsAutomationIdEditRoute =
+  AppAutomationsAutomationIdEditRouteImport.update({
+    id: '/edit',
+    path: '/edit',
+    getParentRoute: () => AppAutomationsAutomationIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/onboarding': typeof OnboardingRouteWithChildren
-  '/automations': typeof AppAutomationsRoute
+  '/automations': typeof AppAutomationsRouteWithChildren
   '/dashboards': typeof AppDashboardsRouteWithChildren
   '/devices': typeof AppDevicesRouteWithChildren
   '/groups': typeof AppGroupsRouteWithChildren
@@ -255,6 +275,8 @@ export interface FileRoutesByFullPath {
   '/onboarding/server': typeof OnboardingServerRoute
   '/onboarding/welcome': typeof OnboardingWelcomeRoute
   '/onboarding/': typeof OnboardingIndexRoute
+  '/automations/$automationId': typeof AppAutomationsAutomationIdRouteWithChildren
+  '/automations/new': typeof AppAutomationsNewRoute
   '/dashboards/$dashboardId': typeof AppDashboardsDashboardIdRouteWithChildren
   '/devices/$deviceId': typeof AppDevicesDeviceIdRoute
   '/groups/$groupId': typeof AppGroupsGroupIdRoute
@@ -268,6 +290,7 @@ export interface FileRoutesByFullPath {
   '/settings/server': typeof AppSettingsServerRouteWithChildren
   '/settings/users': typeof AppSettingsUsersRoute
   '/dashboards/': typeof AppDashboardsIndexRoute
+  '/automations/$automationId/edit': typeof AppAutomationsAutomationIdEditRoute
   '/dashboards/$dashboardId/edit': typeof AppDashboardsDashboardIdEditRoute
   '/scenes/$sceneId/edit': typeof AppScenesSceneIdEditRoute
   '/settings/server/$id': typeof AppSettingsServerIdRoute
@@ -275,7 +298,7 @@ export interface FileRoutesByFullPath {
   '/dashboards/$dashboardId/': typeof AppDashboardsDashboardIdIndexRoute
 }
 export interface FileRoutesByTo {
-  '/automations': typeof AppAutomationsRoute
+  '/automations': typeof AppAutomationsRouteWithChildren
   '/devices': typeof AppDevicesRouteWithChildren
   '/groups': typeof AppGroupsRouteWithChildren
   '/more': typeof AppMoreRoute
@@ -291,6 +314,8 @@ export interface FileRoutesByTo {
   '/onboarding/welcome': typeof OnboardingWelcomeRoute
   '/': typeof AppIndexRoute
   '/onboarding': typeof OnboardingIndexRoute
+  '/automations/$automationId': typeof AppAutomationsAutomationIdRouteWithChildren
+  '/automations/new': typeof AppAutomationsNewRoute
   '/devices/$deviceId': typeof AppDevicesDeviceIdRoute
   '/groups/$groupId': typeof AppGroupsGroupIdRoute
   '/rooms/$roomId': typeof AppRoomsRoomIdRoute
@@ -303,6 +328,7 @@ export interface FileRoutesByTo {
   '/settings/server': typeof AppSettingsServerRouteWithChildren
   '/settings/users': typeof AppSettingsUsersRoute
   '/dashboards': typeof AppDashboardsIndexRoute
+  '/automations/$automationId/edit': typeof AppAutomationsAutomationIdEditRoute
   '/dashboards/$dashboardId/edit': typeof AppDashboardsDashboardIdEditRoute
   '/scenes/$sceneId/edit': typeof AppScenesSceneIdEditRoute
   '/settings/server/$id': typeof AppSettingsServerIdRoute
@@ -313,7 +339,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
   '/onboarding': typeof OnboardingRouteWithChildren
-  '/_app/automations': typeof AppAutomationsRoute
+  '/_app/automations': typeof AppAutomationsRouteWithChildren
   '/_app/dashboards': typeof AppDashboardsRouteWithChildren
   '/_app/devices': typeof AppDevicesRouteWithChildren
   '/_app/groups': typeof AppGroupsRouteWithChildren
@@ -330,6 +356,8 @@ export interface FileRoutesById {
   '/onboarding/welcome': typeof OnboardingWelcomeRoute
   '/_app/': typeof AppIndexRoute
   '/onboarding/': typeof OnboardingIndexRoute
+  '/_app/automations/$automationId': typeof AppAutomationsAutomationIdRouteWithChildren
+  '/_app/automations/new': typeof AppAutomationsNewRoute
   '/_app/dashboards/$dashboardId': typeof AppDashboardsDashboardIdRouteWithChildren
   '/_app/devices/$deviceId': typeof AppDevicesDeviceIdRoute
   '/_app/groups/$groupId': typeof AppGroupsGroupIdRoute
@@ -343,6 +371,7 @@ export interface FileRoutesById {
   '/_app/settings/server': typeof AppSettingsServerRouteWithChildren
   '/_app/settings/users': typeof AppSettingsUsersRoute
   '/_app/dashboards/': typeof AppDashboardsIndexRoute
+  '/_app/automations/$automationId/edit': typeof AppAutomationsAutomationIdEditRoute
   '/_app/dashboards/$dashboardId/edit': typeof AppDashboardsDashboardIdEditRoute
   '/_app/scenes/$sceneId/edit': typeof AppScenesSceneIdEditRoute
   '/_app/settings/server/$id': typeof AppSettingsServerIdRoute
@@ -370,6 +399,8 @@ export interface FileRouteTypes {
     | '/onboarding/server'
     | '/onboarding/welcome'
     | '/onboarding/'
+    | '/automations/$automationId'
+    | '/automations/new'
     | '/dashboards/$dashboardId'
     | '/devices/$deviceId'
     | '/groups/$groupId'
@@ -383,6 +414,7 @@ export interface FileRouteTypes {
     | '/settings/server'
     | '/settings/users'
     | '/dashboards/'
+    | '/automations/$automationId/edit'
     | '/dashboards/$dashboardId/edit'
     | '/scenes/$sceneId/edit'
     | '/settings/server/$id'
@@ -406,6 +438,8 @@ export interface FileRouteTypes {
     | '/onboarding/welcome'
     | '/'
     | '/onboarding'
+    | '/automations/$automationId'
+    | '/automations/new'
     | '/devices/$deviceId'
     | '/groups/$groupId'
     | '/rooms/$roomId'
@@ -418,6 +452,7 @@ export interface FileRouteTypes {
     | '/settings/server'
     | '/settings/users'
     | '/dashboards'
+    | '/automations/$automationId/edit'
     | '/dashboards/$dashboardId/edit'
     | '/scenes/$sceneId/edit'
     | '/settings/server/$id'
@@ -444,6 +479,8 @@ export interface FileRouteTypes {
     | '/onboarding/welcome'
     | '/_app/'
     | '/onboarding/'
+    | '/_app/automations/$automationId'
+    | '/_app/automations/new'
     | '/_app/dashboards/$dashboardId'
     | '/_app/devices/$deviceId'
     | '/_app/groups/$groupId'
@@ -457,6 +494,7 @@ export interface FileRouteTypes {
     | '/_app/settings/server'
     | '/_app/settings/users'
     | '/_app/dashboards/'
+    | '/_app/automations/$automationId/edit'
     | '/_app/dashboards/$dashboardId/edit'
     | '/_app/scenes/$sceneId/edit'
     | '/_app/settings/server/$id'
@@ -695,6 +733,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDashboardsDashboardIdRouteImport
       parentRoute: typeof AppDashboardsRoute
     }
+    '/_app/automations/new': {
+      id: '/_app/automations/new'
+      path: '/new'
+      fullPath: '/automations/new'
+      preLoaderRoute: typeof AppAutomationsNewRouteImport
+      parentRoute: typeof AppAutomationsRoute
+    }
+    '/_app/automations/$automationId': {
+      id: '/_app/automations/$automationId'
+      path: '/$automationId'
+      fullPath: '/automations/$automationId'
+      preLoaderRoute: typeof AppAutomationsAutomationIdRouteImport
+      parentRoute: typeof AppAutomationsRoute
+    }
     '/_app/dashboards/$dashboardId/': {
       id: '/_app/dashboards/$dashboardId/'
       path: '/'
@@ -730,8 +782,43 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDashboardsDashboardIdEditRouteImport
       parentRoute: typeof AppDashboardsDashboardIdRoute
     }
+    '/_app/automations/$automationId/edit': {
+      id: '/_app/automations/$automationId/edit'
+      path: '/edit'
+      fullPath: '/automations/$automationId/edit'
+      preLoaderRoute: typeof AppAutomationsAutomationIdEditRouteImport
+      parentRoute: typeof AppAutomationsAutomationIdRoute
+    }
   }
 }
+
+interface AppAutomationsAutomationIdRouteChildren {
+  AppAutomationsAutomationIdEditRoute: typeof AppAutomationsAutomationIdEditRoute
+}
+
+const AppAutomationsAutomationIdRouteChildren: AppAutomationsAutomationIdRouteChildren =
+  {
+    AppAutomationsAutomationIdEditRoute: AppAutomationsAutomationIdEditRoute,
+  }
+
+const AppAutomationsAutomationIdRouteWithChildren =
+  AppAutomationsAutomationIdRoute._addFileChildren(
+    AppAutomationsAutomationIdRouteChildren,
+  )
+
+interface AppAutomationsRouteChildren {
+  AppAutomationsAutomationIdRoute: typeof AppAutomationsAutomationIdRouteWithChildren
+  AppAutomationsNewRoute: typeof AppAutomationsNewRoute
+}
+
+const AppAutomationsRouteChildren: AppAutomationsRouteChildren = {
+  AppAutomationsAutomationIdRoute: AppAutomationsAutomationIdRouteWithChildren,
+  AppAutomationsNewRoute: AppAutomationsNewRoute,
+}
+
+const AppAutomationsRouteWithChildren = AppAutomationsRoute._addFileChildren(
+  AppAutomationsRouteChildren,
+)
 
 interface AppDashboardsDashboardIdRouteChildren {
   AppDashboardsDashboardIdEditRoute: typeof AppDashboardsDashboardIdEditRoute
@@ -860,7 +947,7 @@ const AppSettingsRouteWithChildren = AppSettingsRoute._addFileChildren(
 )
 
 interface AppRouteChildren {
-  AppAutomationsRoute: typeof AppAutomationsRoute
+  AppAutomationsRoute: typeof AppAutomationsRouteWithChildren
   AppDashboardsRoute: typeof AppDashboardsRouteWithChildren
   AppDevicesRoute: typeof AppDevicesRouteWithChildren
   AppGroupsRoute: typeof AppGroupsRouteWithChildren
@@ -873,7 +960,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
-  AppAutomationsRoute: AppAutomationsRoute,
+  AppAutomationsRoute: AppAutomationsRouteWithChildren,
   AppDashboardsRoute: AppDashboardsRouteWithChildren,
   AppDevicesRoute: AppDevicesRouteWithChildren,
   AppGroupsRoute: AppGroupsRouteWithChildren,
@@ -918,13 +1005,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

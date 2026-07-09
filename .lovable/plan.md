@@ -1,137 +1,154 @@
-# Teil 8 – Szenen & Gerätegruppen
+# Teil 9 – Automation Engine
 
-Ziel: eine vollständig generische Szenen- und Gerätegruppen-Plattform, die ausschließlich vorhandene Systeme nutzt (Device Registry, Capability Registry, Universal Control Engine, Command Queue, Widget Registry, Intelligence Layer, Room Manager, Design System, Event System, Stores). Keine parallelen Datenmodelle, keine Sonderlogik pro Gerätetyp, keine Änderungen an Command Queue oder Universal Control Engine.
+Ziel: eine vollständig generische Automation Engine, ausschließlich über die bereits vorbereiteten `triggerRegistry`, `conditionRegistry`, `actionRegistry` (`src/services/automations/index.ts`) und alle existierenden Systeme (Device/Capability Registry, Scene/Group Manager, Command Queue, Widget Registry, Intelligence Layer, Stores, Design System). Kein paralleles Datenmodell, keine direkten WebSocket-Aufrufe, keine gerätespezifische Logik. Das bestehende dünne `automation.ts` + `automationsStore.ts` + `_app.automations.tsx` wird kompatibel erweitert (keine Breaking Changes; alte Felder bleiben lesbar).
 
 ## 1. Datenmodelle (`src/models/`)
 
-Das bestehende `scene.ts` wird erweitert (keine Breaking Changes, alte Felder bleiben erhalten).
+`automation.ts` wird erweitert; alle bestehenden Felder (`triggers`, `conditions`, `actions`, `enabled`, `order`) bleiben. Neu bzw. präzisiert:
 
-- `scene.ts` – `Scene`, `SceneCategory`, `SceneStatus`, `SceneErrorStrategy`. Felder: `id`, `uuid`, `name`, `description`, `icon`, `color`, `category`, `favorite`, `tags[]`, `version`, `active`, `archived`, `createdAt`, `updatedAt`, `createdBy`, `updatedBy`, `custom`, `actions[]`, `order`, `parameters[]`, `templateId?`.
-- `sceneAction.ts` – `id`, `deviceId?`, `groupId?`, `capabilityId`, `targetValue`, `previousValue?`, `delayMs`, `priority`, `parallel`, `optional`, `errorStrategy` (`abort` | `continue` | `retry`), `comment`, `condition?` (Placeholder Teil 9), `parameterRef?` (verknüpft mit `SceneParameter`).
-- `sceneParameter.ts` – **Vorbereitung ohne Ausführungslogik**: `id`, `key`, `label`, `type` (`boolean` | `number` | `string` | `enum` | `device` | `group` | `capability` | `color`), `default?`, `options?`, `min?`, `max?`, `required?`, `description?`. Wird in Szenen persistiert, aber nicht ausgewertet.
-- `sceneTemplate.ts` – **eigene Datenstruktur**: `id`, `uuid`, `name`, `description`, `icon`, `color`, `category`, `tags[]`, `version`, `createdAt`, `updatedAt`, `parameters[]`, `actions[]` (mit `parameterRef` auf Template-Parameter), `builtin?`. Keine UI notwendig – nur Registry + Store.
-- `sceneVersion.ts` – Snapshot: `versionNumber`, `createdAt`, `createdBy`, `payload` (vollständige Scene ohne `version`).
-- `sceneExecution.ts` – `id`, `sceneId`, `status` (`planned` | `running` | `partial` | `succeeded` | `failed` | `cancelled`), `startedAt`, `finishedAt?`, `progress: { completed, total, failed, cancelled }`, `steps[]` (pro Aktion: `actionId`, `commandIds[]`, `state`, `error?`), `undoable`, `undoSnapshot[]` (Vorwerte je Gerät/Capability – **nur Datenerfassung**, Ausführung folgt später).
-- `deviceGroup.ts` – `DeviceGroup`, `DeviceGroupKind` (`light` | `outlet` | `blind` | `thermostat` | `sensor` | `media` | `mixed` | `virtual` | `dynamic`), `DeviceGroupStatus`. Felder: `id`, `uuid`, `name`, `description`, `icon`, `color`, `category`, `favorite`, `tags[]`, `version`, `deviceIds[]`, `groupIds[]` (**verschachtelte Gruppen**), `capabilities[]`, `status`, `custom`, `createdAt`, `updatedAt`, `createdBy`, `updatedBy`.
-- `sceneEvents.ts`, `groupEvents.ts` – TypedEmitter-Event-Maps für sceneCreated/Updated/Deleted/Executed/ExecutionStarted/Completed/Failed und groupCreated/Updated/Deleted.
+- `Automation` – `id`, `uuid`, `name`, `description?`, `icon?`, `color?`, `category?`, `tags[]`, `favorite`, `enabled` (bleibt = "aktiv"), `priority`, `version`, `createdAt`, `updatedAt`, `createdBy?`, `updatedBy?`, `custom`, `triggers[]`, `conditions` (Root-`ConditionNode`, siehe unten), `actions[]`, `errorStrategy` (`abort` | `continue` | `retry`), `templateId?`, `archived`.
+- `AutomationTrigger` – bleibt: `id`, `kind` (Registry-ID), `config`. `kind` ist offener String – konkrete Werte definiert die Registry (`device.state`, `device.online`, `device.offline`, `capability.changed`, `room.state`, `group.state`, `scene.started`, `scene.finished`, `time`, `date`, `weekday`, `sunrise`, `sunset`, `timer`, `system.start`, `custom`).
+- `AutomationCondition` – als **Baum** (Boolean-Algebra ohne Ausführungslogik-Bruch):
+  ```
+  type ConditionNode =
+    | { id, kind: "and" | "or", children: ConditionNode[] }
+    | { id, kind: "not", child: ConditionNode }
+    | { id, kind: string /* registry id */, config: Record<string, unknown> }
+  ```
+  Blatt-`kind`s aus Registry: `compare.eq`, `compare.neq`, `compare.gt`, `compare.lt`, `compare.between`, `capability`, `device`, `group`, `room`, `scene`, `variable`, `custom`. Backwards-Compat: bestehendes flaches `conditions: AutomationCondition[]` wird beim Laden in einen impliziten `and`-Baum migriert.
+- `AutomationAction` – `id`, `kind` (Registry-ID: `device.control`, `group.control`, `scene.start`, `delay`, `variable.set`, `automation.enable`, `automation.disable`, `custom`), `config`, `delayMs?`, `parallel?`, `optional?`, `errorStrategy?`, `retry?: { count, backoffMs }`, `rollbackHint?` (Vorbereitung).
+- `automationTemplate.ts` – eigene Struktur analog `sceneTemplate.ts`: `id`, `uuid`, `name`, `description`, `icon`, `color`, `category`, `tags`, `version`, `parameters[]` (wiederverwendet `SceneParameter`-Form), `triggers`, `conditions`, `actions`, `builtin?`.
+- `automationVersion.ts` – Snapshot: `versionNumber`, `createdAt`, `createdBy?`, `payload` (Automation ohne `version`).
+- `automationExecution.ts` – `id`, `automationId`, `triggerId?`, `status` (`planned` | `running` | `partial` | `succeeded` | `failed` | `cancelled` | `skipped-conditions`), `startedAt`, `finishedAt?`, `progress: { completed, total, failed, cancelled }`, `steps[]` (`actionId`, `commandIds[]`, `state`, `error?`, `startedAt`, `finishedAt`), `conditionsResult?`, `rollbackSnapshot[]` (Vorbereitung, keine Ausführung), `correlationId`.
+- `automationVariable.ts` – schlanke Variablen-Definition (`id`, `key`, `type`, `value`, `scope: "automation" | "global"`). Persistenz global über neuen Store.
+- `automationEvents.ts` – TypedEmitter-Event-Map: `automationCreated`, `automationUpdated`, `automationDeleted`, `automationEnabled`, `automationDisabled`, `automationTriggered`, `automationStarted`, `automationProgress`, `automationCompleted`, `automationFailed`, `automationCancelled`.
+- `timeline.ts` – **nur Datenmodell + Erweiterungspunkt** für Teil 10: `TimelineEntry = { id, source: "automation" | "scene" | "device" | "notification", refId, kind, timestamp, payload }` + `TimelineSourceDescriptor` mit `subscribe(cb)`. Keine Timeline-UI, keine Route.
 - Re-Exports in `models/index.ts`.
 
-## 2. Services
+## 2. Descriptor-Erweiterungen der bestehenden Registries
 
-```
-src/services/scenes/
-  SceneRegistry.ts        // O(1)-Lookup, byCategory, byTag, byDevice, byGroup
-  SceneManager.ts         // CRUD + Versionierung + Persistenz ("scenes.v1")
-  SceneTemplateRegistry.ts// Template-Registry (O(1), byCategory)
-  SceneTemplateManager.ts // Templates registrieren + instanziieren zu Scene
-  SceneParameterRegistry.ts // Parameter-Typ-Descriptors (boolean/enum/device/…)
-  SceneVersionStore.ts    // Ringpuffer je Szene, max. 20 Versionen
-  SceneExecutor.ts        // plant Aktionen → CommandQueue, Progress, Undo-Snapshot
-  SceneEvents.ts
-  sceneSerialization.ts   // JSON Import/Export inkl. Versionen + Templates
-  index.ts
-src/services/groups/
-  GroupRegistry.ts        // O(1)-Lookup, byKind, byDevice, byParentGroup
-  GroupManager.ts         // CRUD, Zyklenerkennung bei set/add
-  GroupResolver.ts        // rekursive Expansion (Gruppe → Geräte, cycle-safe)
-  GroupExecutor.ts        // Fan-out zu CommandQueue
-  GroupEvents.ts
-  groupSerialization.ts
-  index.ts
+Die vorbereiteten Registries in `src/services/automations/index.ts` erhalten voll typisierte Descriptor-Shapes (ohne Bruch):
+
+```ts
+TriggerDescriptor  { id, label, version, category, schema?, subscribe(ctx, cfg, fire) => Unsubscribe }
+ConditionDescriptor{ id, label, version, category, schema?, evaluate(ctx, cfg) => boolean }
+ActionDescriptor   { id, label, version, category, schema?, plan(ctx, cfg) => PlannedCommand[] }
 ```
 
-### Verschachtelte Gruppen mit Zyklenerkennung
+`PlannedCommand` referenziert ausschließlich `commandQueue.enqueue(deviceId, capabilityId, value, opts)` – Actions liefern nur Pläne, ausgeführt wird zentral. Kein direkter WS-Zugriff.
 
-- `GroupManager.setChildren(groupId, {deviceIds, groupIds})` prüft vor dem Speichern per DFS, ob `groupIds` einen Zyklus erzeugt (`hasCycle(groupId, candidates)`). Bei Zyklus: kein Write, `errorBus.report` + Rückgabe `{ok:false, reason:"cycle"}`.
-- `GroupResolver.expand(groupId)` liefert eine deduplizierte, cycle-safe `Set<deviceId>` per DFS mit `visited`-Set. Ergebnis wird in `groupsStore.expandedById` memoisiert und bei jeder Group-Änderung invalidiert.
-- Alle Konsumenten (Executor, Intelligence Contributor, Widgets) lesen ausschließlich das expandierte Set – nirgends eigene Rekursion.
+Built-ins werden in `src/services/automations/builtin/` registriert, in kleine Dateien pro Familie (`triggers.time.ts`, `triggers.device.ts`, `triggers.scene.ts`, `triggers.group.ts`, `triggers.room.ts`, `triggers.system.ts`, `conditions.boolean.ts`, `conditions.compare.ts`, `conditions.entities.ts`, `conditions.variable.ts`, `actions.device.ts`, `actions.group.ts`, `actions.scene.ts`, `actions.control.ts`, `actions.variable.ts`), gebündelt in `builtin/index.ts` und einmalig in `bootstrap.ts` aufgerufen (`registerBuiltinAutomationDescriptors()`).
 
-### Ausführung (Command Queue unverändert)
+## 3. Services (`src/services/automations/`)
 
-- `SceneExecutor.run(sceneId, args?)` erzeugt eine `SceneExecution` mit `progress.total = Σ konkrete Zielgeräte` (nach Group-Expansion). Für jede Aktion:
-  1. `previousValue` aus `devicesStore` in `undoSnapshot` schreiben (Vorbereitung Undo – keine Ausführung),
-  2. `commandQueue.enqueue(deviceId, capabilityId, targetValue, { optimistic: true, correlationId: executionId })`,
-  3. `delayMs` respektieren, `parallel`-Aktionen bündeln, `priority` sortiert.
-- Fortschritt wird über `commandQueue.on('completed'|'failed'|'cancelled')` per `correlationId` fortgeschrieben (`progress.completed`, `progress.failed`). Emittiert `sceneExecutionStarted`, `sceneExecutionProgress`, `sceneExecutionCompleted|Failed`. **Keine Änderungen an der Command Queue** – nur Listener auf vorhandene Events.
-- `undoable: true` wird gesetzt, sobald ein vollständiger `undoSnapshot` erfasst wurde. Ein `SceneExecutor.undo(executionId)`-Methodenkopf existiert und ist als „prepared" markiert (throw `NotImplemented` bis Teil 9/10). Die Datenstruktur ist vollständig.
-- `errorStrategy`: `abort` bricht die Restplanung ab, `continue` markiert die Aktion als `failed` und macht weiter, `retry` re-enqueued einmalig via `commandQueue.enqueue` (kein Eingriff in die Queue-Retry-Logik selbst).
+```
+AutomationRegistry.ts    // O(1)-Lookup, byCategory, byTag, byDevice/Group/Scene/Room
+AutomationManager.ts     // CRUD + Versionierung + Persistenz ("automations.v1")
+AutomationValidator.ts   // Zod + Referenz-Checks (Devices/Groups/Scenes/Capabilities/Registries)
+AutomationScheduler.ts   // hält Trigger-Subscriptions am Leben, Rescheduling bei Update/Enable
+AutomationExecutor.ts    // Conditions -> Action Pipeline -> commandQueue
+AutomationEvents.ts      // TypedEmitter<AutomationEventMap>
+AutomationVersionStore.ts// Ringpuffer je Automation (max. 20)
+AutomationTemplateRegistry.ts / AutomationTemplateManager.ts
+AutomationHistory.ts     // Vorbereitung: append-only Ringpuffer, feed für timeline.ts
+automationSerialization.ts // JSON Import/Export inkl. Versionen + Templates (Zod, merge/replace)
+builtin/…                // siehe oben
+index.ts
+```
 
-### Gruppenaktionen
+### Scheduler & Trigger
 
-- `GroupExecutor.apply(groupId, capabilityId, value)` löst per `GroupResolver` auf, filtert Geräte über `capabilityRegistry.supports(device, capabilityId)` und ruft für jedes Gerät `commandQueue.enqueue(...)`. Kein zweites Ausführungsmodell.
+- `AutomationScheduler.start()` iteriert aktive Automationen und ruft `triggerDescriptor.subscribe(ctx, cfg, () => executor.trigger(automationId, triggerId, payload))`. Rückgabe = `Unsubscribe`; wird bei Disable/Update/Delete strikt aufgeräumt.
+- Trigger-Contexte greifen ausschließlich auf existierende Emitter/Stores zu:
+  - `deviceRegistry` / `devicesStore` Events → `device.*`, `capability.changed`
+  - `roomsStore` / `RoomManager` Events → `room.state`
+  - `groupsStore` / `GroupEvents` → `group.state`
+  - `sceneEvents` → `scene.started`, `scene.finished`
+  - Zeit-Trigger nutzen einen einzelnen tickenden Timer im Scheduler (kein pro-Automation `setInterval`), Sonnenzeiten aus Settings/Geoposition (falls vorhanden) – rein clientseitig, keine Cloud.
+  - `system.start` feuert einmalig beim ersten `AutomationScheduler.start()`.
 
-### Templates
+### Condition Evaluation
 
-- `SceneTemplateRegistry` verwaltet Built-in und importierte Templates (`register`, `unregister`, `get`, `listByCategory`).
-- `SceneTemplateManager.instantiate(templateId, params)` erzeugt eine reguläre `Scene` (mit Referenz `templateId`), löst `parameterRef`-Platzhalter beim Erstellen der Actions bereits auf und persistiert über `SceneManager.create()`. Keine UI erforderlich; API ist bereit für Teil 9+.
+- `AutomationExecutor.evaluate(node, ctx)` läuft rekursiv über `and`/`or`/`not` und delegiert Blätter an `conditionRegistry.get(kind).evaluate(ctx, cfg)`. Kontext liefert live Stores (`devicesStore`, `roomsStore`, `groupsStore`, `scenesStore`, Variablen-Store) – lesen only.
 
-## 3. Stores (`src/store/slices/`)
+### Action Pipeline
 
-Ersetzen den heutigen dünnen `scenesStore` (Migration übernimmt vorhandene Szenen). Alle Selectors memoisiert, O(1)-Lookups über `byId`.
+- Sequenziell + parallel + verzögert, `errorStrategy` (`abort`/`continue`/`retry`) und `retry.count/backoffMs` pro Action.
+- Jede Action liefert `PlannedCommand[]`; der Executor ruft `commandQueue.enqueue(...)` mit gemeinsamer `correlationId = executionId`.
+- Fortschritt wird über `commandQueue.on('completed'|'failed'|'cancelled')` per `correlationId` fortgeschrieben und als `automationProgress` gespuscht.
+- `rollbackSnapshot[]` wird **nur befüllt** (Vorwerte aus `devicesStore`); ein `undo(executionId)`-Kopf existiert und wirft `NotImplemented`.
+- Spezial-Actions ohne Command Queue (`delay`, `variable.set`, `automation.enable/disable`, `scene.start`) laufen über die bestehenden Manager (`SceneExecutor.run`, `AutomationManager.setEnabled`, Variablen-Store) – keine neuen Pfade.
 
-- `scenesStore.ts` – `scenes`, `byId`, `byCategory`, `favorites`, `recentIds`, CRUD-Actions, `revision`.
-- `sceneTemplatesStore.ts` – Templates (byId, byCategory).
-- `sceneVersionsStore.ts` – Versionen je Szene.
-- `sceneExecutionsStore.ts` – aktive und historische Ausführungen, `byScene`, aktueller `progress`, `undoSnapshot`.
-- `groupsStore.ts` – `byId`, `byKind`, `favorites`, `expandedById` (Cache der aufgelösten Gerätemenge).
-- `groupExecutionsStore.ts` – Live-Status der Fan-out-Kommandos (verlinkt auf `useCommandsStore` per `correlationId`).
+### Validator
 
-Kein Duplizieren von Command-State – die Ausführungs-Stores speichern nur Metadaten und referenzieren `useCommandsStore`.
+- Zod-Schemas + Referenz-Checks gegen `deviceRegistry`, `capabilityRegistry`, `groupsStore`, `scenesStore`, `triggerRegistry/conditionRegistry/actionRegistry`. Liefert `{ ok, errors[], warnings[] }`. Wird bei CRUD und vor `run` aufgerufen.
 
-## 4. Intelligence Layer
+## 4. Stores (`src/store/slices/`)
 
-Neue schlanke Contributors ohne Änderung der bestehenden Aggregatoren:
+Der bestehende `automationsStore` wird auf das erweiterte Modell migriert (Migration konvertiert alte flache `conditions[]` in impliziten `and`-Knoten und ergänzt fehlende Felder). Neue Stores analog Szenen:
 
-- `SceneContributor` – aggregiert Szenen pro Raum (via Aktions-Devices) und Haus. Ergänzt `roomMetrics.custom.scenes`.
-- `GroupContributor` – dito für (expandierte) Gruppen.
-- Registrierung in `registerBuiltinContributors()` – bestehender Erweiterungspunkt, keine neue Architektur.
+- `automationsStore.ts` – `automations`, `byId`, `byCategory`, `favorites`, `recentIds`, `revision`, CRUD, `toggle`.
+- `automationExecutionsStore.ts` – aktive/historische Ausführungen, `byAutomation`, `progress`, `rollbackSnapshot`.
+- `automationVersionsStore.ts` – Versionen je Automation.
+- `automationTemplatesStore.ts` – `byId`, `byCategory`.
+- `automationVariablesStore.ts` – globale Variablen (persistiert).
 
-## 5. Universal Control Engine
+Alle O(1)-Lookups, memoized Selectors, keine Duplikation von Command-State (referenziert `useCommandsStore` per `correlationId`).
 
-Keine Änderungen. Zwei neue **Descriptor-Sources** über bestehende Registries:
+## 5. Intelligence Layer
 
-- `SceneControlSource` – synthetischer `buttonControl`-`ControlSpec`, damit Szenen im Universal Control Renderer als Quick Action erscheinen.
-- `GroupControlSource` – meldet für Gruppen die gemeinsamen Capabilities (Schnittmenge über expandierte Geräte) an die `CapabilityRegistry`; der Renderer erzeugt automatisch passende Controls. Neue Gerätetypen funktionieren dadurch ohne UI-Anpassung.
+Nur neue Contributors, keine Änderungen an bestehenden Aggregatoren:
+
+- `AutomationContributor` – pro Raum: Anzahl aktiver/laufender Automationen, letzte Ausführung, Fehlerquote. Emittiert `aggregationUpdated`, ergänzt `roomMetrics.custom.automations` / `houseMetrics.custom.automations`.
+- Registrierung in `registerBuiltinContributors()`.
 
 ## 6. Widgets (Widget Registry)
 
-Registrierung ausschließlich über `widgetRegistry.register(defineWidget(...))` in `src/services/widgets/builtin/scenes.tsx` und `groups.tsx`, aufgerufen aus `services/widgets/builtin/index.ts`.
-
-Neue Widgets: `scene.button`, `scene.grid`, `scene.favorites`, `scene.status` (nutzt `progress.completed/total`), `group.control`, `group.status`, `quick.actions`. Alle bauen ausschließlich auf `GlassCard`, `IconButton`, `SegmentedControl`, `PageTransition` – kein neues Styling.
+Registrierung ausschließlich über `widgetRegistry.register(defineWidget(...))` in `src/services/widgets/builtin/automations.tsx`, aufgerufen aus `builtin/index.ts`. Neue Widgets: `automation.button`, `automation.status`, `automation.favorites`, `automation.running`. `automation.timeline` bleibt **vorbereitet** (Descriptor + Placeholder-Render, nutzt bereits `timeline.ts`-Modell). Ausschließlich `GlassCard`, `IconButton`, `SegmentedControl`, `PageTransition`.
 
 ## 7. UI (Design System)
 
-- `src/routes/_app.scenes.tsx` – Bibliothek: Suche, Kategorie-Chips, Favoriten, „Zuletzt verwendet", Glass Grid mit Framer-Motion Stagger.
-- `src/routes/_app.scenes.$sceneId.tsx` – Detail: Ausführung mit Progress (completed/total), Versionsliste, Restore, Export. Undo-Button wird gerendert, aber `disabled` mit Tooltip „vorbereitet" bis Teil 9/10.
-- `src/routes/_app.scenes.$sceneId.edit.tsx` – Editor mit Drag & Drop (DnD-Hook aus dem Dashboard-Editor wiederverwenden), Aktions-Reihenfolge, Delay/Priority/errorStrategy, Geräte- und Gruppen-Picker.
-- `src/routes/_app.groups.tsx` + `_app.groups.$groupId.tsx` – Gruppenbibliothek und -Editor. Editor erlaubt Auswahl von Kind-Geräten **und** Kind-Gruppen; ein Zyklus wird per Live-Validierung verhindert und mit klarer Fehlermeldung angezeigt.
-- `src/components/scenes/*`, `src/components/groups/*` – nur Kompositionen bestehender DS-Komponenten (`GlassCard`, `GlassPanel`, `SegmentedControl`, `IconButton`, `PageTransition`, `HeroTransition`, `SharedLayout`).
-- Bestehende Routen (`_app.rooms.$roomId`, `_app.devices.$deviceId`) bekommen neue Panels über die vorhandene `DevicePanelRegistry`/`RoomPanelRegistry`: Mitgliedschaften, Gruppen, verwendete Szenen, Quick Actions.
+Alle Routen ersetzen bzw. ergänzen das aktuelle Minimal-Listing:
+
+- `src/routes/_app.automations.tsx` – Bibliothek: Glas-Grid, Suche, Kategorie-Chips, Favoriten, „Zuletzt ausgeführt", Framer-Motion Stagger.
+- `src/routes/_app.automations.$automationId.tsx` – Detail: Trigger/Conditions/Actions als lesbare Karten, letzte Ausführungen mit Progress (completed/total), Versionsliste, Restore, Export. Rollback-Button gerendert aber `disabled` mit Tooltip „vorbereitet".
+- `src/routes/_app.automations.$automationId.edit.tsx` – **wizardartiger Card-Editor** (kein Blockly, keine freien Blöcke):
+  1. Basis (Name, Icon, Farbe, Kategorie, Priorität, errorStrategy)
+  2. Trigger – Karten aus `triggerRegistry`, pro Trigger inline Konfig-Formular (Schema-getrieben)
+  3. Conditions – hierarchische Card-Struktur (`and`/`or`/`not` als Container-Karten, Blätter aus `conditionRegistry`), Drag & Drop für Reihenfolge innerhalb einer Gruppe
+  4. Actions – DnD-Reihenfolge, pro Karte `delayMs`/`parallel`/`errorStrategy`/`retry`
+  5. Prüfen (Validator-Report) & Speichern
+- `src/routes/_app.automations.new.tsx` – Einstieg: „leer" oder „aus Template" (Template-Picker aus `automationTemplatesStore`).
+- Panels über `DevicePanelRegistry` / `RoomPanelRegistry`: „Verwendete Automationen" auf Device- und Room-Detail; Szenen-/Gruppen-Detail zeigen Automationen, die sie als Trigger/Condition/Action verwenden (Rückverweise berechnet aus `automationsStore` via memoized Selector).
+- Reine Kompositionen bestehender DS-Komponenten (`GlassCard`, `GlassPanel`, `SegmentedControl`, `IconButton`, `PageTransition`, `HeroTransition`, `SharedLayout`). Kein neues Styling.
 
 ## 8. Import / Export
 
-`sceneSerialization.ts` / `groupSerialization.ts` liefern versionsstabiles JSON (`schemaVersion`, `exportedAt`, `scenes[]`, `templates[]`, `groups[]`, `versions{}`). Import validiert per Zod und wählt `merge` | `replace`. Import berücksichtigt Templates und Versionen.
+`automationSerialization.ts` liefert versionsstabiles JSON (`schemaVersion`, `exportedAt`, `automations[]`, `templates[]`, `versions{}`, `variables[]`). Zod-Validierung, `merge` | `replace`. Fehler landen im bestehenden `errorBus`.
 
-## 9. Vorbereitung Teil 9 (Automationen)
+## 9. Vorbereitung Teil 10 (Timeline)
 
-- `sceneAction.condition?: ConditionRef` bleibt typisiert (`unknown`) mit Namespace-Kommentar.
-- Leere Registries unter `src/services/automations/`: `TriggerRegistry`, `ConditionRegistry`, `ActionRegistry` mit definierten Descriptor-Typen. Keine Ausführungslogik, keine Routen.
-- `SceneParameterRegistry` ist bereits einsetzbar für spätere Automations-Parameter.
+- `timeline.ts` (siehe oben) definiert `TimelineSourceDescriptor`.
+- `AutomationHistory` implementiert bereits einen `TimelineSourceDescriptor` (aber nicht registriert außerhalb der Automation-Domäne). Scene- und Notification-Feeds werden **nicht** angefasst; die spätere Timeline-Route kann Sources kombinieren.
+- Keine Timeline-UI, keine Route, kein Widget-Inhalt – nur `automation.timeline` als Placeholder-Widget.
 
 ## 10. Performance & Accessibility
 
-- Alle Listen: `React.memo`, `useMemo`-Selectors, stabile Keys, Slice-fähige Renderer als Virtualisierungs-Vorbereitung.
-- Große Touchflächen (≥ 44 px), `aria-label`, `role="list"/"listitem"`, Fokusreihenfolge im Editor, Screenreader-Ansagen bei Execution-Statuswechsel und Progress-Updates.
+- `React.memo`, `useMemo`-Selectors, Slice-fähige Renderer, stabile Keys, Lazy Import (`React.lazy`) der Editor-Route für Code-Splitting.
+- ≥ 44 px Touchflächen, `aria-label`, `role="list"/"listitem"`, klare Fokusreihenfolge im Wizard, Screenreader-Ansagen bei Executionsstatus.
 
-## 11. Was **nicht** passiert
+## 11. Was nicht passiert
 
-Keine Zeitpläne, Kalender, Geofencing, Benachrichtigungen, Historie, Diagramme, keine Automationen. **Keine Änderungen an der Command Queue oder der Universal Control Engine** – alle Erweiterungen laufen über bestehende Registries, Stores und Event-Kanäle.
+Kein Geofencing, keine Cloud, keine Push-Notifications, keine KI, keine Historien-Diagramme, keine Timeline-UI. **Keine Änderungen an Command Queue, Universal Control Engine, Discovery, Registry, Scene/Group Manager oder bestehenden Aggregatoren** – alle Erweiterungen laufen über bestehende Registries, Stores und Event-Kanäle.
 
 ```text
-Scene UI ──▶ SceneManager ──▶ SceneExecutor ──▶ CommandQueue ──▶ wsManager
-Group UI ──▶ GroupManager ──▶ GroupExecutor ──▶ CommandQueue ──▶ wsManager
-Templates ─▶ TemplateManager ─▶ SceneManager (instantiate)
-Intelligence / Widgets / Rooms lesen ausschließlich Stores
+Trigger (Registry) ─▶ Scheduler ─▶ Executor
+                                     │
+                                     ├─▶ ConditionRegistry.evaluate (Baum)
+                                     │
+                                     └─▶ ActionRegistry.plan ─▶ CommandQueue ─▶ wsManager
+                                                             └▶ SceneExecutor / GroupExecutor / VariablesStore
+Stores/Widgets/Intelligence/Rooms/Devices lesen ausschließlich Stores.
 ```
 
-Ergebnis: versionierte Szenen mit Parameter- und Template-Vorbereitung, verschachtelte Gerätegruppen mit Zyklenerkennung, Progress- und Undo-Vorbereitung, komplette Bibliothek + Editor, Room/Device/Dashboard-Integration und Quick Actions – ausschließlich über vorhandene Registry-, Store- und Event-Architektur.
+Ergebnis: eine vollständig generische, registry-basierte Automation Engine mit Versionierung, Templates, Wizard-Editor, Bibliothek, Room/Device/Scene/Group-Integration, Widgets und Timeline-Vorbereitung – ohne parallele Datenmodelle, ohne direkte WebSocket-Aufrufe, ausschließlich über die vorhandene Architektur.
