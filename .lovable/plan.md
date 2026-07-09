@@ -1,107 +1,181 @@
-# Teil 13 — Globale Suche & Command Palette
+## Teil 14 — PWA, Offline, Backup, Updates & Deployment-Grundlagen
 
-Vollständig generische Suchplattform mit Registry-basierten Providern, moderner Command Palette und Integration in alle bestehenden Systeme. Keine parallelen Datenmodelle, keine Hardcodierung.
+Ziel: Die App vollständig als PWA vorbereiten (installierbar, offlinefähig, updatefähig), ein zentrales Backup/Restore-System, Version- & Migration-Manager sowie Deep-Link- und Lifecycle-Grundlagen — ausschließlich auf Basis der bestehenden Registries, Manager und Stores. Keine parallelen Datenmodelle, keine Cloud, keine nativen Plugins.
 
-## 1. Modelle (`src/models/`)
+---
 
-- `search.ts` — `SearchResult`, `SearchQuery`, `SearchAction`, `SearchCategory`, `SearchResultType`, `SearchContext` (userId, permissions, timestamp), `SearchScore`.
-- `searchProvider.ts` — `SearchProviderDescriptor` (id, label, icon, category, priority, permissionResource?, `search(query, ctx) => SearchResult[]`, optional `index()` für incremental index, optional `suggest()`).
-- `searchHistory.ts` — `SearchHistoryEntry`, `SearchFavorite`, `RecentOpen`.
-- `searchPreferences.ts` — User-scope Preferences (pinned providers, disabled categories, sortOrder).
-- `commandPalette.ts` — `CommandDescriptor` (extends SearchResult mit `run(ctx)`), `CommandGroup`.
+### 1. Web App Manifest & Icons
 
-## 2. Services (`src/services/search/`)
+- `public/manifest.webmanifest` erweitern:
+  - name/short_name, description, `id`, `scope`, `start_url`
+  - `display: "standalone"`, `orientation: "portrait"`
+  - `theme_color`, `background_color`
+  - Icons 192/512 + **maskable** Varianten
+  - `shortcuts` (Dashboard, Räume, Szenen, Suche)
+  - `screenshots` (Slots vorbereitet, Platzhalter-Assets)
+- Head-Tags in `src/routes/__root.tsx`: `apple-touch-icon`, `theme-color` (light/dark), zusätzliche `link rel="icon"`, `mask-icon`.
+- Icons als PNGs unter `public/icons/` (via imagegen, App-Marke neutral, quadratisch, maskable-Safe-Area).
 
-- `SearchProviderRegistry.ts` — register/unregister/list Provider; keine Switch/If-Kaskaden.
-- `SearchIndex.ts` — generischer, lazy, inkrementeller Index (Map-basiert, Tokenizer + n-gram); O(1)-Lookup per id, per-token invertierter Index. Providers dürfen Index selbst nutzen oder eigene `search()` liefern.
-- `SearchManager.ts` — orchestriert Query → fan-out an Provider (parallel, debounced) → PermissionEvaluator-Filter → Ranking → Cache.
-- `SearchRanking.ts` — Score aus Relevanz (Textmatch), Favorit, Recency, Frequency, Priorität, Provider-Weight.
-- `SearchCache.ts` — LRU per normalisierte Query, TTL, Invalidierung bei Store-Änderungen.
-- `SearchHistoryManager.ts` — Recent Searches, Recent Opens, Favorites (via Store).
-- `SearchSuggestions.ts` — Autocomplete aus History + Index + Provider-`suggest()`.
-- `CommandRegistry.ts` — registriert globale Commands (Navigation, Quick Actions); Command ist ein SearchProvider-Adapter.
-- `builtinProviders/` — dünne Adapter, jeder Provider liest ausschließlich aus vorhandenen Stores/Registries:
-  - `devicesProvider.ts` (deviceRegistry + Capability → Steuer-Actions)
-  - `roomsProvider.ts`
-  - `scenesProvider.ts` (Action: aktivieren via SceneManager)
-  - `groupsProvider.ts`
-  - `automationsProvider.ts` (Action: triggern via AutomationEngine)
-  - `usersProvider.ts`
-  - `dashboardsProvider.ts` / `widgetsProvider.ts`
-  - `timelineProvider.ts` (via TimelineSourceRegistry read-only)
-  - `notificationsProvider.ts`
-  - `analyticsProvider.ts`, `logsProvider.ts`, `settingsProvider.ts`
-  - `navigationProvider.ts` — Route-basierte Commands.
-- `serialization.ts` — Import/Export von History, Favorites, Preferences (JSON, schemaVersion).
-- `index.ts` — Barrel + `startSearchPlatform()` / `stopSearchPlatform()`.
+### 2. Service Worker (Kill-Switch-sicher, Preview-safe)
 
-Alle Provider werden in `bootstrap.ts` via `SearchProviderRegistry.register(...)` gebunden.
+- Neue Datei `public/sw.js` — generischer, versionierter SW:
+  - App-Shell Precache (Route-HTML, JS/CSS-Manifest-Einträge werden zur Build-Zeit **nicht** injected; SW nutzt Runtime-Strategien).
+  - Runtime-Caches (getrennte Buckets, Namen inkl. `SW_VERSION`):
+    - `app-shell-v{n}` — HTML: **NetworkFirst** mit Offline-Fallback `/offline.html`.
+    - `assets-v{n}` — same-origin gehashte JS/CSS: **CacheFirst**.
+    - `images-v{n}` — Bilder: **StaleWhileRevalidate**, LRU-Cap.
+    - `fonts-v{n}` — Fonts: **CacheFirst**, langlebig.
+  - `activate`: alte Cache-Buckets, deren Version ≠ aktuell, werden gelöscht.
+  - `message`-Handler: `SKIP_WAITING`, `CLEAR_CACHES`, `GET_VERSION`.
+  - **Keine** Business-Logik, kein Fetch-Rewrite von WebSocket/API-Aufrufen.
+- Registrierungs-Wrapper `src/services/pwa/registerServiceWorker.ts`:
+  - Registrierung **nur** in `import.meta.env.PROD` **und** außerhalb von Lovable-Preview (`id-preview--*`, `preview--*`, `*.lovableproject.com`, `*.lovableproject-dev.com`, `*.beta.lovable.dev`), nicht im iFrame, nicht bei `?sw=off`.
+  - In allen anderen Kontexten: bestehende Registrierungen für `/sw.js` deaktivieren.
+- `public/offline.html`: minimale statische Offline-Seite (Design-System-neutral, inline CSS).
 
-## 3. Stores (`src/store/slices/`)
+### 3. Offline Engine
 
-- `searchStore.ts` — aktuelle Query, results (memoized), open state der Palette, activeCategory-Filter.
-- `searchHistoryStore.ts` — persistent (via `_persistStorage`), pro userId (Vorbereitung).
-- `searchFavoritesStore.ts` — persistent, pro userId.
-- `searchPreferencesStore.ts` — persistent, pro userId.
+`src/services/offline/`:
+- `OfflineEngine.ts` — abonniert `online`/`offline`, `document.visibilitychange`, verwaltet `isOnline`-Zustand als Store-Selector.
+- `offlineStore.ts` (Zustand-Slice) — `online`, `lastOnlineAt`, `lastOfflineAt`, `pendingCount` (aus Command Queue gelesen, nicht dupliziert).
+- Bestehende `CommandQueue` **bleibt unverändert**. Engine liest nur ihren Status und triggert bei Reconnect `commandQueue.flush()` sowie `discoveryEngine.rescan()` (falls vorhanden — sonst dokumentierter Extension-Point).
+- Konflikterkennung & Retry: **Interfaces** und Descriptor-Typen (`ConflictResolutionDescriptor`) vorbereitet, keine Business-Logik.
 
-Alle mit Selektoren (`selectRecent`, `selectFavoritesOf(userId)`, `selectFrequency`).
+### 4. Background Sync (Vorbereitung)
 
-## 4. UI / Komponenten (`src/components/search/`)
+- `src/services/offline/BackgroundSync.ts`:
+  - Registriert bei `visibilitychange → visible` und `online`-Event: Queue-Flush + Discovery-Rescan-Signal.
+  - Wenn `SyncManager` (`'sync' in registration`) verfügbar: `sync`-Tag `smarthome-queue-flush` registrieren. Der SW leitet das Event lediglich an den App-Thread weiter (via `postMessage`), damit die Business-Logik nicht in den SW wandert.
+  - Delta-Sync als Interface vorbereitet (`DeltaSyncDescriptor`), keine Implementierung.
 
-- `CommandPalette.tsx` — globales Overlay (Radix Dialog + Framer Motion + Glass Design), Cmd/Ctrl+K, virtualisierte Result-Liste, Kategorie-Gruppen, Keyboard-Navigation (↑↓, Enter, Tab für Actions), Fokusmanagement.
-- `CommandPaletteHost.tsx` — mounted in `_app.tsx`, registriert globale Shortcut-Listener.
-- `SearchResultItem.tsx` — memoized, Icon+Farbe+Titel+Untertitel+Actions.
-- `SearchActionsMenu.tsx` — Sub-Menü für per-Result Actions.
-- `SearchBar.tsx` — inline Suchfeld (für Widget & Route).
-- `SearchHistoryList.tsx`, `SearchSuggestionsList.tsx`, `SearchFavoritesList.tsx`.
-- `FloatingSearchButton.tsx` — Mobile FAB.
+### 5. Cache Manager
 
-## 5. Routen (`src/routes/`)
+`src/services/cache/CacheManager.ts`:
+- Zentrale Facade über die SW-Cache-API + LRU-Bucket-Meta im `localStorage`.
+- Buckets: `assets`, `api`, `images`, `widgets`, `search`.
+- Integriert bestehende `SearchCache` (Adapter, keine Duplikation): `CacheManager.getBucket('search')` liefert einen dünnen Wrapper um den bestehenden Cache.
+- API: `invalidate(bucket?)`, `clearAll()`, `size(bucket)`, `usageBytes()`.
+- Ereignisse über bestehenden `errorBus`/`devLog` — kein neues Event-System.
 
-- `_app.search.tsx` (Layout mit `<Outlet />`).
-- `_app.search.index.tsx` → `/search` (Landing mit Suchfeld + Empfehlungen).
-- `_app.search.results.tsx` → `/search/results` (validateSearch: `q`, `category`).
-- `_app.search.history.tsx` → `/search/history`.
-- `_app.search.favorites.tsx` → `/search/favorites`.
+### 6. Backup / Restore
 
-Command Palette bleibt als globales Overlay (kein Route-Wechsel).
+Erweiterung der bereits existierenden `src/services/storage/backup.ts` zu einem echten Backup-System (nicht-brechend):
 
-## 6. Widgets (`src/services/widgets/builtin/search.tsx`)
+- Neue Datei `src/services/backup/BackupManager.ts` mit **Provider-Registry** `BackupProviderRegistry`.
+- Jeder Domain-Bereich registriert einen Provider (Descriptor: `id`, `label`, `version`, `export()`, `import(payload, mode)`, `migrate(from, to, payload)`):
+  - settings, users, profiles, roles, permissions, userPreferences
+  - dashboards, widgetInstances, layouts, runtime
+  - rooms, devices, deviceCatalog, capabilities
+  - scenes, sceneTemplates, sceneVersions
+  - groups
+  - automations, automationTemplates, automationVariables, automationVersions
+  - timeline, history, statistics, insights
+  - notifications, notificationRules, notificationTemplates, notificationPreferences
+  - search (history, favorites, preferences)
+- Bestehender `exportBackup()` bleibt als Legacy-Aufruf funktional; intern delegiert er ans neue System.
+- `BackupSchema`: `{ schemaVersion, appVersion, dataModelVersion, createdAt, sections: Record<providerId, { version, data }> }`.
+- Restore-Modi: `replace`, `merge`, `selective` (Whitelist von Provider-IDs).
+- JSON Import/Export, Datei-Download via bestehende `downloadBackupFile`.
 
-Registrierung via `WidgetRegistry.register(...)`:
-- `search.bar`
-- `search.recent`
-- `search.quickActions`
-- `search.favorites`
-- `search.suggestions`
+### 7. Version / Migration Manager
 
-## 7. Integrationen
+`src/services/version/`:
+- `VersionManager.ts` — hält & persistiert:
+  - `appVersion` (aus `import.meta.env.VITE_APP_VERSION`, Default per Build).
+  - `dataModelVersion`, `cacheVersion`, `backupVersion`, `schemaVersions` pro Provider.
+- `MigrationManager.ts` — generisch:
+  - Registry `MigrationRegistry.register({ providerId, from, to, migrate })`.
+  - Beim App-Start und beim Restore werden Migrationsketten sequentiell angewendet.
+  - Keine konkreten Migrationen — nur die Architektur + no-op Baseline v1→v1.
 
-- **Permissions**: `SearchManager` ruft `PermissionEvaluator.can(user, resource, 'read')` auf Basis von `provider.permissionResource`. Ergebnisse ohne Zugriff werden gefiltert.
-- **User Manager**: `SearchContext.userId` aus aktivem User; History/Favorites/Preferences pro User.
-- **Timeline / Event Center / Notifications**: als reguläre Provider (read-only auf bestehende Stores/Registries).
-- **Universal Control Engine**: `SearchAction.run` ruft UCE für Gerätesteuerung; keine WebSocket-Direktaufrufe.
-- **Dashboard**: Command "Dashboard wechseln" via DashboardRuntime; Widget-Suche via WidgetRegistry.
+### 8. Update Manager
 
-## 8. Bootstrap
+`src/services/pwa/UpdateManager.ts`:
+- Beobachtet SW-`updatefound`/`waiting` → schreibt in neuen `updateStore` (`available`, `applying`, `lastChecked`).
+- API: `softReload()` (`navigation.reload({ documentTree: true })` bzw. `window.location.reload()`), `hardReload()` (SW `SKIP_WAITING` + Caches leeren + Reload).
+- Changelog-Datenstruktur vorbereitet (`ChangelogEntry[]`), Feed leer.
 
-`src/services/bootstrap.ts`: `startSearchPlatform()` — registriert built-in Provider + Navigation-Commands + Shortcut-Listener. `_app.tsx` mountet `<CommandPaletteHost />`.
+### 9. Deep Links
 
-## 9. Performance & A11y
+`src/services/deeplinks/DeepLinkRouter.ts`:
+- Parst `smarthome://<kind>/<id>` (device, room, scene, group, automation, dashboard) und mappt auf TanStack-Router-Ziele.
+- Registriert Handler für `navigator.registerProtocolHandler` (nur Prod + non-preview).
+- Manifest: `protocol_handlers` Entry für `web+smarthome`.
+- Kein natives Binding.
 
-- Debounced Query (150ms), memoized Selektoren, `React.memo` für Items, `react-virtual` für lange Listen, Code-Splitting per lazy-imported Route.
-- ARIA: `role="combobox"`/`role="listbox"`, `aria-activedescendant`, focus-trap in Dialog, große Touch-Targets (min. 44px).
+### 10. App Lifecycle
 
-## 10. Offline-Vorbereitung (nur Vorbereitung)
+`src/services/lifecycle/AppLifecycle.ts`:
+- Emittiert über bestehenden `EventEmitter` bzw. `errorBus`-Nachbarsystem (kein neues Bus-System) die Events:
+  - `app.start`, `app.resume`, `app.pause`, `app.visible`, `app.hidden`, `app.online`, `app.offline`.
+- Bindet an `visibilitychange`, `pageshow`, `pagehide`, `online`, `offline`.
+- Wird von OfflineEngine, BackgroundSync und UpdateManager konsumiert.
 
-- Alle Provider arbeiten synchron auf lokalen Stores → funktionieren offline bereits.
-- Index/History/Favorites/Preferences persistiert via `_persistStorage`.
-- Keine Sync-Logik in diesem Teil.
+### 11. Capacitor-Vorbereitung (nur Struktur)
 
-## 11. Nicht enthalten
+- `capacitor.config.ts` (nur Konfig-Skelett, `appId`, `appName`, `webDir`) — **nicht** an Build angebunden.
+- README-Notiz zu geplanten Ordnern `android/`, `ios/` — leer belassen.
+- Keine Plugins, keine Native-APIs.
 
-Keine Cloud-, KI-, Sprach-, OCR-, externe Suche. Keine Notification Engine-Erweiterung. Keine neuen Auth-Systeme.
+### 12. Widgets (via WidgetRegistry)
 
-## 12. Erweiterungsgarantie
+Neue Built-in Widgets unter `src/services/widgets/builtin/system.tsx` (registriert in `src/services/widgets/builtin/index.ts`):
+- `system.backupStatus`
+- `system.offlineStatus`
+- `system.syncStatus`
+- `system.updateStatus`
+- `system.storageStatus`
 
-Neue Suchquellen ausschließlich via `SearchProviderRegistry.register(descriptor)`. Neue Commands via `CommandRegistry.register(descriptor)`. Keine Änderungen in Manager oder UI notwendig.
+Lesen ausschließlich aus den neuen Stores; kein zusätzlicher State.
+
+### 13. Settings & Routen
+
+Neue Routen (jeweils `createFileRoute("/_app/settings/...")`):
+- `_app.settings.offline.tsx`
+- `_app.settings.backup.tsx` — **erweitert** die bestehende Datei (Export/Import mit Provider-Auswahl, Merge/Replace).
+- `_app.settings.restore.tsx`
+- `_app.settings.update.tsx`
+- `_app.settings.storage.tsx`
+- `_app.settings.app.tsx` (App-Info, Versionen, Build-Hash)
+
+Bestehende Backup-Route bleibt funktional; wird nur inhaltlich ausgebaut.
+Verlinkung im bestehenden Settings-Hub (`_app.settings.index.tsx`) ergänzen.
+
+### 14. Bootstrap-Integration
+
+`src/services/bootstrap.ts` erweitert (nur zusätzliche Aufrufe, keine Umstrukturierung):
+- `registerServiceWorker()` (guarded).
+- `versionManager.hydrate()`, `migrationManager.runPending()`.
+- `backupProviderRegistry` mit Built-in Providern initialisieren.
+- `cacheManager.init()`, `offlineEngine.start()`, `backgroundSync.start()`, `updateManager.start()`, `appLifecycle.start()`, `deepLinkRouter.start()`.
+- Stop-Pfade in `stopCommunicationLayer()`.
+
+### 15. Performance / A11y
+
+- Neue Routen via TanStack Auto-Code-Splitting (kein Route-Export der Komponente).
+- Schwere UI-Bereiche (Backup-Restore-Listen) mit `React.memo` + memoisierten Selektoren.
+- Große Listen: bestehende Virtualisierung wiederverwenden (falls bereits im Projekt), sonst leichtes Fenstern via CSS `content-visibility`.
+- A11y: alle Statusanzeigen mit `aria-live="polite"`, Offline-/Update-Banner mit Rolle `status`, Buttons ≥ 44px.
+
+### 16. Was explizit NICHT gebaut wird
+
+- Keine Cloud, kein Push, keine Google/Apple-Services, keine externe Sync, keine Accounts.
+- Keine echten Migrationen (nur Architektur).
+- Keine nativen Plugins.
+- Keine Perf-/Security-Härtung (Teil 15).
+
+---
+
+### Erweiterbarkeitsgarantie
+
+Neue Backup-Bereiche → `backupProviderRegistry.register(descriptor)`.  
+Neue Migrationen → `migrationRegistry.register({...})`.  
+Neue Cache-Buckets → `cacheManager.registerBucket(descriptor)`.  
+Neue Deep-Link-Ziele → `deepLinkRouter.register(kind, resolver)`.  
+Neue Systemwidgets → `widgetRegistry.register(descriptor)`.  
+
+Kein bestehender Manager, keine bestehende Datei muss dafür erneut geändert werden.
+
+---
+
+Soll ich so implementieren?
