@@ -34,6 +34,7 @@ import { bootstrapDevicePanels } from "@/services/devicePanels";
 import { bootstrapDevicePropertyRegistry } from "@/services/deviceProperties";
 import { bootstrapScenes } from "@/services/scenes";
 import { bootstrapGroups, stopGroups } from "@/services/groups";
+import { bootstrapAutomations, stopAutomations } from "@/services/automations";
 
 
 const log = createLogger("bootstrap");
@@ -167,6 +168,10 @@ export function startCommunicationLayer(): void {
   bootstrapScenes();
   bootstrapGroups();
 
+  // Automation Engine: hydratisiert, registriert Built-in Descriptors,
+  // startet Scheduler + Executor. Nutzt ausschließlich CommandQueue.
+  bootstrapAutomations();
+
 
 
 
@@ -202,6 +207,7 @@ export function stopCommunicationLayer(): void {
   unsubActiveServer?.();
   unsubActiveServer = null;
   stopIntelligence();
+  stopAutomations();
   stopGroups();
   commandQueue.stop();
   discoveryEngine.stop();
