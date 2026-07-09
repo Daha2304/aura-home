@@ -37,3 +37,5 @@ registerUserWidgets();
 
 
 
+
+registerSearchWidgets();
