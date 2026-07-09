@@ -1,150 +1,127 @@
 
-# Teil 11 von 18 — Event Center
+# Teil 12 von 18 — Benutzer, Profile, Rollen & Berechtigungen
 
-Vollständig generisches Event Center als Aufsatz auf der Timeline-Plattform (Teil 10). Kein paralleles Notification-System: jede Notification ist eine Timeline-Quelle über `TimelineSourceDescriptor`, alle Farben/Icons kommen aus `SeverityRegistry` und `EventCategoryRegistry`. Der bestehende `notificationsStore` (aus Onboarding) und `TimelineSourceKind = "notification"` (Platzhalter aus Teil 10) werden zum vollwertigen System ausgebaut, nicht ersetzt.
+Vollständig lokales System, aufgesetzt auf bestehende Registries, Stores und das Design System. Keine Cloud, keine Auth-Server, kein OAuth, kein 2FA. Kein Parallelmodell — bestehende `usersStore`, `User`-Model und die in Teil 11 vorbereiteten `userId?`-Felder werden ausgebaut, nicht ersetzt.
 
 ## 1. Datenmodelle (`src/models/`)
 
-### 1.1 `notification.ts` (erweitert, nicht ersetzt)
-Bestehendes `AppNotification` wird ergänzt (alle neuen Felder optional, `NotificationSeverity` bleibt als Alias erhalten für Rückwärtskompatibilität, intern aber auf `Severity` gemappt):
-
+### 1.1 `user.ts` (erweitert, nicht ersetzt)
+`User` bekommt optionale Felder — bestehende `{id, name, role, avatarUrl?, email?}` bleiben rückwärtskompatibel:
 ```ts
 uuid: string;
-category?: EventCategory;
-severity: Severity;            // ersetzt intern NotificationSeverity, alt bleibt kompatibel
-priority?: 'low' | 'normal' | 'high' | 'urgent';
-icon?: string; color?: string;
-refType?: 'device'|'room'|'scene'|'automation'|'group'|'system'|'custom';
-refId?: ID;
-status?: 'active'|'resolved'|'dismissed';
-acknowledged?: boolean; pinned?: boolean; archived?: boolean; favorite?: boolean;
-tags?: string[];
-actions?: NotificationAction[];
+firstName?: string; lastName?: string;
+phone?: string; description?: string;
+color?: HexColor; icon?: IconName;
+language?: string; timezone?: string;
+active: boolean; isGuest?: boolean; isAdmin?: boolean;
+favorites?: FavoriteRef[];
 custom?: Record<string, unknown>;
-userId?: ID;                    // Vorbereitung Teil 12 (Benutzerbindung)
-templateId?: string;
+profileId?: ID; roleIds: ID[];
+createdAt, updatedAt: Timestamp;
 ```
+`UserRole` (alt: `"admin"|"user"|"guest"`) bleibt als String-Alias erhalten; intern über `roleIds` gepflegt, `role` wird als abgeleiteter Getter verfügbar (Migration transparent).
 
-- `NotificationAction`: `{ id; label; icon?; kind: 'navigate'|'run-scene'|'run-automation'|'open-device'|'open-room'|'open-group'|'open-log'|'custom'; target?; payload? }`
-- `NotificationRule`, `NotificationTemplate`, `NotificationPreferences` als neue Modelle (`src/models/notificationRule.ts`, `notificationTemplate.ts`, `notificationPreferences.ts`).
+`FavoriteRef = { refType: 'device'|'room'|'scene'|'group'|'automation'|'dashboard'|'widget'; refId: ID }`.
 
-### 1.2 Regeln (Vorbereitung, kein Runtime-Enforcement über Push)
-`NotificationRule` — quietHours, muteCategories, muteSeverityBelow, mutedRefs (device/room/group/automation/user IDs), enabled. Rein Datenmodell + Auswertungsfunktion `matchesRule(notification, rule): boolean`.
+### 1.2 Neue Modelle
+- `profile.ts` — `Profile { id, name, icon, color, description?, defaultDashboardId?, homeRoute?, notificationPreferencesId?, themeId? }`.
+- `role.ts` — `Role { id, key, name, description?, icon?, color?, builtin: boolean, permissions: PermissionGrant[] }`.
+- `permission.ts` — `PermissionResource = 'device'|'room'|'group'|'scene'|'automation'|'dashboard'|'widget'|'notification'|'timeline'|'analytics'|'history'|'settings'|'user'`; `PermissionAction = 'read'|'control'|'edit'|'delete'|'manage'`; `PermissionGrant = { resource; action; scope?: 'all'|'own'|'shared'|{ refIds: ID[] } }`.
+- `userPreferences.ts` — `{ userId, themeId?, dashboardId?, homeRoute?, widgetLayoutId?, favorites, recentPages, notificationPreferencesId?, language?, units?, animations?, accessibility? }`.
+- `ownership.ts` — generisches Sharing: `Ownership { refType, refId, ownerUserId, memberUserIds, guestUserIds?, sharedRoleIds?, editorUserIds? }`.
 
-### 1.3 Templates
-`NotificationTemplate` — id, title/description-Templates mit `{{placeholders}}`, defaultSeverity, defaultCategory, defaultActions, refType.
+Anpassung bestehender Modelle (nur optionale Felder, keine Pflichtfelder):
+- `Room`: `ownerUserId?`, `memberUserIds?`, `guestUserIds?`.
+- `Device`: `ownerUserId?`, `visibleToUserIds?`, `controlUserIds?`, `favoriteUserIds?`.
+- `Scene`, `DeviceGroup`, `Automation`: `ownerUserId?`, `sharedUserIds?`, für Automation zusätzlich `editorUserIds?`.
+- `AppNotification`, `TimelineEntry`, `NotificationRule`: `userId?` (bereits vorhanden, unverändert genutzt).
 
-## 2. Registries & Manager (`src/services/notifications/`)
+## 2. Registries & Manager (`src/services/users/`)
 
-Bestehende Muster (WidgetRegistry, SceneRegistry, AutomationRegistry) 1:1 übernehmen:
+Muster identisch zu `WidgetRegistry`/`SceneRegistry`/`NotificationRegistry`:
+- `RoleRegistry` — Descriptor-basiert. Built-in Descriptors registrieren `admin`, `user`, `guest`, `technician`. `registerRole(descriptor)` für Custom. Keine Hardcodierung außerhalb der Descriptor-Datei.
+- `PermissionRegistry` — Descriptor je `resource`, listet erlaubte `actions` und liefert `evaluate(user, roles, ownership, action, resource, refId?)`. Keine Switch-Kaskaden — alles über Descriptor.
+- `ProfileRegistry` — Built-in Profile: Administrator, Familie, Kinder, Gast, Techniker. Custom via Registry.
+- `UserManager` — Fassade: `create`, `update`, `remove`, `setActive`, `setFavorite`, `setCurrent`, `assignRole`, `assignProfile`, `updateCustom`. Delegiert an `usersStore`.
+- `ProfileManager` — CRUD über `profilesStore`, `applyProfile(userId)` setzt Preferences-Defaults.
+- `UserPreferencesManager` — CRUD über `userPreferencesStore`, `getEffective(userId)` mergt Profile-Defaults + Overrides.
+- `PermissionEvaluator` (reine Funktion) — zentraler Ausdruck `can(user, action, resource, refId?)`. Alle UI-Gates konsumieren nur diese Funktion. Für Teil 12 rein informativ (UI kann Elemente ausblenden), keine harten Sperren im Command-Pfad.
 
-- `NotificationRegistry` — Registry für **Producer-Descriptoren**: `{ id, label, category, defaultSeverity, subscribe(emit) }`. Producer sind die Punkte, an denen Domänen (Automations, Discovery, Scenes, Groups, System) Notifications erzeugen. Kein Switch/If — der Manager iteriert über Descriptoren.
-- `NotificationTemplateRegistry` — Descriptor-Tabelle, `render(templateId, data): AppNotification`.
-- `NotificationRuleEngine` — reine Auswertungsschicht über `notificationRulesStore`. Filtert eingehende Notifications (drop/soften), verändert nichts an der Timeline-Persistenz.
-- `NotificationManager` — Fassade: `push(input)`, `markRead`, `markAllRead`, `pin`, `archive`, `favorite`, `acknowledge`, `remove`, `runAction(notification, actionId, router)`. Schreibt in `notificationsStore` **und** emittiert einen `TimelineEntry` über den registrierten Timeline-Source-Adapter.
-- `EventCenter` — Orchestrator; startet bei Bootstrap, sammelt Producer, verbindet mit TimelineSourceRegistry, hält Preferences.
+`OwnershipRegistry` — kleiner Descriptor je `refType`, der aus dem passenden Store (`roomsStore`, `devicesStore`, …) das Ownership-Objekt liefert. So kann `PermissionEvaluator` einheitlich auf beliebige Ressourcen zugreifen, ohne einen Switch.
 
-## 3. Timeline-Integration (Erweiterungspunkt-Garantie)
+## 3. Stores (`src/store/slices/`)
 
-- Aktivierung des in Teil 10 vorbereiteten `notificationTimelineSource` (Descriptor bereits vorhanden, `enabled: true` schalten).
-- Der Source-Adapter mapped `AppNotification -> TimelineEntry` (source: `"notification"`, category/severity aus der Notification, refId/refType übernommen, sourceVersion gesetzt).
-- Keine zusätzlichen Switch/If in der Timeline-Engine. Neue Ereignisquellen (später) registrieren sich weiterhin nur über `TimelineSourceRegistry`.
+Alle mit `byId`-Map (O(1)), memoized Selectors, `persistentStorage()`:
 
-## 4. Stores (`src/store/slices/`)
+- `usersStore` (vorhanden) — erweitert um `byId`, `selectActive`, `selectAdmins`, `selectGuests`, `selectByRoleId`, `selectFavoritesOf`, `addFavorite`, `removeFavorite`, `setCurrentUserId`. Alte API (`users`, `currentUser()`) bleibt.
+- `profilesStore` (neu) — CRUD, Selectors, Import/Export.
+- `rolesStore` (neu) — persistiert nur Custom/Overrides; Built-ins kommen aus `RoleRegistry` und werden beim Lesen gemerged.
+- `permissionsStore` (neu) — persistierte Overrides pro User/Role/Resource; Grants aus Roles sind Basis.
+- `userPreferencesStore` (neu) — pro `userId` Preferences; Selectors `selectFavorites(userId)`, `selectRecentPages(userId)`, `selectEffective(userId)`.
 
-- `notificationsStore` (vorhanden) — erweitert um: byId-Map (O(1)), Indexe nach category/severity/refId/pinned/favorite/archived/unread; Selectors `selectUnreadCount`, `selectCritical`, `selectByRoom`, `selectByDevice`, `selectPinned`, `selectFavorites`, `selectArchived`. Ringpuffer bleibt bei 200, wird konfigurierbar.
-- `notificationRulesStore` — Rules + `activeRuleId`, Import/Export-fähig.
-- `notificationTemplatesStore` — Templates, Import/Export.
-- `notificationPreferencesStore` — global Preferences (Ruhezeiten, Toast-Verhalten, Badge-Verhalten, Filter). Bestehende Settings in `settingsStore.notifications` bleiben; neue Preferences ergänzen, alte Keys werden weitergelesen.
+Bestehende Stores (`roomsStore`, `devicesStore`, `scenesStore`, `groupsStore`, `automationsStore`) bekommen zusätzliche Selectors (`selectByOwner(userId)`, `selectSharedWith(userId)`, `selectVisibleFor(userId)`), keine Änderung an der Grundstruktur.
 
-Alle Stores mit memoized Selektoren, O(1)-Lookups.
+## 4. UI & Routen (`src/routes/`)
 
-## 5. Toast-System (`src/components/notifications/`)
+Ausschließlich vorhandenes Design System (`GlassCard`, `HeroCard`, `SectionCard`, `StatusBadge`, `SharedLayout`, `PageTransition`, `BottomSheet`):
 
-- `ToastHost` — global gemountet in `__root.tsx` neben bestehendem `<Toaster />` (sonner bleibt für Ad-hoc-UI-Toasts; das Event-Toast-System zeigt **nur** Notifications, die Preferences erlauben).
-- `NotificationToast` — Glass-Design (GlassCard/GlassPanel), Framer-Motion (`AnimatePresence`, `layout`, shared layout), severity-abhängige Farb-Tokens aus SeverityRegistry, Auto-Dismiss (Dauer priority-abhängig), Aktionen (rendern `NotificationAction`), `aria-live="assertive"` bei critical/error, sonst `polite`.
-- Queue mit max. sichtbaren Toasts (Priorität-basiert, Stapeln), Pause bei Hover/Focus.
+- `/_app/users` — Liste mit Hero (Aktueller Benutzer), Filter (Aktiv/Gast/Admin), Suche. Card-Grid.
+- `/_app/users/$userId` — Detail: Avatar, Rollen, Profil, Preferences-Übersicht, Favoriten, zugeordnete Räume/Geräte/Szenen/Automationen (über neue Store-Selectors), User-spezifische Timeline (Filter über `timelineStore` `userId`), User-spezifische Notifications (bereits vorhanden).
+- `/_app/users/$userId/edit` — Form (Name, Vorname, Nachname, Avatar, E-Mail, Telefon, Beschreibung, Farbe, Icon, Sprache, Zeitzone, Aktiv/Gast/Admin, Rollen, Profil, Custom-Props).
+- `/_app/profiles` — Profile-Liste + Detail-BottomSheet.
+- `/_app/roles` — Rollen-Liste; Built-in read-only mit Badge, Custom editierbar. Permission-Matrix (Resource × Action) über generische Tabellen-Component.
+- `/_app/permissions` — Übergeordnete Übersicht (User → effektive Grants); rein informativ, keine Auth-Sperre.
 
-## 6. Inbox & Routen (`src/routes/`)
+Bestehende Route `/settings/users` bleibt und verlinkt auf `/users` (kein Bruch). `_app.tsx`: keine Änderung an Redirect-Logik (Onboarding-Gate bleibt).
 
-Neue Routen, ausschließlich Glass-Design und bestehende UI-Primitives:
+**Widgets** über `WidgetRegistry.register` in `src/services/widgets/builtin/users.tsx`:
+- `user.current`, `user.switcher`, `user.quick-profiles`, `user.family-overview`. Alle konsumieren nur Store-Selectors.
 
-- `/_app/inbox` — Hauptansicht mit Tabs: Alle, Ungelesen, Favoriten, Angeheftet, Archiv. Filter-Sheet: Kategorie (aus `EventCategoryRegistry`), Severity (aus `SeverityRegistry`), Zeitraum, Suche, Referenz-Typ. Virtualisiert.
-- `/_app/inbox/$notificationId` — Detailansicht: Quelle, Zeit, Referenz (Link zu device/room/scene/automation/group), Beschreibung, eingebettete Timeline (gefiltert auf `refId`), Aktionen (Quick Actions), Zusammenhang (verwandte Einträge).
-- `/_app/settings/notifications` (vorhanden) — erweitert um Ruhezeiten, Kategorien-/Severity-Filter, Regel-Verwaltung, Templates. Alte Rows bleiben.
+## 5. Integration in bestehende Domänen
 
-Bottom-Nav / `_app.more.tsx`: Eintrag „Ereignisse" mit Badge (Ungelesen-Anzahl).
+Rein **datenmodell-basiert**. Keine Änderung an Command-Pfad, Discovery, WebSocket, Automation Executor.
+- Room-/Device-/Scene-/Group-/Automation-Detailseiten bekommen einen kleinen „Zuständigkeit"-Abschnitt (`Owner`, `Mitglieder`, `Gäste`, `Freigaben`), gerendert über die neuen Selectors.
+- Dashboard: `useRuntimeDashboard` bekommt einen optionalen `userId`-Parameter (aus `usersStore.currentUserId`), damit `/dashboards` das benutzerspezifische Default-Dashboard aus `userPreferencesStore` auflösen kann. Kein Zwang — ohne aktuellen Benutzer bleibt Verhalten unverändert.
+- `NotificationManager.push` und `EventCategoryRegistry`-Producer werden ergänzt, `userId` optional durchzureichen (bereits vorbereitet).
+- `TimelineSourceRegistry`-Sources bekommen einen optionalen `userId`-Passthrough; keine neue Source, kein Switch.
 
-## 7. Quick Actions
+## 6. Import / Export
 
-`NotificationActionExecutor` — kennt die generischen Kinds und delegiert an bestehende Manager:
-- `navigate` → `router.navigate({ to: target })`
-- `open-device`/`open-room`/`open-group`/`open-scene`/`open-automation` → typisierte Routen
-- `run-scene` → `SceneManager.run(id, ctx)`
-- `run-automation` → `AutomationManager.trigger(id, ctx)`
-- `open-log` → `/timeline?refId=...`
-- `custom` → registrierbarer Handler via `NotificationRegistry.registerActionHandler(kind, fn)`
+`src/services/users/serialization.ts` — JSON mit `schemaVersion`, Merge/Replace-Strategie. Umfasst Users, Profiles, Roles (nur Custom), Permission-Overrides, Preferences. Fügt sich in `services/storage/backup.ts` ein (neuer Namespace `users`).
 
-## 8. Widgets (`src/services/widgets/builtin/notifications.tsx`)
+## 7. Vorbereitung Teil 13 (globale Suche)
 
-Registriert via `WidgetRegistry.register(...)`:
-- `notification.center` — kompakte Inbox
-- `notification.unread` — Zähler
-- `notification.critical` — kritische Ereignisse
-- `notification.warnings` — Warnungen
-- `notification.recent` — letzte N
-- `notification.pinned` — angeheftete
-Alle konsumieren Store-Selectors, keine eigene Datenlogik.
+- `userPreferencesStore.recentPages` mit generischer Struktur `{ ref, timestamp }` — Suche kann später darauf zugreifen.
+- `favorites` einheitlich als `FavoriteRef[]` — Suche kann filtern.
+- `PermissionEvaluator.can(...)` — Suche kann Ergebnisse filtern.
+- Kein Suchsystem, keine Suchindexe, keine Routen dafür.
 
-## 9. Integration in bestehende Domänen
+## 8. Performance & Accessibility
 
-Über **Producer-Descriptoren** (Notification Registry), keine Sonderpfade:
+- `React.memo` auf Listen-Items, memoized Selectors, `byId`-Lookups.
+- Lazy-Loading der User-/Rollen-/Profil-Routen.
+- Fokus-Management in BottomSheets, ARIA-Labels, ≥ 44 px Touchflächen, Framer-Motion `SharedLayout` für Detail-Übergänge.
 
-- `automationNotificationProducer` — hört auf `AutomationEvents` (executed/failed), erzeugt Notifications über Templates.
-- `discoveryNotificationProducer` — Discovery-Status-Ereignisse.
-- `deviceNotificationProducer` — offline/online/error via bestehende Device-Events.
-- `sceneNotificationProducer`, `groupNotificationProducer` — Ausführungsergebnisse/Fehler.
-- `systemNotificationProducer` — WebSocket-Status, App-Lifecycle.
+## 9. Bootstrap (`src/services/bootstrap.ts`)
 
-Producer sind rein optional-abonnierbar; Producer-Descriptoren registrieren sich zentral in `bootstrap.ts`. Room-/Device-/Automation-Detailseiten binden Store-Selectors (`selectByRoom(id)` etc.) und zeigen bestehende Karten — keine Änderung an deren Datenpfad.
+- Registrierung der Built-in Roles + Profiles beim App-Start.
+- Anlegen eines Default-Admin-Users, wenn `usersStore.users` leer ist (Migration bestehender Sessions ohne Users).
+- `UserManager`/`ProfileManager`/`UserPreferencesManager` als Singletons instanziieren.
+- Kein neuer Lifecycle-Hook nötig; passt sich in bestehende `bootstrap()`-Sequenz ein.
 
-## 10. Import / Export
+## 10. Nicht enthalten
 
-`src/services/notifications/serialization.ts` — JSON-Export/-Import für Preferences, Rules, Templates. Fügt sich in bestehende Backup-Route ein.
+Kein Login, keine Passwörter, kein OAuth/LDAP/Google/Microsoft, kein 2FA, keine Cloud-Sync. Kein Auth-Middleware, kein Route-Guard mit Redirect. Berechtigungen sind rein UI-informativ.
 
-## 11. Vorbereitung Teil 12 (Benutzer)
+## 11. Erweiterungspunkt-Garantie
 
-- `AppNotification.userId?` und `NotificationRule.userId?` optional.
-- `NotificationManager.push` akzeptiert optional `userId` (falls in Zukunft gesetzt).
-- `notificationsStore`-Selectors erhalten optionalen `userId`-Filter.
-- Keine Auth-, keine Rollenlogik in diesem Teil.
-
-## 12. Performance & Accessibility
-
-- `React.memo`, memoized Selectors, virtualisierte Inbox-Liste, Lazy-Load der Inbox-Route.
-- ARIA-Live-Region im ToastHost, `role="status"`/`role="alert"` je nach Severity.
-- Touchflächen ≥ 44px, Fokus-Management in Detail-Sheets.
-
-## 13. Bootstrap
-
-`src/services/bootstrap.ts`: Registrierung der Producer-Descriptoren, Aktivierung `notificationTimelineSource`, Start `EventCenter`, `stopEventCenter()` im Lifecycle.
-
-## 14. Nicht enthalten
-
-Kein Push, keine Cloud, kein E-Mail, kein SMS, keine externe Dienste, keine Auth. Kein Ersatz für sonner (bleibt für UI-Toasts). Kein neuer WebSocket-Kanal.
-
-## 15. Erweiterungspunkt-Garantie
-
-Neue Ereignisquellen kommen ausschließlich über:
-1. `TimelineSourceRegistry.register(descriptor)` (falls eigene Timeline-Quelle) und/oder
-2. `NotificationRegistry.registerProducer(descriptor)` (falls Notifications erzeugt werden).
-
-Kein Code in Manager, Store, Toast, Inbox oder Widgets muss dafür geändert werden.
+Neue Rollen: `RoleRegistry.registerRole(descriptor)`. Neue Ressourcen: `PermissionRegistry.registerResource(descriptor)` + `OwnershipRegistry.registerOwnershipSource(descriptor)`. Neue Widgets: `WidgetRegistry.register`. Kein Manager-, Store- oder UI-Code muss dafür geändert werden.
 
 ## Technische Details
 
-- `NotificationSeverity` (alt) bleibt exportiert als Alias auf `Severity`-Teilmenge; Migration in Store transparent (`"info"|"success"|"warning"|"error"` unverändert, `"critical"` neu unterstützt).
-- `notificationsStore.push` ruft intern `NotificationManager.push`; direkter Store-Aufruf bleibt kompatibel, wird aber via Wrapper an Manager delegiert.
-- Timeline-Adapter für Notifications ist **die einzige** Stelle, die Notifications in die Timeline schreibt — kein Domain-Code emittiert Timeline-Einträge parallel.
-- Rules werden vor `push` ausgewertet; abgelehnte Notifications können optional dennoch als Timeline-Eintrag (severity `info`) archiviert werden (per Preference).
-- Refactoring erlaubt: Konsolidierung von `settingsStore.notifications` in `notificationPreferencesStore` möglich, alte Keys werden weitergelesen; keine bestehende Funktion entfällt.
+- Migration `usersStore`: bestehender `role: UserRole` bleibt lesbar; beim ersten Lauf wird auf `roleIds: [<matching-builtin-role-id>]` gemappt, `role` als abgeleiteter Getter (String) bleibt für Rückwärtskompatibilität exportiert.
+- Bestehende Detailseiten (`_app.rooms.$roomId`, `_app.devices.$deviceId`, …) werden nur um einen Ownership-Abschnitt ergänzt; kein bestehender Code entfernt.
+- `PermissionEvaluator` ist pure; Ergebnis kann memoisiert per `useMemo(user, action, resource, refId)` in Components genutzt werden.
+- `Ownership` wird **nicht** als separater persistierter Store gehalten; Descriptoren lesen aus den vorhandenen Domain-Stores. So entstehen keine Sync-Probleme.
+- Refactoring erlaubt: `settingsStore` bleibt unverändert; nur ergänzende Selectors, keine Datenverschiebung.
+
