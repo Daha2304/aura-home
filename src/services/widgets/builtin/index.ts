@@ -1,7 +1,7 @@
 /**
  * Built-in Widget Descriptors.
  * Registriert System-, Raum-, Device-, Szenen-, Gruppen-, Automation-,
- * Analytics-, Notification- und User-Widgets.
+ * Analytics-, Notification-, User-, Search- und PWA-Widgets.
  */
 import { registerSystemWidgets } from "./system";
 import { registerRoomWidgets } from "./rooms";
@@ -13,6 +13,7 @@ import { registerAnalyticsWidgets } from "./analytics";
 import { registerNotificationWidgets } from "./notifications";
 import { registerUserWidgets } from "./users";
 import { registerSearchWidgets } from "./search";
+import { registerPwaWidgets } from "./pwa";
 
 export { registerSystemWidgets, SYSTEM_WIDGET_IDS } from "./system";
 export { registerRoomWidgets, ROOM_WIDGET_IDS } from "./rooms";
@@ -24,6 +25,7 @@ export { registerAnalyticsWidgets, ANALYTICS_WIDGET_IDS } from "./analytics";
 export { registerNotificationWidgets, NOTIFICATION_WIDGET_IDS } from "./notifications";
 export { registerUserWidgets, USER_WIDGET_IDS } from "./users";
 export { registerSearchWidgets, SEARCH_WIDGET_IDS } from "./search";
+export { registerPwaWidgets, PWA_WIDGET_IDS } from "./pwa";
 
 registerSystemWidgets();
 registerRoomWidgets();
@@ -34,8 +36,5 @@ registerAutomationWidgets();
 registerAnalyticsWidgets();
 registerNotificationWidgets();
 registerUserWidgets();
-
-
-
-
 registerSearchWidgets();
+registerPwaWidgets();

@@ -41,12 +41,17 @@ import { Route as AppUsersIndexRouteImport } from './routes/_app.users.index'
 import { Route as AppDashboardsIndexRouteImport } from './routes/_app.dashboards.index'
 import { Route as AppUsersUserIdRouteImport } from './routes/_app.users.$userId'
 import { Route as AppSettingsUsersRouteImport } from './routes/_app.settings.users'
+import { Route as AppSettingsUpdateRouteImport } from './routes/_app.settings.update'
+import { Route as AppSettingsStorageRouteImport } from './routes/_app.settings.storage'
 import { Route as AppSettingsServerRouteImport } from './routes/_app.settings.server'
+import { Route as AppSettingsRestoreRouteImport } from './routes/_app.settings.restore'
+import { Route as AppSettingsOfflineRouteImport } from './routes/_app.settings.offline'
 import { Route as AppSettingsNotificationsRouteImport } from './routes/_app.settings.notifications'
 import { Route as AppSettingsLanguageRouteImport } from './routes/_app.settings.language'
 import { Route as AppSettingsDeveloperRouteImport } from './routes/_app.settings.developer'
 import { Route as AppSettingsBackupRouteImport } from './routes/_app.settings.backup'
 import { Route as AppSettingsAppearanceRouteImport } from './routes/_app.settings.appearance'
+import { Route as AppSettingsAppRouteImport } from './routes/_app.settings.app'
 import { Route as AppSearchResultsRouteImport } from './routes/_app.search.results'
 import { Route as AppSearchHistoryRouteImport } from './routes/_app.search.history'
 import { Route as AppSearchFavoritesRouteImport } from './routes/_app.search.favorites'
@@ -226,9 +231,29 @@ const AppSettingsUsersRoute = AppSettingsUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => AppSettingsRoute,
 } as any)
+const AppSettingsUpdateRoute = AppSettingsUpdateRouteImport.update({
+  id: '/update',
+  path: '/update',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
+const AppSettingsStorageRoute = AppSettingsStorageRouteImport.update({
+  id: '/storage',
+  path: '/storage',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
 const AppSettingsServerRoute = AppSettingsServerRouteImport.update({
   id: '/server',
   path: '/server',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
+const AppSettingsRestoreRoute = AppSettingsRestoreRouteImport.update({
+  id: '/restore',
+  path: '/restore',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
+const AppSettingsOfflineRoute = AppSettingsOfflineRouteImport.update({
+  id: '/offline',
+  path: '/offline',
   getParentRoute: () => AppSettingsRoute,
 } as any)
 const AppSettingsNotificationsRoute =
@@ -255,6 +280,11 @@ const AppSettingsBackupRoute = AppSettingsBackupRouteImport.update({
 const AppSettingsAppearanceRoute = AppSettingsAppearanceRouteImport.update({
   id: '/appearance',
   path: '/appearance',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
+const AppSettingsAppRoute = AppSettingsAppRouteImport.update({
+  id: '/app',
+  path: '/app',
   getParentRoute: () => AppSettingsRoute,
 } as any)
 const AppSearchResultsRoute = AppSearchResultsRouteImport.update({
@@ -397,12 +427,17 @@ export interface FileRoutesByFullPath {
   '/search/favorites': typeof AppSearchFavoritesRoute
   '/search/history': typeof AppSearchHistoryRoute
   '/search/results': typeof AppSearchResultsRoute
+  '/settings/app': typeof AppSettingsAppRoute
   '/settings/appearance': typeof AppSettingsAppearanceRoute
   '/settings/backup': typeof AppSettingsBackupRoute
   '/settings/developer': typeof AppSettingsDeveloperRoute
   '/settings/language': typeof AppSettingsLanguageRoute
   '/settings/notifications': typeof AppSettingsNotificationsRoute
+  '/settings/offline': typeof AppSettingsOfflineRoute
+  '/settings/restore': typeof AppSettingsRestoreRoute
   '/settings/server': typeof AppSettingsServerRouteWithChildren
+  '/settings/storage': typeof AppSettingsStorageRoute
+  '/settings/update': typeof AppSettingsUpdateRoute
   '/settings/users': typeof AppSettingsUsersRoute
   '/users/$userId': typeof AppUsersUserIdRouteWithChildren
   '/dashboards/': typeof AppDashboardsIndexRoute
@@ -451,12 +486,17 @@ export interface FileRoutesByTo {
   '/search/favorites': typeof AppSearchFavoritesRoute
   '/search/history': typeof AppSearchHistoryRoute
   '/search/results': typeof AppSearchResultsRoute
+  '/settings/app': typeof AppSettingsAppRoute
   '/settings/appearance': typeof AppSettingsAppearanceRoute
   '/settings/backup': typeof AppSettingsBackupRoute
   '/settings/developer': typeof AppSettingsDeveloperRoute
   '/settings/language': typeof AppSettingsLanguageRoute
   '/settings/notifications': typeof AppSettingsNotificationsRoute
+  '/settings/offline': typeof AppSettingsOfflineRoute
+  '/settings/restore': typeof AppSettingsRestoreRoute
   '/settings/server': typeof AppSettingsServerRouteWithChildren
+  '/settings/storage': typeof AppSettingsStorageRoute
+  '/settings/update': typeof AppSettingsUpdateRoute
   '/settings/users': typeof AppSettingsUsersRoute
   '/dashboards': typeof AppDashboardsIndexRoute
   '/users': typeof AppUsersIndexRoute
@@ -510,12 +550,17 @@ export interface FileRoutesById {
   '/_app/search/favorites': typeof AppSearchFavoritesRoute
   '/_app/search/history': typeof AppSearchHistoryRoute
   '/_app/search/results': typeof AppSearchResultsRoute
+  '/_app/settings/app': typeof AppSettingsAppRoute
   '/_app/settings/appearance': typeof AppSettingsAppearanceRoute
   '/_app/settings/backup': typeof AppSettingsBackupRoute
   '/_app/settings/developer': typeof AppSettingsDeveloperRoute
   '/_app/settings/language': typeof AppSettingsLanguageRoute
   '/_app/settings/notifications': typeof AppSettingsNotificationsRoute
+  '/_app/settings/offline': typeof AppSettingsOfflineRoute
+  '/_app/settings/restore': typeof AppSettingsRestoreRoute
   '/_app/settings/server': typeof AppSettingsServerRouteWithChildren
+  '/_app/settings/storage': typeof AppSettingsStorageRoute
+  '/_app/settings/update': typeof AppSettingsUpdateRoute
   '/_app/settings/users': typeof AppSettingsUsersRoute
   '/_app/users/$userId': typeof AppUsersUserIdRouteWithChildren
   '/_app/dashboards/': typeof AppDashboardsIndexRoute
@@ -570,12 +615,17 @@ export interface FileRouteTypes {
     | '/search/favorites'
     | '/search/history'
     | '/search/results'
+    | '/settings/app'
     | '/settings/appearance'
     | '/settings/backup'
     | '/settings/developer'
     | '/settings/language'
     | '/settings/notifications'
+    | '/settings/offline'
+    | '/settings/restore'
     | '/settings/server'
+    | '/settings/storage'
+    | '/settings/update'
     | '/settings/users'
     | '/users/$userId'
     | '/dashboards/'
@@ -624,12 +674,17 @@ export interface FileRouteTypes {
     | '/search/favorites'
     | '/search/history'
     | '/search/results'
+    | '/settings/app'
     | '/settings/appearance'
     | '/settings/backup'
     | '/settings/developer'
     | '/settings/language'
     | '/settings/notifications'
+    | '/settings/offline'
+    | '/settings/restore'
     | '/settings/server'
+    | '/settings/storage'
+    | '/settings/update'
     | '/settings/users'
     | '/dashboards'
     | '/users'
@@ -682,12 +737,17 @@ export interface FileRouteTypes {
     | '/_app/search/favorites'
     | '/_app/search/history'
     | '/_app/search/results'
+    | '/_app/settings/app'
     | '/_app/settings/appearance'
     | '/_app/settings/backup'
     | '/_app/settings/developer'
     | '/_app/settings/language'
     | '/_app/settings/notifications'
+    | '/_app/settings/offline'
+    | '/_app/settings/restore'
     | '/_app/settings/server'
+    | '/_app/settings/storage'
+    | '/_app/settings/update'
     | '/_app/settings/users'
     | '/_app/users/$userId'
     | '/_app/dashboards/'
@@ -933,11 +993,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsUsersRouteImport
       parentRoute: typeof AppSettingsRoute
     }
+    '/_app/settings/update': {
+      id: '/_app/settings/update'
+      path: '/update'
+      fullPath: '/settings/update'
+      preLoaderRoute: typeof AppSettingsUpdateRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/settings/storage': {
+      id: '/_app/settings/storage'
+      path: '/storage'
+      fullPath: '/settings/storage'
+      preLoaderRoute: typeof AppSettingsStorageRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
     '/_app/settings/server': {
       id: '/_app/settings/server'
       path: '/server'
       fullPath: '/settings/server'
       preLoaderRoute: typeof AppSettingsServerRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/settings/restore': {
+      id: '/_app/settings/restore'
+      path: '/restore'
+      fullPath: '/settings/restore'
+      preLoaderRoute: typeof AppSettingsRestoreRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/settings/offline': {
+      id: '/_app/settings/offline'
+      path: '/offline'
+      fullPath: '/settings/offline'
+      preLoaderRoute: typeof AppSettingsOfflineRouteImport
       parentRoute: typeof AppSettingsRoute
     }
     '/_app/settings/notifications': {
@@ -973,6 +1061,13 @@ declare module '@tanstack/react-router' {
       path: '/appearance'
       fullPath: '/settings/appearance'
       preLoaderRoute: typeof AppSettingsAppearanceRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/settings/app': {
+      id: '/_app/settings/app'
+      path: '/app'
+      fullPath: '/settings/app'
+      preLoaderRoute: typeof AppSettingsAppRouteImport
       parentRoute: typeof AppSettingsRoute
     }
     '/_app/search/results': {
@@ -1270,22 +1365,32 @@ const AppSettingsServerRouteWithChildren =
   AppSettingsServerRoute._addFileChildren(AppSettingsServerRouteChildren)
 
 interface AppSettingsRouteChildren {
+  AppSettingsAppRoute: typeof AppSettingsAppRoute
   AppSettingsAppearanceRoute: typeof AppSettingsAppearanceRoute
   AppSettingsBackupRoute: typeof AppSettingsBackupRoute
   AppSettingsDeveloperRoute: typeof AppSettingsDeveloperRoute
   AppSettingsLanguageRoute: typeof AppSettingsLanguageRoute
   AppSettingsNotificationsRoute: typeof AppSettingsNotificationsRoute
+  AppSettingsOfflineRoute: typeof AppSettingsOfflineRoute
+  AppSettingsRestoreRoute: typeof AppSettingsRestoreRoute
   AppSettingsServerRoute: typeof AppSettingsServerRouteWithChildren
+  AppSettingsStorageRoute: typeof AppSettingsStorageRoute
+  AppSettingsUpdateRoute: typeof AppSettingsUpdateRoute
   AppSettingsUsersRoute: typeof AppSettingsUsersRoute
 }
 
 const AppSettingsRouteChildren: AppSettingsRouteChildren = {
+  AppSettingsAppRoute: AppSettingsAppRoute,
   AppSettingsAppearanceRoute: AppSettingsAppearanceRoute,
   AppSettingsBackupRoute: AppSettingsBackupRoute,
   AppSettingsDeveloperRoute: AppSettingsDeveloperRoute,
   AppSettingsLanguageRoute: AppSettingsLanguageRoute,
   AppSettingsNotificationsRoute: AppSettingsNotificationsRoute,
+  AppSettingsOfflineRoute: AppSettingsOfflineRoute,
+  AppSettingsRestoreRoute: AppSettingsRestoreRoute,
   AppSettingsServerRoute: AppSettingsServerRouteWithChildren,
+  AppSettingsStorageRoute: AppSettingsStorageRoute,
+  AppSettingsUpdateRoute: AppSettingsUpdateRoute,
   AppSettingsUsersRoute: AppSettingsUsersRoute,
 }
 
@@ -1398,13 +1503,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
