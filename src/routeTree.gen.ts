@@ -19,6 +19,7 @@ import { Route as OnboardingIntroRouteImport } from './routes/onboarding.intro'
 import { Route as OnboardingDoneRouteImport } from './routes/onboarding.done'
 import { Route as OnboardingConnectRouteImport } from './routes/onboarding.connect'
 import { Route as OnboardingConfigureRouteImport } from './routes/onboarding.configure'
+import { Route as AppUsersRouteImport } from './routes/_app.users'
 import { Route as AppTimelineRouteImport } from './routes/_app.timeline'
 import { Route as AppStatisticsRouteImport } from './routes/_app.statistics'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
@@ -110,6 +111,11 @@ const OnboardingConfigureRoute = OnboardingConfigureRouteImport.update({
   path: '/configure',
   getParentRoute: () => OnboardingRoute,
 } as any)
+const AppUsersRoute = AppUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppTimelineRoute = AppTimelineRouteImport.update({
   id: '/timeline',
   path: '/timeline',
@@ -191,9 +197,9 @@ const AppAnalyticsRoute = AppAnalyticsRouteImport.update({
   getParentRoute: () => AppRoute,
 } as any)
 const AppUsersIndexRoute = AppUsersIndexRouteImport.update({
-  id: '/users/',
-  path: '/users/',
-  getParentRoute: () => AppRoute,
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppUsersRoute,
 } as any)
 const AppDashboardsIndexRoute = AppDashboardsIndexRouteImport.update({
   id: '/',
@@ -201,9 +207,9 @@ const AppDashboardsIndexRoute = AppDashboardsIndexRouteImport.update({
   getParentRoute: () => AppDashboardsRoute,
 } as any)
 const AppUsersUserIdRoute = AppUsersUserIdRouteImport.update({
-  id: '/users/$userId',
-  path: '/users/$userId',
-  getParentRoute: () => AppRoute,
+  id: '/$userId',
+  path: '/$userId',
+  getParentRoute: () => AppUsersRoute,
 } as any)
 const AppSettingsUsersRoute = AppSettingsUsersRouteImport.update({
   id: '/users',
@@ -341,6 +347,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AppSettingsRouteWithChildren
   '/statistics': typeof AppStatisticsRoute
   '/timeline': typeof AppTimelineRoute
+  '/users': typeof AppUsersRouteWithChildren
   '/onboarding/configure': typeof OnboardingConfigureRoute
   '/onboarding/connect': typeof OnboardingConnectRoute
   '/onboarding/done': typeof OnboardingDoneRoute
@@ -443,6 +450,7 @@ export interface FileRoutesById {
   '/_app/settings': typeof AppSettingsRouteWithChildren
   '/_app/statistics': typeof AppStatisticsRoute
   '/_app/timeline': typeof AppTimelineRoute
+  '/_app/users': typeof AppUsersRouteWithChildren
   '/onboarding/configure': typeof OnboardingConfigureRoute
   '/onboarding/connect': typeof OnboardingConnectRoute
   '/onboarding/done': typeof OnboardingDoneRoute
@@ -498,6 +506,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/statistics'
     | '/timeline'
+    | '/users'
     | '/onboarding/configure'
     | '/onboarding/connect'
     | '/onboarding/done'
@@ -599,6 +608,7 @@ export interface FileRouteTypes {
     | '/_app/settings'
     | '/_app/statistics'
     | '/_app/timeline'
+    | '/_app/users'
     | '/onboarding/configure'
     | '/onboarding/connect'
     | '/onboarding/done'
@@ -710,6 +720,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/onboarding/configure'
       preLoaderRoute: typeof OnboardingConfigureRouteImport
       parentRoute: typeof OnboardingRoute
+    }
+    '/_app/users': {
+      id: '/_app/users'
+      path: '/users'
+      fullPath: '/users'
+      preLoaderRoute: typeof AppUsersRouteImport
+      parentRoute: typeof AppRoute
     }
     '/_app/timeline': {
       id: '/_app/timeline'
@@ -825,10 +842,10 @@ declare module '@tanstack/react-router' {
     }
     '/_app/users/': {
       id: '/_app/users/'
-      path: '/users'
+      path: '/'
       fullPath: '/users/'
       preLoaderRoute: typeof AppUsersIndexRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof AppUsersRoute
     }
     '/_app/dashboards/': {
       id: '/_app/dashboards/'
@@ -839,10 +856,10 @@ declare module '@tanstack/react-router' {
     }
     '/_app/users/$userId': {
       id: '/_app/users/$userId'
-      path: '/users/$userId'
+      path: '/$userId'
       fullPath: '/users/$userId'
       preLoaderRoute: typeof AppUsersUserIdRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof AppUsersRoute
     }
     '/_app/settings/users': {
       id: '/_app/settings/users'
@@ -1179,6 +1196,20 @@ const AppUsersUserIdRouteWithChildren = AppUsersUserIdRoute._addFileChildren(
   AppUsersUserIdRouteChildren,
 )
 
+interface AppUsersRouteChildren {
+  AppUsersUserIdRoute: typeof AppUsersUserIdRouteWithChildren
+  AppUsersIndexRoute: typeof AppUsersIndexRoute
+}
+
+const AppUsersRouteChildren: AppUsersRouteChildren = {
+  AppUsersUserIdRoute: AppUsersUserIdRouteWithChildren,
+  AppUsersIndexRoute: AppUsersIndexRoute,
+}
+
+const AppUsersRouteWithChildren = AppUsersRoute._addFileChildren(
+  AppUsersRouteChildren,
+)
+
 interface AppRouteChildren {
   AppAnalyticsRoute: typeof AppAnalyticsRoute
   AppAutomationsRoute: typeof AppAutomationsRouteWithChildren
@@ -1196,9 +1227,8 @@ interface AppRouteChildren {
   AppSettingsRoute: typeof AppSettingsRouteWithChildren
   AppStatisticsRoute: typeof AppStatisticsRoute
   AppTimelineRoute: typeof AppTimelineRoute
+  AppUsersRoute: typeof AppUsersRouteWithChildren
   AppIndexRoute: typeof AppIndexRoute
-  AppUsersUserIdRoute: typeof AppUsersUserIdRouteWithChildren
-  AppUsersIndexRoute: typeof AppUsersIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -1218,9 +1248,8 @@ const AppRouteChildren: AppRouteChildren = {
   AppSettingsRoute: AppSettingsRouteWithChildren,
   AppStatisticsRoute: AppStatisticsRoute,
   AppTimelineRoute: AppTimelineRoute,
+  AppUsersRoute: AppUsersRouteWithChildren,
   AppIndexRoute: AppIndexRoute,
-  AppUsersUserIdRoute: AppUsersUserIdRouteWithChildren,
-  AppUsersIndexRoute: AppUsersIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
