@@ -49,7 +49,7 @@ export const devicesProvider: SearchProviderDescriptor = {
     const rooms = useRoomsStore.getState().byId;
     const out: SearchResult[] = [];
     for (const d of devices) {
-      const hay = `${d.name} ${d.type} ${d.category ?? ""}`;
+      const hay = `${d.name} ${d.type}`;
       if (!matches(hay, q)) continue;
       const room = d.roomId ? rooms[d.roomId]?.name : undefined;
       out.push({
@@ -316,7 +316,7 @@ export const widgetsProvider: SearchProviderDescriptor = {
   permissionResource: "widget",
   search: (ctx) => {
     const q = ctx.query;
-    const descriptors = widgetRegistry.list();
+    const descriptors = widgetRegistry.all();
     return descriptors
       .filter((d) => matches(`${d.name} ${d.description ?? ""}`, q))
       .map<SearchResult>((d) => ({
@@ -375,7 +375,7 @@ export const notificationsProvider: SearchProviderDescriptor = {
   permissionResource: "notification",
   search: (ctx) => {
     const q = ctx.query;
-    const notifs = useNotificationsStore.getState().notifications;
+    const notifs = useNotificationsStore.getState().items;
     return notifs
       .filter((n) => matches(`${n.title} ${n.message ?? ""}`, q))
       .slice(0, 20)
