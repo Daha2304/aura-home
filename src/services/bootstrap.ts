@@ -182,6 +182,11 @@ export function startCommunicationLayer(): void {
   bootstrapTimeline();
   automationDebugger.register();
 
+  // Event Center (Teil 11): startet Notification-Producer und registriert
+  // die Notification-Timeline-Source. Neue Ereignisquellen kommen ausschließlich
+  // über NotificationRegistry.registerProducer(...) hinzu — keine Änderung hier.
+  startEventCenter();
+
 
 
 
