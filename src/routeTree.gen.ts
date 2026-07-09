@@ -30,6 +30,7 @@ import { Route as AppGroupsRouteImport } from './routes/_app.groups'
 import { Route as AppDevicesRouteImport } from './routes/_app.devices'
 import { Route as AppDashboardsRouteImport } from './routes/_app.dashboards'
 import { Route as AppAutomationsRouteImport } from './routes/_app.automations'
+import { Route as AppAnalyticsRouteImport } from './routes/_app.analytics'
 import { Route as AppDashboardsIndexRouteImport } from './routes/_app.dashboards.index'
 import { Route as AppSettingsUsersRouteImport } from './routes/_app.settings.users'
 import { Route as AppSettingsServerRouteImport } from './routes/_app.settings.server'
@@ -156,6 +157,11 @@ const AppAutomationsRoute = AppAutomationsRouteImport.update({
   path: '/automations',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAnalyticsRoute = AppAnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppDashboardsIndexRoute = AppDashboardsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -271,6 +277,7 @@ const AppAutomationsAutomationIdEditRoute =
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/onboarding': typeof OnboardingRouteWithChildren
+  '/analytics': typeof AppAnalyticsRoute
   '/automations': typeof AppAutomationsRouteWithChildren
   '/dashboards': typeof AppDashboardsRouteWithChildren
   '/devices': typeof AppDevicesRouteWithChildren
@@ -312,6 +319,7 @@ export interface FileRoutesByFullPath {
   '/dashboards/$dashboardId/': typeof AppDashboardsDashboardIdIndexRoute
 }
 export interface FileRoutesByTo {
+  '/analytics': typeof AppAnalyticsRoute
   '/automations': typeof AppAutomationsRouteWithChildren
   '/devices': typeof AppDevicesRouteWithChildren
   '/groups': typeof AppGroupsRouteWithChildren
@@ -355,6 +363,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
   '/onboarding': typeof OnboardingRouteWithChildren
+  '/_app/analytics': typeof AppAnalyticsRoute
   '/_app/automations': typeof AppAutomationsRouteWithChildren
   '/_app/dashboards': typeof AppDashboardsRouteWithChildren
   '/_app/devices': typeof AppDevicesRouteWithChildren
@@ -401,6 +410,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/onboarding'
+    | '/analytics'
     | '/automations'
     | '/dashboards'
     | '/devices'
@@ -442,6 +452,7 @@ export interface FileRouteTypes {
     | '/dashboards/$dashboardId/'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/analytics'
     | '/automations'
     | '/devices'
     | '/groups'
@@ -484,6 +495,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_app'
     | '/onboarding'
+    | '/_app/analytics'
     | '/_app/automations'
     | '/_app/dashboards'
     | '/_app/devices'
@@ -678,6 +690,13 @@ declare module '@tanstack/react-router' {
       path: '/automations'
       fullPath: '/automations'
       preLoaderRoute: typeof AppAutomationsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/analytics': {
+      id: '/_app/analytics'
+      path: '/analytics'
+      fullPath: '/analytics'
+      preLoaderRoute: typeof AppAnalyticsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/dashboards/': {
@@ -985,6 +1004,7 @@ const AppSettingsRouteWithChildren = AppSettingsRoute._addFileChildren(
 )
 
 interface AppRouteChildren {
+  AppAnalyticsRoute: typeof AppAnalyticsRoute
   AppAutomationsRoute: typeof AppAutomationsRouteWithChildren
   AppDashboardsRoute: typeof AppDashboardsRouteWithChildren
   AppDevicesRoute: typeof AppDevicesRouteWithChildren
@@ -1000,6 +1020,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAnalyticsRoute: AppAnalyticsRoute,
   AppAutomationsRoute: AppAutomationsRouteWithChildren,
   AppDashboardsRoute: AppDashboardsRouteWithChildren,
   AppDevicesRoute: AppDevicesRouteWithChildren,
