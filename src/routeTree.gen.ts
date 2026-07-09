@@ -41,6 +41,7 @@ import { Route as AppRoomsRoomIdRouteImport } from './routes/_app.rooms.$roomId'
 import { Route as AppGroupsGroupIdRouteImport } from './routes/_app.groups.$groupId'
 import { Route as AppDevicesDeviceIdRouteImport } from './routes/_app.devices.$deviceId'
 import { Route as AppDashboardsDashboardIdRouteImport } from './routes/_app.dashboards.$dashboardId'
+import { Route as AppAutomationsNewRouteImport } from './routes/_app.automations.new'
 import { Route as AppAutomationsAutomationIdRouteImport } from './routes/_app.automations.$automationId'
 import { Route as AppDashboardsDashboardIdIndexRouteImport } from './routes/_app.dashboards.$dashboardId.index'
 import { Route as AppSettingsServerNewRouteImport } from './routes/_app.settings.server.new'
@@ -210,6 +211,11 @@ const AppDashboardsDashboardIdRoute =
     path: '/$dashboardId',
     getParentRoute: () => AppDashboardsRoute,
   } as any)
+const AppAutomationsNewRoute = AppAutomationsNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AppAutomationsRoute,
+} as any)
 const AppAutomationsAutomationIdRoute =
   AppAutomationsAutomationIdRouteImport.update({
     id: '/$automationId',
@@ -270,6 +276,7 @@ export interface FileRoutesByFullPath {
   '/onboarding/welcome': typeof OnboardingWelcomeRoute
   '/onboarding/': typeof OnboardingIndexRoute
   '/automations/$automationId': typeof AppAutomationsAutomationIdRouteWithChildren
+  '/automations/new': typeof AppAutomationsNewRoute
   '/dashboards/$dashboardId': typeof AppDashboardsDashboardIdRouteWithChildren
   '/devices/$deviceId': typeof AppDevicesDeviceIdRoute
   '/groups/$groupId': typeof AppGroupsGroupIdRoute
@@ -308,6 +315,7 @@ export interface FileRoutesByTo {
   '/': typeof AppIndexRoute
   '/onboarding': typeof OnboardingIndexRoute
   '/automations/$automationId': typeof AppAutomationsAutomationIdRouteWithChildren
+  '/automations/new': typeof AppAutomationsNewRoute
   '/devices/$deviceId': typeof AppDevicesDeviceIdRoute
   '/groups/$groupId': typeof AppGroupsGroupIdRoute
   '/rooms/$roomId': typeof AppRoomsRoomIdRoute
@@ -349,6 +357,7 @@ export interface FileRoutesById {
   '/_app/': typeof AppIndexRoute
   '/onboarding/': typeof OnboardingIndexRoute
   '/_app/automations/$automationId': typeof AppAutomationsAutomationIdRouteWithChildren
+  '/_app/automations/new': typeof AppAutomationsNewRoute
   '/_app/dashboards/$dashboardId': typeof AppDashboardsDashboardIdRouteWithChildren
   '/_app/devices/$deviceId': typeof AppDevicesDeviceIdRoute
   '/_app/groups/$groupId': typeof AppGroupsGroupIdRoute
@@ -391,6 +400,7 @@ export interface FileRouteTypes {
     | '/onboarding/welcome'
     | '/onboarding/'
     | '/automations/$automationId'
+    | '/automations/new'
     | '/dashboards/$dashboardId'
     | '/devices/$deviceId'
     | '/groups/$groupId'
@@ -429,6 +439,7 @@ export interface FileRouteTypes {
     | '/'
     | '/onboarding'
     | '/automations/$automationId'
+    | '/automations/new'
     | '/devices/$deviceId'
     | '/groups/$groupId'
     | '/rooms/$roomId'
@@ -469,6 +480,7 @@ export interface FileRouteTypes {
     | '/_app/'
     | '/onboarding/'
     | '/_app/automations/$automationId'
+    | '/_app/automations/new'
     | '/_app/dashboards/$dashboardId'
     | '/_app/devices/$deviceId'
     | '/_app/groups/$groupId'
@@ -721,6 +733,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDashboardsDashboardIdRouteImport
       parentRoute: typeof AppDashboardsRoute
     }
+    '/_app/automations/new': {
+      id: '/_app/automations/new'
+      path: '/new'
+      fullPath: '/automations/new'
+      preLoaderRoute: typeof AppAutomationsNewRouteImport
+      parentRoute: typeof AppAutomationsRoute
+    }
     '/_app/automations/$automationId': {
       id: '/_app/automations/$automationId'
       path: '/$automationId'
@@ -789,10 +808,12 @@ const AppAutomationsAutomationIdRouteWithChildren =
 
 interface AppAutomationsRouteChildren {
   AppAutomationsAutomationIdRoute: typeof AppAutomationsAutomationIdRouteWithChildren
+  AppAutomationsNewRoute: typeof AppAutomationsNewRoute
 }
 
 const AppAutomationsRouteChildren: AppAutomationsRouteChildren = {
   AppAutomationsAutomationIdRoute: AppAutomationsAutomationIdRouteWithChildren,
+  AppAutomationsNewRoute: AppAutomationsNewRoute,
 }
 
 const AppAutomationsRouteWithChildren = AppAutomationsRoute._addFileChildren(
