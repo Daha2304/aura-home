@@ -1,6 +1,7 @@
 import { create } from "zustand";
-import { persist, createJSONStorage } from "zustand/middleware";
+import { persist } from "zustand/middleware";
 import type { NotificationRule } from "@/models/notificationRule";
+import { persistentStorage } from "./_persistStorage";
 
 interface State {
   rules: NotificationRule[];
@@ -24,17 +25,6 @@ export const useNotificationRulesStore = create<State>()(
       remove: (id) => set((s) => ({ rules: s.rules.filter((r) => r.id !== id) })),
       replaceAll: (rules) => set({ rules }),
     }),
-    {
-      name: "notification-rules",
-      storage: createJSONStorage(() =>
-        
-          ? (({
-              getItem: () => null,
-              setItem: () => {},
-              removeItem: () => {},
-            } as unknown) as Storage)
-          : window.localStorage,
-      ),
-    },
+    { name: "notification-rules", storage: persistentStorage() },
   ),
 );

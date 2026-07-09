@@ -1,6 +1,7 @@
 import { create } from "zustand";
-import { persist, createJSONStorage } from "zustand/middleware";
+import { persist } from "zustand/middleware";
 import type { NotificationTemplate } from "@/models/notificationTemplate";
+import { persistentStorage } from "./_persistStorage";
 
 interface State {
   templates: NotificationTemplate[];
@@ -27,17 +28,6 @@ export const useNotificationTemplatesStore = create<State>()(
       replaceAll: (templates) => set({ templates }),
       get: (id) => get().templates.find((t) => t.id === id),
     }),
-    {
-      name: "notification-templates",
-      storage: createJSONStorage(() =>
-        
-          ? (({
-              getItem: () => null,
-              setItem: () => {},
-              removeItem: () => {},
-            } as unknown) as Storage)
-          : window.localStorage,
-      ),
-    },
+    { name: "notification-templates", storage: persistentStorage() },
   ),
 );

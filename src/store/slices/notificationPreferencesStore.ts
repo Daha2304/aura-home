@@ -1,9 +1,10 @@
 import { create } from "zustand";
-import { persist, createJSONStorage } from "zustand/middleware";
+import { persist } from "zustand/middleware";
 import {
   DEFAULT_NOTIFICATION_PREFERENCES,
   type NotificationPreferences,
 } from "@/models/notificationPreferences";
+import { persistentStorage } from "./_persistStorage";
 
 interface State {
   preferences: NotificationPreferences;
@@ -19,17 +20,6 @@ export const useNotificationPreferencesStore = create<State>()(
         set((s) => ({ preferences: { ...s.preferences, ...patch } })),
       reset: () => set({ preferences: DEFAULT_NOTIFICATION_PREFERENCES }),
     }),
-    {
-      name: "notification-preferences",
-      storage: createJSONStorage(() =>
-        
-          ? (({
-              getItem: () => null,
-              setItem: () => {},
-              removeItem: () => {},
-            } as unknown) as Storage)
-          : window.localStorage,
-      ),
-    },
+    { name: "notification-preferences", storage: persistentStorage() },
   ),
 );
