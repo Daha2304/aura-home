@@ -1,4 +1,10 @@
-import { createLogger, setGlobalLogLevel } from "@/services/logger/Logger";
+import { createLogger, setGlobalLogLevel, addLogSink } from "@/services/logger/Logger";
+import { installGlobalErrorHandlers } from "@/services/errors/globalHandlers";
+import { useLogStore } from "@/store/slices/logStore";
+import { healthManager, registerBuiltinHealthChecks } from "@/services/health";
+import { recoveryManager } from "@/services/recovery/RecoveryManager";
+import { runStartupValidation } from "@/services/selfCheck/StartupValidation";
+import "@/services/flags/FeatureFlags";
 import { errorBus } from "@/services/errors/ErrorBus";
 import { wsManager } from "@/services/websocket/WebSocketManager";
 import {
