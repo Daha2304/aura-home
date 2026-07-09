@@ -6,6 +6,7 @@ import {
   History,
   Layers,
   LineChart,
+  Search,
   Settings as SettingsIcon,
   ShieldCheck,
   UserCog,
