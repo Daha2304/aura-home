@@ -27,12 +27,12 @@ export const useNotificationRulesStore = create<State>()(
     {
       name: "notification-rules",
       storage: createJSONStorage(() =>
-        typeof window === "undefined"
-          ? ({
+        
+          ? (({
               getItem: () => null,
               setItem: () => {},
               removeItem: () => {},
-            } as Storage)
+            } as unknown) as Storage)
           : window.localStorage,
       ),
     },

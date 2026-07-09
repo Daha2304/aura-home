@@ -22,12 +22,12 @@ export const useNotificationPreferencesStore = create<State>()(
     {
       name: "notification-preferences",
       storage: createJSONStorage(() =>
-        typeof window === "undefined"
-          ? ({
+        
+          ? (({
               getItem: () => null,
               setItem: () => {},
               removeItem: () => {},
-            } as Storage)
+            } as unknown) as Storage)
           : window.localStorage,
       ),
     },

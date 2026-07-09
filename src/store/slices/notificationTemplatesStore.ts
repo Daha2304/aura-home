@@ -30,12 +30,12 @@ export const useNotificationTemplatesStore = create<State>()(
     {
       name: "notification-templates",
       storage: createJSONStorage(() =>
-        typeof window === "undefined"
-          ? ({
+        
+          ? (({
               getItem: () => null,
               setItem: () => {},
               removeItem: () => {},
-            } as Storage)
+            } as unknown) as Storage)
           : window.localStorage,
       ),
     },
