@@ -28,7 +28,7 @@ export function CommandPalette() {
   );
   const isFavorite = useSearchFavoritesStore((s) => s.isFavorite);
   const toggleFavorite = useSearchFavoritesStore((s) => s.toggle);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // Debounced search fan-out.
   useEffect(() => {
