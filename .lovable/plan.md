@@ -1,127 +1,107 @@
+# Teil 13 — Globale Suche & Command Palette
 
-# Teil 12 von 18 — Benutzer, Profile, Rollen & Berechtigungen
+Vollständig generische Suchplattform mit Registry-basierten Providern, moderner Command Palette und Integration in alle bestehenden Systeme. Keine parallelen Datenmodelle, keine Hardcodierung.
 
-Vollständig lokales System, aufgesetzt auf bestehende Registries, Stores und das Design System. Keine Cloud, keine Auth-Server, kein OAuth, kein 2FA. Kein Parallelmodell — bestehende `usersStore`, `User`-Model und die in Teil 11 vorbereiteten `userId?`-Felder werden ausgebaut, nicht ersetzt.
+## 1. Modelle (`src/models/`)
 
-## 1. Datenmodelle (`src/models/`)
+- `search.ts` — `SearchResult`, `SearchQuery`, `SearchAction`, `SearchCategory`, `SearchResultType`, `SearchContext` (userId, permissions, timestamp), `SearchScore`.
+- `searchProvider.ts` — `SearchProviderDescriptor` (id, label, icon, category, priority, permissionResource?, `search(query, ctx) => SearchResult[]`, optional `index()` für incremental index, optional `suggest()`).
+- `searchHistory.ts` — `SearchHistoryEntry`, `SearchFavorite`, `RecentOpen`.
+- `searchPreferences.ts` — User-scope Preferences (pinned providers, disabled categories, sortOrder).
+- `commandPalette.ts` — `CommandDescriptor` (extends SearchResult mit `run(ctx)`), `CommandGroup`.
 
-### 1.1 `user.ts` (erweitert, nicht ersetzt)
-`User` bekommt optionale Felder — bestehende `{id, name, role, avatarUrl?, email?}` bleiben rückwärtskompatibel:
-```ts
-uuid: string;
-firstName?: string; lastName?: string;
-phone?: string; description?: string;
-color?: HexColor; icon?: IconName;
-language?: string; timezone?: string;
-active: boolean; isGuest?: boolean; isAdmin?: boolean;
-favorites?: FavoriteRef[];
-custom?: Record<string, unknown>;
-profileId?: ID; roleIds: ID[];
-createdAt, updatedAt: Timestamp;
-```
-`UserRole` (alt: `"admin"|"user"|"guest"`) bleibt als String-Alias erhalten; intern über `roleIds` gepflegt, `role` wird als abgeleiteter Getter verfügbar (Migration transparent).
+## 2. Services (`src/services/search/`)
 
-`FavoriteRef = { refType: 'device'|'room'|'scene'|'group'|'automation'|'dashboard'|'widget'; refId: ID }`.
+- `SearchProviderRegistry.ts` — register/unregister/list Provider; keine Switch/If-Kaskaden.
+- `SearchIndex.ts` — generischer, lazy, inkrementeller Index (Map-basiert, Tokenizer + n-gram); O(1)-Lookup per id, per-token invertierter Index. Providers dürfen Index selbst nutzen oder eigene `search()` liefern.
+- `SearchManager.ts` — orchestriert Query → fan-out an Provider (parallel, debounced) → PermissionEvaluator-Filter → Ranking → Cache.
+- `SearchRanking.ts` — Score aus Relevanz (Textmatch), Favorit, Recency, Frequency, Priorität, Provider-Weight.
+- `SearchCache.ts` — LRU per normalisierte Query, TTL, Invalidierung bei Store-Änderungen.
+- `SearchHistoryManager.ts` — Recent Searches, Recent Opens, Favorites (via Store).
+- `SearchSuggestions.ts` — Autocomplete aus History + Index + Provider-`suggest()`.
+- `CommandRegistry.ts` — registriert globale Commands (Navigation, Quick Actions); Command ist ein SearchProvider-Adapter.
+- `builtinProviders/` — dünne Adapter, jeder Provider liest ausschließlich aus vorhandenen Stores/Registries:
+  - `devicesProvider.ts` (deviceRegistry + Capability → Steuer-Actions)
+  - `roomsProvider.ts`
+  - `scenesProvider.ts` (Action: aktivieren via SceneManager)
+  - `groupsProvider.ts`
+  - `automationsProvider.ts` (Action: triggern via AutomationEngine)
+  - `usersProvider.ts`
+  - `dashboardsProvider.ts` / `widgetsProvider.ts`
+  - `timelineProvider.ts` (via TimelineSourceRegistry read-only)
+  - `notificationsProvider.ts`
+  - `analyticsProvider.ts`, `logsProvider.ts`, `settingsProvider.ts`
+  - `navigationProvider.ts` — Route-basierte Commands.
+- `serialization.ts` — Import/Export von History, Favorites, Preferences (JSON, schemaVersion).
+- `index.ts` — Barrel + `startSearchPlatform()` / `stopSearchPlatform()`.
 
-### 1.2 Neue Modelle
-- `profile.ts` — `Profile { id, name, icon, color, description?, defaultDashboardId?, homeRoute?, notificationPreferencesId?, themeId? }`.
-- `role.ts` — `Role { id, key, name, description?, icon?, color?, builtin: boolean, permissions: PermissionGrant[] }`.
-- `permission.ts` — `PermissionResource = 'device'|'room'|'group'|'scene'|'automation'|'dashboard'|'widget'|'notification'|'timeline'|'analytics'|'history'|'settings'|'user'`; `PermissionAction = 'read'|'control'|'edit'|'delete'|'manage'`; `PermissionGrant = { resource; action; scope?: 'all'|'own'|'shared'|{ refIds: ID[] } }`.
-- `userPreferences.ts` — `{ userId, themeId?, dashboardId?, homeRoute?, widgetLayoutId?, favorites, recentPages, notificationPreferencesId?, language?, units?, animations?, accessibility? }`.
-- `ownership.ts` — generisches Sharing: `Ownership { refType, refId, ownerUserId, memberUserIds, guestUserIds?, sharedRoleIds?, editorUserIds? }`.
-
-Anpassung bestehender Modelle (nur optionale Felder, keine Pflichtfelder):
-- `Room`: `ownerUserId?`, `memberUserIds?`, `guestUserIds?`.
-- `Device`: `ownerUserId?`, `visibleToUserIds?`, `controlUserIds?`, `favoriteUserIds?`.
-- `Scene`, `DeviceGroup`, `Automation`: `ownerUserId?`, `sharedUserIds?`, für Automation zusätzlich `editorUserIds?`.
-- `AppNotification`, `TimelineEntry`, `NotificationRule`: `userId?` (bereits vorhanden, unverändert genutzt).
-
-## 2. Registries & Manager (`src/services/users/`)
-
-Muster identisch zu `WidgetRegistry`/`SceneRegistry`/`NotificationRegistry`:
-- `RoleRegistry` — Descriptor-basiert. Built-in Descriptors registrieren `admin`, `user`, `guest`, `technician`. `registerRole(descriptor)` für Custom. Keine Hardcodierung außerhalb der Descriptor-Datei.
-- `PermissionRegistry` — Descriptor je `resource`, listet erlaubte `actions` und liefert `evaluate(user, roles, ownership, action, resource, refId?)`. Keine Switch-Kaskaden — alles über Descriptor.
-- `ProfileRegistry` — Built-in Profile: Administrator, Familie, Kinder, Gast, Techniker. Custom via Registry.
-- `UserManager` — Fassade: `create`, `update`, `remove`, `setActive`, `setFavorite`, `setCurrent`, `assignRole`, `assignProfile`, `updateCustom`. Delegiert an `usersStore`.
-- `ProfileManager` — CRUD über `profilesStore`, `applyProfile(userId)` setzt Preferences-Defaults.
-- `UserPreferencesManager` — CRUD über `userPreferencesStore`, `getEffective(userId)` mergt Profile-Defaults + Overrides.
-- `PermissionEvaluator` (reine Funktion) — zentraler Ausdruck `can(user, action, resource, refId?)`. Alle UI-Gates konsumieren nur diese Funktion. Für Teil 12 rein informativ (UI kann Elemente ausblenden), keine harten Sperren im Command-Pfad.
-
-`OwnershipRegistry` — kleiner Descriptor je `refType`, der aus dem passenden Store (`roomsStore`, `devicesStore`, …) das Ownership-Objekt liefert. So kann `PermissionEvaluator` einheitlich auf beliebige Ressourcen zugreifen, ohne einen Switch.
+Alle Provider werden in `bootstrap.ts` via `SearchProviderRegistry.register(...)` gebunden.
 
 ## 3. Stores (`src/store/slices/`)
 
-Alle mit `byId`-Map (O(1)), memoized Selectors, `persistentStorage()`:
+- `searchStore.ts` — aktuelle Query, results (memoized), open state der Palette, activeCategory-Filter.
+- `searchHistoryStore.ts` — persistent (via `_persistStorage`), pro userId (Vorbereitung).
+- `searchFavoritesStore.ts` — persistent, pro userId.
+- `searchPreferencesStore.ts` — persistent, pro userId.
 
-- `usersStore` (vorhanden) — erweitert um `byId`, `selectActive`, `selectAdmins`, `selectGuests`, `selectByRoleId`, `selectFavoritesOf`, `addFavorite`, `removeFavorite`, `setCurrentUserId`. Alte API (`users`, `currentUser()`) bleibt.
-- `profilesStore` (neu) — CRUD, Selectors, Import/Export.
-- `rolesStore` (neu) — persistiert nur Custom/Overrides; Built-ins kommen aus `RoleRegistry` und werden beim Lesen gemerged.
-- `permissionsStore` (neu) — persistierte Overrides pro User/Role/Resource; Grants aus Roles sind Basis.
-- `userPreferencesStore` (neu) — pro `userId` Preferences; Selectors `selectFavorites(userId)`, `selectRecentPages(userId)`, `selectEffective(userId)`.
+Alle mit Selektoren (`selectRecent`, `selectFavoritesOf(userId)`, `selectFrequency`).
 
-Bestehende Stores (`roomsStore`, `devicesStore`, `scenesStore`, `groupsStore`, `automationsStore`) bekommen zusätzliche Selectors (`selectByOwner(userId)`, `selectSharedWith(userId)`, `selectVisibleFor(userId)`), keine Änderung an der Grundstruktur.
+## 4. UI / Komponenten (`src/components/search/`)
 
-## 4. UI & Routen (`src/routes/`)
+- `CommandPalette.tsx` — globales Overlay (Radix Dialog + Framer Motion + Glass Design), Cmd/Ctrl+K, virtualisierte Result-Liste, Kategorie-Gruppen, Keyboard-Navigation (↑↓, Enter, Tab für Actions), Fokusmanagement.
+- `CommandPaletteHost.tsx` — mounted in `_app.tsx`, registriert globale Shortcut-Listener.
+- `SearchResultItem.tsx` — memoized, Icon+Farbe+Titel+Untertitel+Actions.
+- `SearchActionsMenu.tsx` — Sub-Menü für per-Result Actions.
+- `SearchBar.tsx` — inline Suchfeld (für Widget & Route).
+- `SearchHistoryList.tsx`, `SearchSuggestionsList.tsx`, `SearchFavoritesList.tsx`.
+- `FloatingSearchButton.tsx` — Mobile FAB.
 
-Ausschließlich vorhandenes Design System (`GlassCard`, `HeroCard`, `SectionCard`, `StatusBadge`, `SharedLayout`, `PageTransition`, `BottomSheet`):
+## 5. Routen (`src/routes/`)
 
-- `/_app/users` — Liste mit Hero (Aktueller Benutzer), Filter (Aktiv/Gast/Admin), Suche. Card-Grid.
-- `/_app/users/$userId` — Detail: Avatar, Rollen, Profil, Preferences-Übersicht, Favoriten, zugeordnete Räume/Geräte/Szenen/Automationen (über neue Store-Selectors), User-spezifische Timeline (Filter über `timelineStore` `userId`), User-spezifische Notifications (bereits vorhanden).
-- `/_app/users/$userId/edit` — Form (Name, Vorname, Nachname, Avatar, E-Mail, Telefon, Beschreibung, Farbe, Icon, Sprache, Zeitzone, Aktiv/Gast/Admin, Rollen, Profil, Custom-Props).
-- `/_app/profiles` — Profile-Liste + Detail-BottomSheet.
-- `/_app/roles` — Rollen-Liste; Built-in read-only mit Badge, Custom editierbar. Permission-Matrix (Resource × Action) über generische Tabellen-Component.
-- `/_app/permissions` — Übergeordnete Übersicht (User → effektive Grants); rein informativ, keine Auth-Sperre.
+- `_app.search.tsx` (Layout mit `<Outlet />`).
+- `_app.search.index.tsx` → `/search` (Landing mit Suchfeld + Empfehlungen).
+- `_app.search.results.tsx` → `/search/results` (validateSearch: `q`, `category`).
+- `_app.search.history.tsx` → `/search/history`.
+- `_app.search.favorites.tsx` → `/search/favorites`.
 
-Bestehende Route `/settings/users` bleibt und verlinkt auf `/users` (kein Bruch). `_app.tsx`: keine Änderung an Redirect-Logik (Onboarding-Gate bleibt).
+Command Palette bleibt als globales Overlay (kein Route-Wechsel).
 
-**Widgets** über `WidgetRegistry.register` in `src/services/widgets/builtin/users.tsx`:
-- `user.current`, `user.switcher`, `user.quick-profiles`, `user.family-overview`. Alle konsumieren nur Store-Selectors.
+## 6. Widgets (`src/services/widgets/builtin/search.tsx`)
 
-## 5. Integration in bestehende Domänen
+Registrierung via `WidgetRegistry.register(...)`:
+- `search.bar`
+- `search.recent`
+- `search.quickActions`
+- `search.favorites`
+- `search.suggestions`
 
-Rein **datenmodell-basiert**. Keine Änderung an Command-Pfad, Discovery, WebSocket, Automation Executor.
-- Room-/Device-/Scene-/Group-/Automation-Detailseiten bekommen einen kleinen „Zuständigkeit"-Abschnitt (`Owner`, `Mitglieder`, `Gäste`, `Freigaben`), gerendert über die neuen Selectors.
-- Dashboard: `useRuntimeDashboard` bekommt einen optionalen `userId`-Parameter (aus `usersStore.currentUserId`), damit `/dashboards` das benutzerspezifische Default-Dashboard aus `userPreferencesStore` auflösen kann. Kein Zwang — ohne aktuellen Benutzer bleibt Verhalten unverändert.
-- `NotificationManager.push` und `EventCategoryRegistry`-Producer werden ergänzt, `userId` optional durchzureichen (bereits vorbereitet).
-- `TimelineSourceRegistry`-Sources bekommen einen optionalen `userId`-Passthrough; keine neue Source, kein Switch.
+## 7. Integrationen
 
-## 6. Import / Export
+- **Permissions**: `SearchManager` ruft `PermissionEvaluator.can(user, resource, 'read')` auf Basis von `provider.permissionResource`. Ergebnisse ohne Zugriff werden gefiltert.
+- **User Manager**: `SearchContext.userId` aus aktivem User; History/Favorites/Preferences pro User.
+- **Timeline / Event Center / Notifications**: als reguläre Provider (read-only auf bestehende Stores/Registries).
+- **Universal Control Engine**: `SearchAction.run` ruft UCE für Gerätesteuerung; keine WebSocket-Direktaufrufe.
+- **Dashboard**: Command "Dashboard wechseln" via DashboardRuntime; Widget-Suche via WidgetRegistry.
 
-`src/services/users/serialization.ts` — JSON mit `schemaVersion`, Merge/Replace-Strategie. Umfasst Users, Profiles, Roles (nur Custom), Permission-Overrides, Preferences. Fügt sich in `services/storage/backup.ts` ein (neuer Namespace `users`).
+## 8. Bootstrap
 
-## 7. Vorbereitung Teil 13 (globale Suche)
+`src/services/bootstrap.ts`: `startSearchPlatform()` — registriert built-in Provider + Navigation-Commands + Shortcut-Listener. `_app.tsx` mountet `<CommandPaletteHost />`.
 
-- `userPreferencesStore.recentPages` mit generischer Struktur `{ ref, timestamp }` — Suche kann später darauf zugreifen.
-- `favorites` einheitlich als `FavoriteRef[]` — Suche kann filtern.
-- `PermissionEvaluator.can(...)` — Suche kann Ergebnisse filtern.
-- Kein Suchsystem, keine Suchindexe, keine Routen dafür.
+## 9. Performance & A11y
 
-## 8. Performance & Accessibility
+- Debounced Query (150ms), memoized Selektoren, `React.memo` für Items, `react-virtual` für lange Listen, Code-Splitting per lazy-imported Route.
+- ARIA: `role="combobox"`/`role="listbox"`, `aria-activedescendant`, focus-trap in Dialog, große Touch-Targets (min. 44px).
 
-- `React.memo` auf Listen-Items, memoized Selectors, `byId`-Lookups.
-- Lazy-Loading der User-/Rollen-/Profil-Routen.
-- Fokus-Management in BottomSheets, ARIA-Labels, ≥ 44 px Touchflächen, Framer-Motion `SharedLayout` für Detail-Übergänge.
+## 10. Offline-Vorbereitung (nur Vorbereitung)
 
-## 9. Bootstrap (`src/services/bootstrap.ts`)
+- Alle Provider arbeiten synchron auf lokalen Stores → funktionieren offline bereits.
+- Index/History/Favorites/Preferences persistiert via `_persistStorage`.
+- Keine Sync-Logik in diesem Teil.
 
-- Registrierung der Built-in Roles + Profiles beim App-Start.
-- Anlegen eines Default-Admin-Users, wenn `usersStore.users` leer ist (Migration bestehender Sessions ohne Users).
-- `UserManager`/`ProfileManager`/`UserPreferencesManager` als Singletons instanziieren.
-- Kein neuer Lifecycle-Hook nötig; passt sich in bestehende `bootstrap()`-Sequenz ein.
+## 11. Nicht enthalten
 
-## 10. Nicht enthalten
+Keine Cloud-, KI-, Sprach-, OCR-, externe Suche. Keine Notification Engine-Erweiterung. Keine neuen Auth-Systeme.
 
-Kein Login, keine Passwörter, kein OAuth/LDAP/Google/Microsoft, kein 2FA, keine Cloud-Sync. Kein Auth-Middleware, kein Route-Guard mit Redirect. Berechtigungen sind rein UI-informativ.
+## 12. Erweiterungsgarantie
 
-## 11. Erweiterungspunkt-Garantie
-
-Neue Rollen: `RoleRegistry.registerRole(descriptor)`. Neue Ressourcen: `PermissionRegistry.registerResource(descriptor)` + `OwnershipRegistry.registerOwnershipSource(descriptor)`. Neue Widgets: `WidgetRegistry.register`. Kein Manager-, Store- oder UI-Code muss dafür geändert werden.
-
-## Technische Details
-
-- Migration `usersStore`: bestehender `role: UserRole` bleibt lesbar; beim ersten Lauf wird auf `roleIds: [<matching-builtin-role-id>]` gemappt, `role` als abgeleiteter Getter (String) bleibt für Rückwärtskompatibilität exportiert.
-- Bestehende Detailseiten (`_app.rooms.$roomId`, `_app.devices.$deviceId`, …) werden nur um einen Ownership-Abschnitt ergänzt; kein bestehender Code entfernt.
-- `PermissionEvaluator` ist pure; Ergebnis kann memoisiert per `useMemo(user, action, resource, refId)` in Components genutzt werden.
-- `Ownership` wird **nicht** als separater persistierter Store gehalten; Descriptoren lesen aus den vorhandenen Domain-Stores. So entstehen keine Sync-Probleme.
-- Refactoring erlaubt: `settingsStore` bleibt unverändert; nur ergänzende Selectors, keine Datenverschiebung.
-
+Neue Suchquellen ausschließlich via `SearchProviderRegistry.register(descriptor)`. Neue Commands via `CommandRegistry.register(descriptor)`. Keine Änderungen in Manager oder UI notwendig.
