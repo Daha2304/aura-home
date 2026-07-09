@@ -139,7 +139,10 @@ export const PWA_WIDGET_IDS = [
   "pwa.storageStatus",
 ];
 
+let registered = false;
 export function registerPwaWidgets(): void {
+  if (registered) return;
+  registered = true;
   const common = {
     category: "system" as const,
     defaultSize: { w: 3, h: 2 },
