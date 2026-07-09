@@ -27,6 +27,7 @@ interface Entry {
 }
 
 const entries: Entry[] = [
+  { to: "/inbox", label: "Ereignisse", hint: "Benachrichtigungen, Warnungen, Fehler", icon: Bell },
   { to: "/groups", label: "Gerätegruppen", hint: "Verschachtelte Gruppen, Fan-out, Schnellaktionen", icon: Layers },
   { to: "/automations", label: "Automationen", hint: "Auslöser, Bedingungen, Aktionen", icon: Workflow },
   { to: "/timeline", label: "Timeline", hint: "Zentrale Ereignis-Timeline aller Quellen", icon: History },
