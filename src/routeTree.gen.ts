@@ -23,6 +23,7 @@ import { Route as AppUsersRouteImport } from './routes/_app.users'
 import { Route as AppTimelineRouteImport } from './routes/_app.timeline'
 import { Route as AppStatisticsRouteImport } from './routes/_app.statistics'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
+import { Route as AppSearchRouteImport } from './routes/_app.search'
 import { Route as AppScenesRouteImport } from './routes/_app.scenes'
 import { Route as AppRoomsRouteImport } from './routes/_app.rooms'
 import { Route as AppRolesRouteImport } from './routes/_app.roles'
@@ -46,6 +47,9 @@ import { Route as AppSettingsLanguageRouteImport } from './routes/_app.settings.
 import { Route as AppSettingsDeveloperRouteImport } from './routes/_app.settings.developer'
 import { Route as AppSettingsBackupRouteImport } from './routes/_app.settings.backup'
 import { Route as AppSettingsAppearanceRouteImport } from './routes/_app.settings.appearance'
+import { Route as AppSearchResultsRouteImport } from './routes/_app.search.results'
+import { Route as AppSearchHistoryRouteImport } from './routes/_app.search.history'
+import { Route as AppSearchFavoritesRouteImport } from './routes/_app.search.favorites'
 import { Route as AppScenesSceneIdRouteImport } from './routes/_app.scenes.$sceneId'
 import { Route as AppRoomsRoomIdRouteImport } from './routes/_app.rooms.$roomId'
 import { Route as AppInboxNotificationIdRouteImport } from './routes/_app.inbox.$notificationId'
@@ -130,6 +134,11 @@ const AppStatisticsRoute = AppStatisticsRouteImport.update({
 const AppSettingsRoute = AppSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSearchRoute = AppSearchRouteImport.update({
+  id: '/search',
+  path: '/search',
   getParentRoute: () => AppRoute,
 } as any)
 const AppScenesRoute = AppScenesRouteImport.update({
@@ -248,6 +257,21 @@ const AppSettingsAppearanceRoute = AppSettingsAppearanceRouteImport.update({
   path: '/appearance',
   getParentRoute: () => AppSettingsRoute,
 } as any)
+const AppSearchResultsRoute = AppSearchResultsRouteImport.update({
+  id: '/results',
+  path: '/results',
+  getParentRoute: () => AppSearchRoute,
+} as any)
+const AppSearchHistoryRoute = AppSearchHistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
+  getParentRoute: () => AppSearchRoute,
+} as any)
+const AppSearchFavoritesRoute = AppSearchFavoritesRouteImport.update({
+  id: '/favorites',
+  path: '/favorites',
+  getParentRoute: () => AppSearchRoute,
+} as any)
 const AppScenesSceneIdRoute = AppScenesSceneIdRouteImport.update({
   id: '/$sceneId',
   path: '/$sceneId',
@@ -350,6 +374,7 @@ export interface FileRoutesByFullPath {
   '/roles': typeof AppRolesRoute
   '/rooms': typeof AppRoomsRouteWithChildren
   '/scenes': typeof AppScenesRouteWithChildren
+  '/search': typeof AppSearchRouteWithChildren
   '/settings': typeof AppSettingsRouteWithChildren
   '/statistics': typeof AppStatisticsRoute
   '/timeline': typeof AppTimelineRoute
@@ -369,6 +394,9 @@ export interface FileRoutesByFullPath {
   '/inbox/$notificationId': typeof AppInboxNotificationIdRoute
   '/rooms/$roomId': typeof AppRoomsRoomIdRoute
   '/scenes/$sceneId': typeof AppScenesSceneIdRouteWithChildren
+  '/search/favorites': typeof AppSearchFavoritesRoute
+  '/search/history': typeof AppSearchHistoryRoute
+  '/search/results': typeof AppSearchResultsRoute
   '/settings/appearance': typeof AppSettingsAppearanceRoute
   '/settings/backup': typeof AppSettingsBackupRoute
   '/settings/developer': typeof AppSettingsDeveloperRoute
@@ -401,6 +429,7 @@ export interface FileRoutesByTo {
   '/roles': typeof AppRolesRoute
   '/rooms': typeof AppRoomsRouteWithChildren
   '/scenes': typeof AppScenesRouteWithChildren
+  '/search': typeof AppSearchRouteWithChildren
   '/settings': typeof AppSettingsRouteWithChildren
   '/statistics': typeof AppStatisticsRoute
   '/timeline': typeof AppTimelineRoute
@@ -419,6 +448,9 @@ export interface FileRoutesByTo {
   '/inbox/$notificationId': typeof AppInboxNotificationIdRoute
   '/rooms/$roomId': typeof AppRoomsRoomIdRoute
   '/scenes/$sceneId': typeof AppScenesSceneIdRouteWithChildren
+  '/search/favorites': typeof AppSearchFavoritesRoute
+  '/search/history': typeof AppSearchHistoryRoute
+  '/search/results': typeof AppSearchResultsRoute
   '/settings/appearance': typeof AppSettingsAppearanceRoute
   '/settings/backup': typeof AppSettingsBackupRoute
   '/settings/developer': typeof AppSettingsDeveloperRoute
@@ -454,6 +486,7 @@ export interface FileRoutesById {
   '/_app/roles': typeof AppRolesRoute
   '/_app/rooms': typeof AppRoomsRouteWithChildren
   '/_app/scenes': typeof AppScenesRouteWithChildren
+  '/_app/search': typeof AppSearchRouteWithChildren
   '/_app/settings': typeof AppSettingsRouteWithChildren
   '/_app/statistics': typeof AppStatisticsRoute
   '/_app/timeline': typeof AppTimelineRoute
@@ -474,6 +507,9 @@ export interface FileRoutesById {
   '/_app/inbox/$notificationId': typeof AppInboxNotificationIdRoute
   '/_app/rooms/$roomId': typeof AppRoomsRoomIdRoute
   '/_app/scenes/$sceneId': typeof AppScenesSceneIdRouteWithChildren
+  '/_app/search/favorites': typeof AppSearchFavoritesRoute
+  '/_app/search/history': typeof AppSearchHistoryRoute
+  '/_app/search/results': typeof AppSearchResultsRoute
   '/_app/settings/appearance': typeof AppSettingsAppearanceRoute
   '/_app/settings/backup': typeof AppSettingsBackupRoute
   '/_app/settings/developer': typeof AppSettingsDeveloperRoute
@@ -511,6 +547,7 @@ export interface FileRouteTypes {
     | '/roles'
     | '/rooms'
     | '/scenes'
+    | '/search'
     | '/settings'
     | '/statistics'
     | '/timeline'
@@ -530,6 +567,9 @@ export interface FileRouteTypes {
     | '/inbox/$notificationId'
     | '/rooms/$roomId'
     | '/scenes/$sceneId'
+    | '/search/favorites'
+    | '/search/history'
+    | '/search/results'
     | '/settings/appearance'
     | '/settings/backup'
     | '/settings/developer'
@@ -562,6 +602,7 @@ export interface FileRouteTypes {
     | '/roles'
     | '/rooms'
     | '/scenes'
+    | '/search'
     | '/settings'
     | '/statistics'
     | '/timeline'
@@ -580,6 +621,9 @@ export interface FileRouteTypes {
     | '/inbox/$notificationId'
     | '/rooms/$roomId'
     | '/scenes/$sceneId'
+    | '/search/favorites'
+    | '/search/history'
+    | '/search/results'
     | '/settings/appearance'
     | '/settings/backup'
     | '/settings/developer'
@@ -614,6 +658,7 @@ export interface FileRouteTypes {
     | '/_app/roles'
     | '/_app/rooms'
     | '/_app/scenes'
+    | '/_app/search'
     | '/_app/settings'
     | '/_app/statistics'
     | '/_app/timeline'
@@ -634,6 +679,9 @@ export interface FileRouteTypes {
     | '/_app/inbox/$notificationId'
     | '/_app/rooms/$roomId'
     | '/_app/scenes/$sceneId'
+    | '/_app/search/favorites'
+    | '/_app/search/history'
+    | '/_app/search/results'
     | '/_app/settings/appearance'
     | '/_app/settings/backup'
     | '/_app/settings/developer'
@@ -757,6 +805,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/search': {
+      id: '/_app/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof AppSearchRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/scenes': {
@@ -919,6 +974,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/settings/appearance'
       preLoaderRoute: typeof AppSettingsAppearanceRouteImport
       parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/search/results': {
+      id: '/_app/search/results'
+      path: '/results'
+      fullPath: '/search/results'
+      preLoaderRoute: typeof AppSearchResultsRouteImport
+      parentRoute: typeof AppSearchRoute
+    }
+    '/_app/search/history': {
+      id: '/_app/search/history'
+      path: '/history'
+      fullPath: '/search/history'
+      preLoaderRoute: typeof AppSearchHistoryRouteImport
+      parentRoute: typeof AppSearchRoute
+    }
+    '/_app/search/favorites': {
+      id: '/_app/search/favorites'
+      path: '/favorites'
+      fullPath: '/search/favorites'
+      preLoaderRoute: typeof AppSearchFavoritesRouteImport
+      parentRoute: typeof AppSearchRoute
     }
     '/_app/scenes/$sceneId': {
       id: '/_app/scenes/$sceneId'
@@ -1164,6 +1240,22 @@ const AppScenesRouteWithChildren = AppScenesRoute._addFileChildren(
   AppScenesRouteChildren,
 )
 
+interface AppSearchRouteChildren {
+  AppSearchFavoritesRoute: typeof AppSearchFavoritesRoute
+  AppSearchHistoryRoute: typeof AppSearchHistoryRoute
+  AppSearchResultsRoute: typeof AppSearchResultsRoute
+}
+
+const AppSearchRouteChildren: AppSearchRouteChildren = {
+  AppSearchFavoritesRoute: AppSearchFavoritesRoute,
+  AppSearchHistoryRoute: AppSearchHistoryRoute,
+  AppSearchResultsRoute: AppSearchResultsRoute,
+}
+
+const AppSearchRouteWithChildren = AppSearchRoute._addFileChildren(
+  AppSearchRouteChildren,
+)
+
 interface AppSettingsServerRouteChildren {
   AppSettingsServerIdRoute: typeof AppSettingsServerIdRoute
   AppSettingsServerNewRoute: typeof AppSettingsServerNewRoute
@@ -1243,6 +1335,7 @@ interface AppRouteChildren {
   AppRolesRoute: typeof AppRolesRoute
   AppRoomsRoute: typeof AppRoomsRouteWithChildren
   AppScenesRoute: typeof AppScenesRouteWithChildren
+  AppSearchRoute: typeof AppSearchRouteWithChildren
   AppSettingsRoute: typeof AppSettingsRouteWithChildren
   AppStatisticsRoute: typeof AppStatisticsRoute
   AppTimelineRoute: typeof AppTimelineRoute
@@ -1264,6 +1357,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppRolesRoute: AppRolesRoute,
   AppRoomsRoute: AppRoomsRouteWithChildren,
   AppScenesRoute: AppScenesRouteWithChildren,
+  AppSearchRoute: AppSearchRouteWithChildren,
   AppSettingsRoute: AppSettingsRouteWithChildren,
   AppStatisticsRoute: AppStatisticsRoute,
   AppTimelineRoute: AppTimelineRoute,
