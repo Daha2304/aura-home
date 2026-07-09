@@ -12,6 +12,7 @@ import { registerAutomationWidgets } from "./automations";
 import { registerAnalyticsWidgets } from "./analytics";
 import { registerNotificationWidgets } from "./notifications";
 import { registerUserWidgets } from "./users";
+import { registerSearchWidgets } from "./search";
 
 export { registerSystemWidgets, SYSTEM_WIDGET_IDS } from "./system";
 export { registerRoomWidgets, ROOM_WIDGET_IDS } from "./rooms";
@@ -22,6 +23,7 @@ export { registerAutomationWidgets, AUTOMATION_WIDGET_IDS } from "./automations"
 export { registerAnalyticsWidgets, ANALYTICS_WIDGET_IDS } from "./analytics";
 export { registerNotificationWidgets, NOTIFICATION_WIDGET_IDS } from "./notifications";
 export { registerUserWidgets, USER_WIDGET_IDS } from "./users";
+export { registerSearchWidgets, SEARCH_WIDGET_IDS } from "./search";
 
 registerSystemWidgets();
 registerRoomWidgets();
@@ -35,3 +37,5 @@ registerUserWidgets();
 
 
 
+
+registerSearchWidgets();

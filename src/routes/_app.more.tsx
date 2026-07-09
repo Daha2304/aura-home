@@ -6,6 +6,7 @@ import {
   History,
   Layers,
   LineChart,
+  Search,
   Settings as SettingsIcon,
   ShieldCheck,
   UserCog,
@@ -30,6 +31,7 @@ interface Entry {
 }
 
 const entries: Entry[] = [
+  { to: "/search", label: "Suche", hint: "Globale Suche & Command Palette (⌘K)", icon: Search },
   { to: "/inbox", label: "Ereignisse", hint: "Benachrichtigungen, Warnungen, Fehler", icon: Bell },
   { to: "/groups", label: "Gerätegruppen", hint: "Verschachtelte Gruppen, Fan-out, Schnellaktionen", icon: Layers },
   { to: "/automations", label: "Automationen", hint: "Auslöser, Bedingungen, Aktionen", icon: Workflow },

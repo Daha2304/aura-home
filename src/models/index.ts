@@ -60,3 +60,8 @@ export * from "./houseMetrics";
 export * from "./roomHealth";
 export * from "./insight";
 export * from "./intelligenceEvents";
+export * from "./search";
+export * from "./searchProvider";
+export * from "./searchHistory";
+export * from "./searchPreferences";
+export * from "./commandPalette";
