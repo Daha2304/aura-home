@@ -259,6 +259,11 @@ export function stopCommunicationLayer(): void {
   unsubscribers = [];
   unsubActiveServer?.();
   unsubActiveServer = null;
+  updateManager.stop();
+  deepLinkRouter.stop();
+  appLifecycle.stop();
+  backgroundSync.stop();
+  offlineEngine.stop();
   stopSearchPlatform();
   stopIntelligence();
   stopEventCenter();
