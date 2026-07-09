@@ -13,7 +13,7 @@ import { useDevicesStore } from "@/store/slices/devicesStore";
 import { useScenesStore } from "@/store/slices/scenesStore";
 import { useAutomationsStore } from "@/store/slices/automationsStore";
 
-export const Route = createFileRoute("/_app/users/$userId")({
+export const Route = createFileRoute("/_app/users/$userId/")({
   head: () => ({ meta: [{ title: "Benutzer · Smart Home" }] }),
   component: UserDetail,
 });
