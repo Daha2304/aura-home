@@ -206,6 +206,25 @@ export function startCommunicationLayer(): void {
   // searchProviderRegistry.register(...) hinzu.
   startSearchPlatform();
 
+  // PWA, Offline, Backup, Version, Update (Teil 14).
+  // Reihenfolge:
+  //   1. Versionen laden + Migrationen anwenden (idempotent).
+  //   2. Cache-Manager + Backup-Provider (registry-basiert, non-blocking).
+  //   3. Offline Engine + Background Sync (lesen bestehende Command-Queue).
+  //   4. App-Lifecycle + Deep-Link Router.
+  //   5. Service Worker + Update Manager (nur Prod / non-preview).
+  versionManager.hydrate();
+  void migrationManager.runPending();
+  void cacheManager.init();
+  void registerBuiltinBackupProviders();
+  offlineEngine.start();
+  void backgroundSync.start();
+  appLifecycle.start();
+  deepLinkRouter.start();
+  void updateManager.start();
+
+
+
 
 
 
