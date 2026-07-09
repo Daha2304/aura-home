@@ -6,6 +6,7 @@ import { pageTransition } from "@/themes/motion";
 import { useCommunicationLayer } from "@/hooks/useCommunicationLayer";
 import { useSettingsStore } from "@/store/slices/settingsStore";
 import { ToastHost } from "@/components/notifications/ToastHost";
+import { CommandPaletteHost } from "@/components/search/CommandPaletteHost";
 
 export const Route = createFileRoute("/_app")({
   component: AppLayout,
