@@ -14,6 +14,9 @@ import {
   Sparkles,
   HardDrive,
   Info,
+  Activity,
+  HeartPulse,
+  FileText,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
