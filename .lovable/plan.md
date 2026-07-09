@@ -1,181 +1,213 @@
-## Teil 14 — PWA, Offline, Backup, Updates & Deployment-Grundlagen
 
-Ziel: Die App vollständig als PWA vorbereiten (installierbar, offlinefähig, updatefähig), ein zentrales Backup/Restore-System, Version- & Migration-Manager sowie Deep-Link- und Lifecycle-Grundlagen — ausschließlich auf Basis der bestehenden Registries, Manager und Stores. Keine parallelen Datenmodelle, keine Cloud, keine nativen Plugins.
+# Teil 15 von 18 — Produktionsreife (Stabilität, Performance, Qualität)
+
+Rein additiv. Keine neuen Fachfunktionen, keine neue Architektur, keine parallelen Datenmodelle. Alles läuft über bestehende Systeme (WebSocketManager, DiscoveryEngine, DeviceRegistry, CapabilityRegistry, DashboardManager, WidgetRegistry, RoomManager, SceneManager, GroupManager, AutomationEngine, Timeline, NotificationRegistry, SearchManager, UserManager, PWA/Update/Backup/Version/Cache/Offline/Lifecycle, ErrorBus, Logger, Stores).
+
+## 1. Performance-Audit & -Optimierungen (nicht-funktional)
+
+- Bestehende Hot-Path-Komponenten mit React.memo/useMemo/useCallback stabilisieren:
+  DashboardRuntime, RuntimeCanvas, RuntimeWidgetHost, WidgetGrid, WidgetContainer,
+  RoomCard, SceneCard, GroupCard, AutomationCard, GlassListItem, ToastHost,
+  CommandPalette-Ergebnisliste.
+- Zustand-Selektoren feingranular splitten (Regel: nie ganze Slice-Objekte lesen).
+  Betroffen v. a. dashboardStore, widgetInstancesStore, discoveryStore,
+  connectionStore, notificationsStore, searchStore, timelineStore.
+- Lange Listen virtualisieren (falls Länge >200): Timeline, Inbox, DevLog,
+  Suchergebnisse, Users, Devices. Nutzt `@tanstack/react-virtual` (bereits kompatibel;
+  falls nicht vorhanden, additiv installieren — keine Architekturänderung).
+- Route-Level Lazy Splitting: Diagnose-/Developer-/Log-Routen als `.lazy.tsx`,
+  damit Prod-Bundle klein bleibt.
+- Keine Business-Logik-Änderungen.
+
+## 2. Memory-Hygiene
+
+Systematischer Sweep aller Services/Hooks:
+- Event-Listener (window/document/visibilitychange/online/offline): sicherstellen,
+  dass Registrierung im `start()` und Freigabe in `stop()` erfolgt.
+- Timer/Intervals (Heartbeat, BackgroundSync, discovery poll, updateManager):
+  `clearInterval`/`clearTimeout` in `stop()`.
+- Store-Subscriptions (`zustand.subscribe`) — bootstrap sammelt bereits
+  `unsubscribers[]`; gleiches Muster auf `intelligence`, `search`, `notifications`,
+  `groups`, `automations`, `timeline` prüfen und ergänzen.
+- WebSocketManager: doppelte Handler-Registrierung ausschließen (idempotent).
+- MutationObserver/ResizeObserver in Runtime-Komponenten cleanup in useEffect.
+
+## 3. Zentrales Error Boundary System
+
+Aufbauend auf `errorBus` + bestehendem `reportLovableError`:
+
+- Neue Komponente `src/components/errors/AppErrorBoundary.tsx` (React ErrorBoundary),
+  meldet an `errorBus` + `reportLovableError`, mit „Neu laden“ / „Zurück“ / „Diagnose öffnen“.
+- `RouteErrorBoundary` als leichter Wrapper für pro-Route-Einsatz.
+- Globaler Handler in `src/services/errors/globalHandlers.ts`:
+  `window.onerror`, `unhandledrejection` → `errorBus.report(...)`.
+- Registrierung in `bootstrap.ts` (nur Client).
+- `__root.tsx` erhält `errorComponent` / `notFoundComponent` über bestehende
+  TanStack-Konventionen (nur wenn noch nicht gesetzt).
+
+Keine parallele Fehlerarchitektur — alles fließt in `errorBus`.
+
+## 4. Recovery Layer
+
+Neu: `src/services/recovery/RecoveryManager.ts` (koordiniert bestehende Systeme):
+- Beobachtet `errorBus`, `connectionStore`, `offlineStore`, `updateStore`.
+- Triggert bekannte Aktionen:
+  - WebSocket: `wsManager.connect()` mit Backoff (bereits vorhanden).
+  - CommandQueue: `backgroundSync.flush()` (bereits vorhanden).
+  - Cache: `cacheManager.invalidate(bucket)` bei Cache-Fehler.
+  - Store-Recovery: `dashboardManager.hydrate()`, `roomManager.hydrate()`,
+    `versionManager.hydrate()` re-run bei Hydration-Error.
+- Kein neuer Persistenzpfad, keine neue Business-Logik.
+- Start/Stop in `bootstrap.ts`.
+
+## 5. Logging-Erweiterung
+
+`src/services/logger/Logger.ts` erweitern (additiv, API-kompatibel):
+- Level `critical` ergänzen.
+- Interner Ringpuffer (z. B. 2000 Einträge) für Filter/Export.
+- Neuer Store `src/store/slices/logStore.ts` (nur UI-Spiegel, bounded).
+- Export als JSON/Text (Download); Filter nach Scope + Level.
+- `PerformanceLogger`-Helper (Wrap um `performance.mark/measure`) für einzelne
+  Bootstrap-/Hydration-Phasen; loggt in denselben Logger — keine parallele API.
+
+## 6. Diagnostics-Seite
+
+Route `/_app/settings/diagnostics.tsx`, liest ausschließlich aus bestehenden Systemen:
+- Version: `versionManager` (app/dataModel/cache/backup/schema).
+- Build-Info: kompilierte Konstanten aus `src/generated/buildInfo.ts` (siehe §13).
+- WebSocket: `connectionStore` (Status, Latenz, Reconnects, Auth).
+- Discovery: `discoveryStore` (Geräteanzahl, letzte Snapshots, Errors).
+- Cache: `cacheManager.stats()` (bestehend/ergänzen um read-only stats).
+- Offline: `offlineStore`.
+- Service Worker: `updateManager.getState()` + registration info.
+- Speicher: `navigator.storage.estimate()` (Client-Only, in Effect).
+- Registrierungszähler: `widgetRegistryStore`, `capabilityRegistry`,
+  `deviceCatalogStore`, `automationsStore`, `timelineSourceRegistry`,
+  `searchProviderRegistry`, `notificationProducerRegistry`,
+  `backupProviderRegistry`, `commandRegistry`.
+- Export als JSON.
+
+## 7. Health-Check Manager
+
+`src/services/health/HealthManager.ts` mit generischer Provider-Registry
+`HealthCheckRegistry`:
+- Interface `HealthCheck { id; label; run(): Promise<{status:"ok"|"warn"|"fail", detail?}> }`.
+- Built-in Checks (thin adapter, keine Reparatur):
+  stores-hydrated, ws-connected, discovery-ready, cache-init, backup-providers,
+  service-worker, migrations-applied, registry-nonEmpty (widgets/capabilities/…).
+- Nur Diagnose; Ergebnis in `healthStore`.
+- Widget `system.healthStatus` + Anzeige in Diagnostics.
+- Erweiterbar wie alle anderen Registries.
+
+## 8. Security-Vorbereitung
+
+- `src/services/security/csp.ts` — dokumentierte CSP/Security-Header-Vorlage
+  (Kommentare, Konstanten) für Reverse-Proxy-Konfiguration. Kein Code, der
+  Header setzt (kein Serverpfad in dieser Runtime nötig).
+- ENV-Handling: `src/config/env.ts` typisiert `import.meta.env.VITE_*` und
+  liefert klare Defaults. Prüfen: keine Secrets im Bundle.
+- Secret-Handling-Doku in `docs/SECURITY.md`.
+
+## 9. Accessibility-Audit
+
+Systematischer Sweep, ohne Redesign:
+- Icon-only Buttons → `aria-label` (BottomNav, IconButton-Varianten,
+  Palette-Aktionen, SceneCard-Ausführen, GroupCard-Toggle, RoomCard-Menu).
+- `<main>` genau einmal (in `_app.tsx`), `<h1>` pro Route via `PageHeader`.
+- Fokus-Ringe an interaktiven Glass-Komponenten sichtbar (`focus-visible`).
+- Kontraste über Tokens (kein `text-gray-*` in Komponenten).
+- Touchflächen ≥44px an Bottom-Nav & Palette.
+- Live-Regionen für Toasts (`aria-live="polite"`) — falls fehlt.
+
+## 10. Testing-Vorbereitung (leichtgewichtig)
+
+- `src/services/selfCheck/StartupValidation.ts`: Läuft nach `bootstrap`,
+  prüft Registries auf non-empty, Router-Tree konsistent, Store-Hydration ok.
+  Ergebnis → `logStore` + optional Toast bei `fail`.
+- Kein Jest/Vitest neu installieren. Vorhandene Setup-Skripte unverändert.
+
+## 11. Developer Tools Seite
+
+Route `/_app/settings/developer` (bereits vorhanden) erweitern um Tabs:
+- Stores: Snapshot aller registrierten Slices (read-only JSON-Tree).
+- Registries: Live-Liste (Widget/Capability/Device/Timeline/Search/Backup/…).
+- Cache: Buckets + Größen.
+- Versionen: Modell-/Migrationstabelle.
+- Build-Info.
+Nur sichtbar bei `settingsStore.developerMode === true`.
+
+## 12. Feature Flags
+
+`src/services/flags/FeatureFlags.ts` + `flagsStore`:
+- API: `flags.get(key, default)`, `flags.set(key, value)`, `flags.list()`.
+- Persistenz lokal (kein Remote, keine Cloud).
+- Beispiel-Flags: `ui.virtualization`, `dev.showDiagnosticsWidget`.
+- UI unter `/settings/developer` (Flags-Tab).
+
+## 13. Build-Info & Environments
+
+- Vite `define` (in `vite.config.ts`) füllt `__BUILD_HASH__`, `__BUILD_TIME__`,
+  `__BUILD_MODE__` → generierte Datei `src/generated/buildInfo.ts`.
+- `env.ts` normalisiert `MODE` in dev/staging/prod.
+- Kein Wechsel des Builders.
+
+## 14. Neue Routen
+
+- `/settings/diagnostics` — Diagnose + Health + Export
+- `/settings/performance` — Perf-Marker, Bundle-Hints, Virtualisierungs-Flags
+- `/settings/logs` — Log-Viewer, Filter, Export
+- `/settings/developer` — erweitert (Tabs)
+
+Alle als `.lazy.tsx` (Code-Splitting). Verlinkt in `_app.settings.index.tsx`.
+
+## 15. Neue Widgets (via WidgetRegistry)
+
+- `system.healthStatus`
+- `system.performance` (FPS, Render-Zeiten Sampler)
+- `system.diagnostics` (Kurzstatus)
+- `system.buildInfo`
+
+Registrierung ausschließlich in `src/services/widgets/builtin/system.tsx` +
+Eintrag in `builtin/index.ts`.
+
+## 16. Dokumentation
+
+Automatisch generierte, gepflegte Markdown-Dateien unter `docs/`:
+- `docs/ARCHITECTURE.md` — Layer-Übersicht (Kommunikation → Registry → Manager → Store → UI).
+- `docs/MODULES.md` — Alle Services + Verantwortlichkeiten.
+- `docs/REGISTRIES.md` — Vollständige Registry-Liste + Erweiterungs-API.
+- `docs/STORES.md` — Slice-Übersicht, Persistenzpfad, Reset.
+- `docs/ROUTING.md` — Routen-Baum + Zweck.
+- `docs/VERSIONS.md` — Schema-/Migrations-Tabelle.
+- `docs/SECURITY.md` — CSP/Header/Env/Secrets-Empfehlungen.
+- `docs/DEPLOYMENT.md` — Proxmox/HTTPS/Reverse-Proxy/appsocket.
+
+Statisch gepflegt (keine Runtime-Generierung nötig).
+
+## 17. Bootstrap-Integration
+
+`src/services/bootstrap.ts` erweitert (rein additiv, gleiche Reihenfolge-Regeln):
+1. Global error handlers registrieren (früh).
+2. Logger-Ringpuffer aktivieren.
+3. `recoveryManager.start()`.
+4. `healthManager.start()`.
+5. `startupValidation.run()` (nach allen `bootstrap*()`-Calls).
+Alles mit korrespondierendem Stop im Teardown.
+
+## 18. Nicht enthalten
+
+Keine neuen Smart-Home-Funktionen, keine Cloud, kein Push, keine KI,
+keine neue Discovery, keine neuen Geräte, keine Server-Runtime-Logik,
+keine Änderungen an bestehenden Managern außer additiven Hooks
+(z. B. optionale `stats()`-Methode am CacheManager).
 
 ---
 
-### 1. Web App Manifest & Icons
+### Technische Randnotizen
 
-- `public/manifest.webmanifest` erweitern:
-  - name/short_name, description, `id`, `scope`, `start_url`
-  - `display: "standalone"`, `orientation: "portrait"`
-  - `theme_color`, `background_color`
-  - Icons 192/512 + **maskable** Varianten
-  - `shortcuts` (Dashboard, Räume, Szenen, Suche)
-  - `screenshots` (Slots vorbereitet, Platzhalter-Assets)
-- Head-Tags in `src/routes/__root.tsx`: `apple-touch-icon`, `theme-color` (light/dark), zusätzliche `link rel="icon"`, `mask-icon`.
-- Icons als PNGs unter `public/icons/` (via imagegen, App-Marke neutral, quadratisch, maskable-Safe-Area).
-
-### 2. Service Worker (Kill-Switch-sicher, Preview-safe)
-
-- Neue Datei `public/sw.js` — generischer, versionierter SW:
-  - App-Shell Precache (Route-HTML, JS/CSS-Manifest-Einträge werden zur Build-Zeit **nicht** injected; SW nutzt Runtime-Strategien).
-  - Runtime-Caches (getrennte Buckets, Namen inkl. `SW_VERSION`):
-    - `app-shell-v{n}` — HTML: **NetworkFirst** mit Offline-Fallback `/offline.html`.
-    - `assets-v{n}` — same-origin gehashte JS/CSS: **CacheFirst**.
-    - `images-v{n}` — Bilder: **StaleWhileRevalidate**, LRU-Cap.
-    - `fonts-v{n}` — Fonts: **CacheFirst**, langlebig.
-  - `activate`: alte Cache-Buckets, deren Version ≠ aktuell, werden gelöscht.
-  - `message`-Handler: `SKIP_WAITING`, `CLEAR_CACHES`, `GET_VERSION`.
-  - **Keine** Business-Logik, kein Fetch-Rewrite von WebSocket/API-Aufrufen.
-- Registrierungs-Wrapper `src/services/pwa/registerServiceWorker.ts`:
-  - Registrierung **nur** in `import.meta.env.PROD` **und** außerhalb von Lovable-Preview (`id-preview--*`, `preview--*`, `*.lovableproject.com`, `*.lovableproject-dev.com`, `*.beta.lovable.dev`), nicht im iFrame, nicht bei `?sw=off`.
-  - In allen anderen Kontexten: bestehende Registrierungen für `/sw.js` deaktivieren.
-- `public/offline.html`: minimale statische Offline-Seite (Design-System-neutral, inline CSS).
-
-### 3. Offline Engine
-
-`src/services/offline/`:
-- `OfflineEngine.ts` — abonniert `online`/`offline`, `document.visibilitychange`, verwaltet `isOnline`-Zustand als Store-Selector.
-- `offlineStore.ts` (Zustand-Slice) — `online`, `lastOnlineAt`, `lastOfflineAt`, `pendingCount` (aus Command Queue gelesen, nicht dupliziert).
-- Bestehende `CommandQueue` **bleibt unverändert**. Engine liest nur ihren Status und triggert bei Reconnect `commandQueue.flush()` sowie `discoveryEngine.rescan()` (falls vorhanden — sonst dokumentierter Extension-Point).
-- Konflikterkennung & Retry: **Interfaces** und Descriptor-Typen (`ConflictResolutionDescriptor`) vorbereitet, keine Business-Logik.
-
-### 4. Background Sync (Vorbereitung)
-
-- `src/services/offline/BackgroundSync.ts`:
-  - Registriert bei `visibilitychange → visible` und `online`-Event: Queue-Flush + Discovery-Rescan-Signal.
-  - Wenn `SyncManager` (`'sync' in registration`) verfügbar: `sync`-Tag `smarthome-queue-flush` registrieren. Der SW leitet das Event lediglich an den App-Thread weiter (via `postMessage`), damit die Business-Logik nicht in den SW wandert.
-  - Delta-Sync als Interface vorbereitet (`DeltaSyncDescriptor`), keine Implementierung.
-
-### 5. Cache Manager
-
-`src/services/cache/CacheManager.ts`:
-- Zentrale Facade über die SW-Cache-API + LRU-Bucket-Meta im `localStorage`.
-- Buckets: `assets`, `api`, `images`, `widgets`, `search`.
-- Integriert bestehende `SearchCache` (Adapter, keine Duplikation): `CacheManager.getBucket('search')` liefert einen dünnen Wrapper um den bestehenden Cache.
-- API: `invalidate(bucket?)`, `clearAll()`, `size(bucket)`, `usageBytes()`.
-- Ereignisse über bestehenden `errorBus`/`devLog` — kein neues Event-System.
-
-### 6. Backup / Restore
-
-Erweiterung der bereits existierenden `src/services/storage/backup.ts` zu einem echten Backup-System (nicht-brechend):
-
-- Neue Datei `src/services/backup/BackupManager.ts` mit **Provider-Registry** `BackupProviderRegistry`.
-- Jeder Domain-Bereich registriert einen Provider (Descriptor: `id`, `label`, `version`, `export()`, `import(payload, mode)`, `migrate(from, to, payload)`):
-  - settings, users, profiles, roles, permissions, userPreferences
-  - dashboards, widgetInstances, layouts, runtime
-  - rooms, devices, deviceCatalog, capabilities
-  - scenes, sceneTemplates, sceneVersions
-  - groups
-  - automations, automationTemplates, automationVariables, automationVersions
-  - timeline, history, statistics, insights
-  - notifications, notificationRules, notificationTemplates, notificationPreferences
-  - search (history, favorites, preferences)
-- Bestehender `exportBackup()` bleibt als Legacy-Aufruf funktional; intern delegiert er ans neue System.
-- `BackupSchema`: `{ schemaVersion, appVersion, dataModelVersion, createdAt, sections: Record<providerId, { version, data }> }`.
-- Restore-Modi: `replace`, `merge`, `selective` (Whitelist von Provider-IDs).
-- JSON Import/Export, Datei-Download via bestehende `downloadBackupFile`.
-
-### 7. Version / Migration Manager
-
-`src/services/version/`:
-- `VersionManager.ts` — hält & persistiert:
-  - `appVersion` (aus `import.meta.env.VITE_APP_VERSION`, Default per Build).
-  - `dataModelVersion`, `cacheVersion`, `backupVersion`, `schemaVersions` pro Provider.
-- `MigrationManager.ts` — generisch:
-  - Registry `MigrationRegistry.register({ providerId, from, to, migrate })`.
-  - Beim App-Start und beim Restore werden Migrationsketten sequentiell angewendet.
-  - Keine konkreten Migrationen — nur die Architektur + no-op Baseline v1→v1.
-
-### 8. Update Manager
-
-`src/services/pwa/UpdateManager.ts`:
-- Beobachtet SW-`updatefound`/`waiting` → schreibt in neuen `updateStore` (`available`, `applying`, `lastChecked`).
-- API: `softReload()` (`navigation.reload({ documentTree: true })` bzw. `window.location.reload()`), `hardReload()` (SW `SKIP_WAITING` + Caches leeren + Reload).
-- Changelog-Datenstruktur vorbereitet (`ChangelogEntry[]`), Feed leer.
-
-### 9. Deep Links
-
-`src/services/deeplinks/DeepLinkRouter.ts`:
-- Parst `smarthome://<kind>/<id>` (device, room, scene, group, automation, dashboard) und mappt auf TanStack-Router-Ziele.
-- Registriert Handler für `navigator.registerProtocolHandler` (nur Prod + non-preview).
-- Manifest: `protocol_handlers` Entry für `web+smarthome`.
-- Kein natives Binding.
-
-### 10. App Lifecycle
-
-`src/services/lifecycle/AppLifecycle.ts`:
-- Emittiert über bestehenden `EventEmitter` bzw. `errorBus`-Nachbarsystem (kein neues Bus-System) die Events:
-  - `app.start`, `app.resume`, `app.pause`, `app.visible`, `app.hidden`, `app.online`, `app.offline`.
-- Bindet an `visibilitychange`, `pageshow`, `pagehide`, `online`, `offline`.
-- Wird von OfflineEngine, BackgroundSync und UpdateManager konsumiert.
-
-### 11. Capacitor-Vorbereitung (nur Struktur)
-
-- `capacitor.config.ts` (nur Konfig-Skelett, `appId`, `appName`, `webDir`) — **nicht** an Build angebunden.
-- README-Notiz zu geplanten Ordnern `android/`, `ios/` — leer belassen.
-- Keine Plugins, keine Native-APIs.
-
-### 12. Widgets (via WidgetRegistry)
-
-Neue Built-in Widgets unter `src/services/widgets/builtin/system.tsx` (registriert in `src/services/widgets/builtin/index.ts`):
-- `system.backupStatus`
-- `system.offlineStatus`
-- `system.syncStatus`
-- `system.updateStatus`
-- `system.storageStatus`
-
-Lesen ausschließlich aus den neuen Stores; kein zusätzlicher State.
-
-### 13. Settings & Routen
-
-Neue Routen (jeweils `createFileRoute("/_app/settings/...")`):
-- `_app.settings.offline.tsx`
-- `_app.settings.backup.tsx` — **erweitert** die bestehende Datei (Export/Import mit Provider-Auswahl, Merge/Replace).
-- `_app.settings.restore.tsx`
-- `_app.settings.update.tsx`
-- `_app.settings.storage.tsx`
-- `_app.settings.app.tsx` (App-Info, Versionen, Build-Hash)
-
-Bestehende Backup-Route bleibt funktional; wird nur inhaltlich ausgebaut.
-Verlinkung im bestehenden Settings-Hub (`_app.settings.index.tsx`) ergänzen.
-
-### 14. Bootstrap-Integration
-
-`src/services/bootstrap.ts` erweitert (nur zusätzliche Aufrufe, keine Umstrukturierung):
-- `registerServiceWorker()` (guarded).
-- `versionManager.hydrate()`, `migrationManager.runPending()`.
-- `backupProviderRegistry` mit Built-in Providern initialisieren.
-- `cacheManager.init()`, `offlineEngine.start()`, `backgroundSync.start()`, `updateManager.start()`, `appLifecycle.start()`, `deepLinkRouter.start()`.
-- Stop-Pfade in `stopCommunicationLayer()`.
-
-### 15. Performance / A11y
-
-- Neue Routen via TanStack Auto-Code-Splitting (kein Route-Export der Komponente).
-- Schwere UI-Bereiche (Backup-Restore-Listen) mit `React.memo` + memoisierten Selektoren.
-- Große Listen: bestehende Virtualisierung wiederverwenden (falls bereits im Projekt), sonst leichtes Fenstern via CSS `content-visibility`.
-- A11y: alle Statusanzeigen mit `aria-live="polite"`, Offline-/Update-Banner mit Rolle `status`, Buttons ≥ 44px.
-
-### 16. Was explizit NICHT gebaut wird
-
-- Keine Cloud, kein Push, keine Google/Apple-Services, keine externe Sync, keine Accounts.
-- Keine echten Migrationen (nur Architektur).
-- Keine nativen Plugins.
-- Keine Perf-/Security-Härtung (Teil 15).
-
----
-
-### Erweiterbarkeitsgarantie
-
-Neue Backup-Bereiche → `backupProviderRegistry.register(descriptor)`.  
-Neue Migrationen → `migrationRegistry.register({...})`.  
-Neue Cache-Buckets → `cacheManager.registerBucket(descriptor)`.  
-Neue Deep-Link-Ziele → `deepLinkRouter.register(kind, resolver)`.  
-Neue Systemwidgets → `widgetRegistry.register(descriptor)`.  
-
-Kein bestehender Manager, keine bestehende Datei muss dafür erneut geändert werden.
-
----
-
-Soll ich so implementieren?
+- Alle neuen Services folgen dem Muster `start()`/`stop()` + `unsubscribers[]`.
+- Alle neuen Registries: `register(descriptor)` / `unregister(id)` / `list()`.
+- Alle neuen Stores nutzen `_persistStorage.ts` (bounded, JSON, versioniert).
+- Keine Datei unter `src/routeTree.gen.ts` manuell ändern.
+- Neue Widgets erhalten IDs unter Namespace `system.*`.
+- Lazy-Routen: `.lazy.tsx` + `getRouteApi`, keine Komponenten-Exports.
