@@ -76,7 +76,7 @@ function InboxList() {
     <>
       <PageHeader
         title="Ereignisse"
-        actions={
+        trailing={
           <button
             onClick={() => notificationManager.markAllRead()}
             className="inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium hover:bg-white/20"
