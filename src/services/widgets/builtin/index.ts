@@ -14,6 +14,7 @@ import { registerNotificationWidgets } from "./notifications";
 import { registerUserWidgets } from "./users";
 import { registerSearchWidgets } from "./search";
 import { registerPwaWidgets } from "./pwa";
+import { registerDiagnosticsWidgets } from "./diagnostics";
 
 export { registerSystemWidgets, SYSTEM_WIDGET_IDS } from "./system";
 export { registerRoomWidgets, ROOM_WIDGET_IDS } from "./rooms";
@@ -26,6 +27,7 @@ export { registerNotificationWidgets, NOTIFICATION_WIDGET_IDS } from "./notifica
 export { registerUserWidgets, USER_WIDGET_IDS } from "./users";
 export { registerSearchWidgets, SEARCH_WIDGET_IDS } from "./search";
 export { registerPwaWidgets, PWA_WIDGET_IDS } from "./pwa";
+export { registerDiagnosticsWidgets, DIAGNOSTICS_WIDGET_IDS } from "./diagnostics";
 
 registerSystemWidgets();
 registerRoomWidgets();
@@ -38,3 +40,4 @@ registerNotificationWidgets();
 registerUserWidgets();
 registerSearchWidgets();
 registerPwaWidgets();
+registerDiagnosticsWidgets();

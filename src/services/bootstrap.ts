@@ -1,4 +1,10 @@
-import { createLogger, setGlobalLogLevel } from "@/services/logger/Logger";
+import { createLogger, setGlobalLogLevel, addLogSink } from "@/services/logger/Logger";
+import { installGlobalErrorHandlers } from "@/services/errors/globalHandlers";
+import { useLogStore } from "@/store/slices/logStore";
+import { healthManager, registerBuiltinHealthChecks } from "@/services/health";
+import { recoveryManager } from "@/services/recovery/RecoveryManager";
+import { runStartupValidation } from "@/services/selfCheck/StartupValidation";
+import "@/services/flags/FeatureFlags";
 import { errorBus } from "@/services/errors/ErrorBus";
 import { wsManager } from "@/services/websocket/WebSocketManager";
 import {
@@ -70,6 +76,13 @@ export function startCommunicationLayer(): void {
   if (typeof window === "undefined") return; // strikt client-only
   started = true;
   log.info("starting communication layer");
+
+  // Frühe Fehler-/Log-Verkabelung. installGlobalErrorHandlers ist idempotent.
+  const removeGlobalErrors = installGlobalErrorHandlers();
+  const removeLogSink = addLogSink((entry) => {
+    useLogStore.getState().push(entry);
+  });
+  unsubscribers.push(removeGlobalErrors, removeLogSink);
 
   // Protokoll-Adapter: ioBroker appsocket. Muss vor jedem connect() gesetzt sein,
   // damit die allererste Nachricht ein "hello" ist.
@@ -223,6 +236,12 @@ export function startCommunicationLayer(): void {
   deepLinkRouter.start();
   void updateManager.start();
 
+  // Produktions-Diagnose (Teil 15). Health-Checks + Recovery + Self-Check.
+  registerBuiltinHealthChecks();
+  healthManager.start();
+  recoveryManager.start();
+  void runStartupValidation();
+
 
 
 
@@ -259,6 +278,8 @@ export function stopCommunicationLayer(): void {
   unsubscribers = [];
   unsubActiveServer?.();
   unsubActiveServer = null;
+  recoveryManager.stop();
+  healthManager.stop();
   updateManager.stop();
   deepLinkRouter.stop();
   appLifecycle.stop();

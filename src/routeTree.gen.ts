@@ -45,9 +45,12 @@ import { Route as AppSettingsUpdateRouteImport } from './routes/_app.settings.up
 import { Route as AppSettingsStorageRouteImport } from './routes/_app.settings.storage'
 import { Route as AppSettingsServerRouteImport } from './routes/_app.settings.server'
 import { Route as AppSettingsRestoreRouteImport } from './routes/_app.settings.restore'
+import { Route as AppSettingsPerformanceRouteImport } from './routes/_app.settings.performance'
 import { Route as AppSettingsOfflineRouteImport } from './routes/_app.settings.offline'
 import { Route as AppSettingsNotificationsRouteImport } from './routes/_app.settings.notifications'
+import { Route as AppSettingsLogsRouteImport } from './routes/_app.settings.logs'
 import { Route as AppSettingsLanguageRouteImport } from './routes/_app.settings.language'
+import { Route as AppSettingsDiagnosticsRouteImport } from './routes/_app.settings.diagnostics'
 import { Route as AppSettingsDeveloperRouteImport } from './routes/_app.settings.developer'
 import { Route as AppSettingsBackupRouteImport } from './routes/_app.settings.backup'
 import { Route as AppSettingsAppearanceRouteImport } from './routes/_app.settings.appearance'
@@ -251,6 +254,11 @@ const AppSettingsRestoreRoute = AppSettingsRestoreRouteImport.update({
   path: '/restore',
   getParentRoute: () => AppSettingsRoute,
 } as any)
+const AppSettingsPerformanceRoute = AppSettingsPerformanceRouteImport.update({
+  id: '/performance',
+  path: '/performance',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
 const AppSettingsOfflineRoute = AppSettingsOfflineRouteImport.update({
   id: '/offline',
   path: '/offline',
@@ -262,9 +270,19 @@ const AppSettingsNotificationsRoute =
     path: '/notifications',
     getParentRoute: () => AppSettingsRoute,
   } as any)
+const AppSettingsLogsRoute = AppSettingsLogsRouteImport.update({
+  id: '/logs',
+  path: '/logs',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
 const AppSettingsLanguageRoute = AppSettingsLanguageRouteImport.update({
   id: '/language',
   path: '/language',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
+const AppSettingsDiagnosticsRoute = AppSettingsDiagnosticsRouteImport.update({
+  id: '/diagnostics',
+  path: '/diagnostics',
   getParentRoute: () => AppSettingsRoute,
 } as any)
 const AppSettingsDeveloperRoute = AppSettingsDeveloperRouteImport.update({
@@ -431,9 +449,12 @@ export interface FileRoutesByFullPath {
   '/settings/appearance': typeof AppSettingsAppearanceRoute
   '/settings/backup': typeof AppSettingsBackupRoute
   '/settings/developer': typeof AppSettingsDeveloperRoute
+  '/settings/diagnostics': typeof AppSettingsDiagnosticsRoute
   '/settings/language': typeof AppSettingsLanguageRoute
+  '/settings/logs': typeof AppSettingsLogsRoute
   '/settings/notifications': typeof AppSettingsNotificationsRoute
   '/settings/offline': typeof AppSettingsOfflineRoute
+  '/settings/performance': typeof AppSettingsPerformanceRoute
   '/settings/restore': typeof AppSettingsRestoreRoute
   '/settings/server': typeof AppSettingsServerRouteWithChildren
   '/settings/storage': typeof AppSettingsStorageRoute
@@ -490,9 +511,12 @@ export interface FileRoutesByTo {
   '/settings/appearance': typeof AppSettingsAppearanceRoute
   '/settings/backup': typeof AppSettingsBackupRoute
   '/settings/developer': typeof AppSettingsDeveloperRoute
+  '/settings/diagnostics': typeof AppSettingsDiagnosticsRoute
   '/settings/language': typeof AppSettingsLanguageRoute
+  '/settings/logs': typeof AppSettingsLogsRoute
   '/settings/notifications': typeof AppSettingsNotificationsRoute
   '/settings/offline': typeof AppSettingsOfflineRoute
+  '/settings/performance': typeof AppSettingsPerformanceRoute
   '/settings/restore': typeof AppSettingsRestoreRoute
   '/settings/server': typeof AppSettingsServerRouteWithChildren
   '/settings/storage': typeof AppSettingsStorageRoute
@@ -554,9 +578,12 @@ export interface FileRoutesById {
   '/_app/settings/appearance': typeof AppSettingsAppearanceRoute
   '/_app/settings/backup': typeof AppSettingsBackupRoute
   '/_app/settings/developer': typeof AppSettingsDeveloperRoute
+  '/_app/settings/diagnostics': typeof AppSettingsDiagnosticsRoute
   '/_app/settings/language': typeof AppSettingsLanguageRoute
+  '/_app/settings/logs': typeof AppSettingsLogsRoute
   '/_app/settings/notifications': typeof AppSettingsNotificationsRoute
   '/_app/settings/offline': typeof AppSettingsOfflineRoute
+  '/_app/settings/performance': typeof AppSettingsPerformanceRoute
   '/_app/settings/restore': typeof AppSettingsRestoreRoute
   '/_app/settings/server': typeof AppSettingsServerRouteWithChildren
   '/_app/settings/storage': typeof AppSettingsStorageRoute
@@ -619,9 +646,12 @@ export interface FileRouteTypes {
     | '/settings/appearance'
     | '/settings/backup'
     | '/settings/developer'
+    | '/settings/diagnostics'
     | '/settings/language'
+    | '/settings/logs'
     | '/settings/notifications'
     | '/settings/offline'
+    | '/settings/performance'
     | '/settings/restore'
     | '/settings/server'
     | '/settings/storage'
@@ -678,9 +708,12 @@ export interface FileRouteTypes {
     | '/settings/appearance'
     | '/settings/backup'
     | '/settings/developer'
+    | '/settings/diagnostics'
     | '/settings/language'
+    | '/settings/logs'
     | '/settings/notifications'
     | '/settings/offline'
+    | '/settings/performance'
     | '/settings/restore'
     | '/settings/server'
     | '/settings/storage'
@@ -741,9 +774,12 @@ export interface FileRouteTypes {
     | '/_app/settings/appearance'
     | '/_app/settings/backup'
     | '/_app/settings/developer'
+    | '/_app/settings/diagnostics'
     | '/_app/settings/language'
+    | '/_app/settings/logs'
     | '/_app/settings/notifications'
     | '/_app/settings/offline'
+    | '/_app/settings/performance'
     | '/_app/settings/restore'
     | '/_app/settings/server'
     | '/_app/settings/storage'
@@ -1021,6 +1057,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsRestoreRouteImport
       parentRoute: typeof AppSettingsRoute
     }
+    '/_app/settings/performance': {
+      id: '/_app/settings/performance'
+      path: '/performance'
+      fullPath: '/settings/performance'
+      preLoaderRoute: typeof AppSettingsPerformanceRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
     '/_app/settings/offline': {
       id: '/_app/settings/offline'
       path: '/offline'
@@ -1035,11 +1078,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsNotificationsRouteImport
       parentRoute: typeof AppSettingsRoute
     }
+    '/_app/settings/logs': {
+      id: '/_app/settings/logs'
+      path: '/logs'
+      fullPath: '/settings/logs'
+      preLoaderRoute: typeof AppSettingsLogsRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
     '/_app/settings/language': {
       id: '/_app/settings/language'
       path: '/language'
       fullPath: '/settings/language'
       preLoaderRoute: typeof AppSettingsLanguageRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/settings/diagnostics': {
+      id: '/_app/settings/diagnostics'
+      path: '/diagnostics'
+      fullPath: '/settings/diagnostics'
+      preLoaderRoute: typeof AppSettingsDiagnosticsRouteImport
       parentRoute: typeof AppSettingsRoute
     }
     '/_app/settings/developer': {
@@ -1369,9 +1426,12 @@ interface AppSettingsRouteChildren {
   AppSettingsAppearanceRoute: typeof AppSettingsAppearanceRoute
   AppSettingsBackupRoute: typeof AppSettingsBackupRoute
   AppSettingsDeveloperRoute: typeof AppSettingsDeveloperRoute
+  AppSettingsDiagnosticsRoute: typeof AppSettingsDiagnosticsRoute
   AppSettingsLanguageRoute: typeof AppSettingsLanguageRoute
+  AppSettingsLogsRoute: typeof AppSettingsLogsRoute
   AppSettingsNotificationsRoute: typeof AppSettingsNotificationsRoute
   AppSettingsOfflineRoute: typeof AppSettingsOfflineRoute
+  AppSettingsPerformanceRoute: typeof AppSettingsPerformanceRoute
   AppSettingsRestoreRoute: typeof AppSettingsRestoreRoute
   AppSettingsServerRoute: typeof AppSettingsServerRouteWithChildren
   AppSettingsStorageRoute: typeof AppSettingsStorageRoute
@@ -1384,9 +1444,12 @@ const AppSettingsRouteChildren: AppSettingsRouteChildren = {
   AppSettingsAppearanceRoute: AppSettingsAppearanceRoute,
   AppSettingsBackupRoute: AppSettingsBackupRoute,
   AppSettingsDeveloperRoute: AppSettingsDeveloperRoute,
+  AppSettingsDiagnosticsRoute: AppSettingsDiagnosticsRoute,
   AppSettingsLanguageRoute: AppSettingsLanguageRoute,
+  AppSettingsLogsRoute: AppSettingsLogsRoute,
   AppSettingsNotificationsRoute: AppSettingsNotificationsRoute,
   AppSettingsOfflineRoute: AppSettingsOfflineRoute,
+  AppSettingsPerformanceRoute: AppSettingsPerformanceRoute,
   AppSettingsRestoreRoute: AppSettingsRestoreRoute,
   AppSettingsServerRoute: AppSettingsServerRouteWithChildren,
   AppSettingsStorageRoute: AppSettingsStorageRoute,
@@ -1503,13 +1566,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
