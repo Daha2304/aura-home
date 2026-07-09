@@ -260,7 +260,7 @@ function ConditionNodeEditor({
           <select
             className="input-glass"
             value={n.kind}
-            onChange={(e) => onChange({ ...n, kind: e.target.value as "and" | "or" })}
+            onChange={(e) => onChange({ ...n, kind: e.target.value as "and" | "or" } as ConditionNode)}
           >
             <option value="and">UND</option>
             <option value="or">ODER</option>
@@ -272,8 +272,8 @@ function ConditionNodeEditor({
             <ConditionNodeEditor
               key={c.id}
               node={c}
-              onChange={(nc) => onChange({ ...n, children: n.children.map((x, idx) => (idx === i ? nc : x)) })}
-              onRemove={() => onChange({ ...n, children: n.children.filter((_, idx) => idx !== i) })}
+              onChange={(nc) => onChange({ ...n, children: n.children.map((x, idx) => (idx === i ? nc : x)) } as ConditionNode)}
+              onRemove={() => onChange({ ...n, children: n.children.filter((_, idx) => idx !== i) } as ConditionNode)}
               options={options}
             />
           ))}
@@ -284,7 +284,7 @@ function ConditionNodeEditor({
               onChange({
                 ...n,
                 children: [...n.children, { id: createId("acn"), kind: options[0]?.id ?? "custom", config: {} } as ConditionNode],
-              })
+              } as ConditionNode)
             }
           >
             <Plus className="mr-1 h-3 w-3" /> Bedingung
