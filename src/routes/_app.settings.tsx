@@ -9,6 +9,11 @@ import {
   Palette,
   TerminalSquare,
   Users,
+  CloudOff,
+  Upload,
+  Sparkles,
+  HardDrive,
+  Info,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -37,8 +42,13 @@ const entries: Entry[] = [
   { to: "/settings/users", label: "Benutzer", hint: "Rollen und Zugriff", icon: Users },
   { to: "/settings/appearance", label: "Darstellung", hint: "Theme, Animationen", icon: Palette },
   { to: "/settings/language", label: "Sprache", hint: "Deutsch, Englisch", icon: Languages },
-  { to: "/settings/backup", label: "Backup & Restore", hint: "Import, Export", icon: Database },
   { to: "/settings/notifications", label: "Benachrichtigungen", hint: "Push-Meldungen", icon: Bell },
+  { to: "/settings/offline", label: "Offline", hint: "Verbindung & Sync", icon: CloudOff },
+  { to: "/settings/backup", label: "Backup", hint: "Export sichern", icon: Database },
+  { to: "/settings/restore", label: "Restore", hint: "Backup einspielen", icon: Upload },
+  { to: "/settings/update", label: "App-Update", hint: "Aktualisierungen", icon: Sparkles },
+  { to: "/settings/storage", label: "Speicher", hint: "Caches verwalten", icon: HardDrive },
+  { to: "/settings/app", label: "App-Informationen", hint: "Versionen", icon: Info },
   { to: "/settings/developer", label: "Entwickler", hint: "Diagnose, Logs", icon: TerminalSquare },
 ];
 
