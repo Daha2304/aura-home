@@ -19,6 +19,7 @@ import { Route as OnboardingIntroRouteImport } from './routes/onboarding.intro'
 import { Route as OnboardingDoneRouteImport } from './routes/onboarding.done'
 import { Route as OnboardingConnectRouteImport } from './routes/onboarding.connect'
 import { Route as OnboardingConfigureRouteImport } from './routes/onboarding.configure'
+import { Route as AppTimelineRouteImport } from './routes/_app.timeline'
 import { Route as AppStatisticsRouteImport } from './routes/_app.statistics'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppScenesRouteImport } from './routes/_app.scenes'
@@ -98,6 +99,11 @@ const OnboardingConfigureRoute = OnboardingConfigureRouteImport.update({
   id: '/configure',
   path: '/configure',
   getParentRoute: () => OnboardingRoute,
+} as any)
+const AppTimelineRoute = AppTimelineRouteImport.update({
+  id: '/timeline',
+  path: '/timeline',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppStatisticsRoute = AppStatisticsRouteImport.update({
   id: '/statistics',
@@ -268,6 +274,7 @@ export interface FileRoutesByFullPath {
   '/scenes': typeof AppScenesRouteWithChildren
   '/settings': typeof AppSettingsRouteWithChildren
   '/statistics': typeof AppStatisticsRoute
+  '/timeline': typeof AppTimelineRoute
   '/onboarding/configure': typeof OnboardingConfigureRoute
   '/onboarding/connect': typeof OnboardingConnectRoute
   '/onboarding/done': typeof OnboardingDoneRoute
@@ -306,6 +313,7 @@ export interface FileRoutesByTo {
   '/scenes': typeof AppScenesRouteWithChildren
   '/settings': typeof AppSettingsRouteWithChildren
   '/statistics': typeof AppStatisticsRoute
+  '/timeline': typeof AppTimelineRoute
   '/onboarding/configure': typeof OnboardingConfigureRoute
   '/onboarding/connect': typeof OnboardingConnectRoute
   '/onboarding/done': typeof OnboardingDoneRoute
@@ -348,6 +356,7 @@ export interface FileRoutesById {
   '/_app/scenes': typeof AppScenesRouteWithChildren
   '/_app/settings': typeof AppSettingsRouteWithChildren
   '/_app/statistics': typeof AppStatisticsRoute
+  '/_app/timeline': typeof AppTimelineRoute
   '/onboarding/configure': typeof OnboardingConfigureRoute
   '/onboarding/connect': typeof OnboardingConnectRoute
   '/onboarding/done': typeof OnboardingDoneRoute
@@ -392,6 +401,7 @@ export interface FileRouteTypes {
     | '/scenes'
     | '/settings'
     | '/statistics'
+    | '/timeline'
     | '/onboarding/configure'
     | '/onboarding/connect'
     | '/onboarding/done'
@@ -430,6 +440,7 @@ export interface FileRouteTypes {
     | '/scenes'
     | '/settings'
     | '/statistics'
+    | '/timeline'
     | '/onboarding/configure'
     | '/onboarding/connect'
     | '/onboarding/done'
@@ -471,6 +482,7 @@ export interface FileRouteTypes {
     | '/_app/scenes'
     | '/_app/settings'
     | '/_app/statistics'
+    | '/_app/timeline'
     | '/onboarding/configure'
     | '/onboarding/connect'
     | '/onboarding/done'
@@ -578,6 +590,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/onboarding/configure'
       preLoaderRoute: typeof OnboardingConfigureRouteImport
       parentRoute: typeof OnboardingRoute
+    }
+    '/_app/timeline': {
+      id: '/_app/timeline'
+      path: '/timeline'
+      fullPath: '/timeline'
+      preLoaderRoute: typeof AppTimelineRouteImport
+      parentRoute: typeof AppRoute
     }
     '/_app/statistics': {
       id: '/_app/statistics'
@@ -956,6 +975,7 @@ interface AppRouteChildren {
   AppScenesRoute: typeof AppScenesRouteWithChildren
   AppSettingsRoute: typeof AppSettingsRouteWithChildren
   AppStatisticsRoute: typeof AppStatisticsRoute
+  AppTimelineRoute: typeof AppTimelineRoute
   AppIndexRoute: typeof AppIndexRoute
 }
 
@@ -969,6 +989,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppScenesRoute: AppScenesRouteWithChildren,
   AppSettingsRoute: AppSettingsRouteWithChildren,
   AppStatisticsRoute: AppStatisticsRoute,
+  AppTimelineRoute: AppTimelineRoute,
   AppIndexRoute: AppIndexRoute,
 }
 
