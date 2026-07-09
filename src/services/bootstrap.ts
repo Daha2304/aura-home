@@ -222,6 +222,7 @@ export function stopCommunicationLayer(): void {
   unsubActiveServer?.();
   unsubActiveServer = null;
   stopIntelligence();
+  stopEventCenter();
   stopTimeline();
   stopAutomations();
   stopGroups();
