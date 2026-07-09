@@ -194,6 +194,11 @@ export function startCommunicationLayer(): void {
   // erweitern ausschließlich die Registries — keine Änderung hier.
   bootstrapUsers();
 
+  // Global Search & Command Palette (Teil 13). Registriert built-in Provider
+  // + Commands. Neue Suchquellen kommen ausschließlich über
+  // searchProviderRegistry.register(...) hinzu.
+  startSearchPlatform();
+
 
 
 
