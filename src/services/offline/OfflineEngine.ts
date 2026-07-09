@@ -42,10 +42,7 @@ let started = false;
 const unsubs: Array<() => void> = [];
 
 function readPendingCount(): number {
-  const state = useCommandsStore.getState() as Record<string, unknown>;
-  const commands = (state.commands ?? state.items ?? []) as Array<{ state?: string }>;
-  if (!Array.isArray(commands)) return 0;
-  return commands.filter((c) => c.state === "queued" || c.state === "pending" || c.state === "in-flight").length;
+  return useCommandsStore.getState().active.length;
 }
 
 function refreshPending(): void {
