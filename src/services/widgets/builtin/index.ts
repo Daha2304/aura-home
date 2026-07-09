@@ -10,6 +10,7 @@ import { registerSceneWidgets } from "./scenes";
 import { registerGroupWidgets } from "./groups";
 import { registerAutomationWidgets } from "./automations";
 import { registerAnalyticsWidgets } from "./analytics";
+import { registerNotificationWidgets } from "./notifications";
 
 export { registerSystemWidgets, SYSTEM_WIDGET_IDS } from "./system";
 export { registerRoomWidgets, ROOM_WIDGET_IDS } from "./rooms";
@@ -18,6 +19,7 @@ export { registerSceneWidgets, SCENE_WIDGET_IDS } from "./scenes";
 export { registerGroupWidgets, GROUP_WIDGET_IDS } from "./groups";
 export { registerAutomationWidgets, AUTOMATION_WIDGET_IDS } from "./automations";
 export { registerAnalyticsWidgets, ANALYTICS_WIDGET_IDS } from "./analytics";
+export { registerNotificationWidgets, NOTIFICATION_WIDGET_IDS } from "./notifications";
 
 registerSystemWidgets();
 registerRoomWidgets();
@@ -26,5 +28,6 @@ registerSceneWidgets();
 registerGroupWidgets();
 registerAutomationWidgets();
 registerAnalyticsWidgets();
+registerNotificationWidgets();
 
 

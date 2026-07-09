@@ -5,6 +5,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { pageTransition } from "@/themes/motion";
 import { useCommunicationLayer } from "@/hooks/useCommunicationLayer";
 import { useSettingsStore } from "@/store/slices/settingsStore";
+import { ToastHost } from "@/components/notifications/ToastHost";
 
 export const Route = createFileRoute("/_app")({
   component: AppLayout,
@@ -38,6 +39,7 @@ function AppLayout() {
           <Outlet />
         </motion.div>
       </AnimatePresence>
+      <ToastHost />
     </AppShell>
   );
 }

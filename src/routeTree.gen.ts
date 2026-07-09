@@ -25,6 +25,7 @@ import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppScenesRouteImport } from './routes/_app.scenes'
 import { Route as AppRoomsRouteImport } from './routes/_app.rooms'
 import { Route as AppMoreRouteImport } from './routes/_app.more'
+import { Route as AppInboxRouteImport } from './routes/_app.inbox'
 import { Route as AppHistoryRouteImport } from './routes/_app.history'
 import { Route as AppGroupsRouteImport } from './routes/_app.groups'
 import { Route as AppDevicesRouteImport } from './routes/_app.devices'
@@ -41,6 +42,7 @@ import { Route as AppSettingsBackupRouteImport } from './routes/_app.settings.ba
 import { Route as AppSettingsAppearanceRouteImport } from './routes/_app.settings.appearance'
 import { Route as AppScenesSceneIdRouteImport } from './routes/_app.scenes.$sceneId'
 import { Route as AppRoomsRoomIdRouteImport } from './routes/_app.rooms.$roomId'
+import { Route as AppInboxNotificationIdRouteImport } from './routes/_app.inbox.$notificationId'
 import { Route as AppGroupsGroupIdRouteImport } from './routes/_app.groups.$groupId'
 import { Route as AppDevicesDeviceIdRouteImport } from './routes/_app.devices.$deviceId'
 import { Route as AppDashboardsDashboardIdRouteImport } from './routes/_app.dashboards.$dashboardId'
@@ -132,6 +134,11 @@ const AppMoreRoute = AppMoreRouteImport.update({
   path: '/more',
   getParentRoute: () => AppRoute,
 } as any)
+const AppInboxRoute = AppInboxRouteImport.update({
+  id: '/inbox',
+  path: '/inbox',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppHistoryRoute = AppHistoryRouteImport.update({
   id: '/history',
   path: '/history',
@@ -213,6 +220,11 @@ const AppRoomsRoomIdRoute = AppRoomsRoomIdRouteImport.update({
   path: '/$roomId',
   getParentRoute: () => AppRoomsRoute,
 } as any)
+const AppInboxNotificationIdRoute = AppInboxNotificationIdRouteImport.update({
+  id: '/$notificationId',
+  path: '/$notificationId',
+  getParentRoute: () => AppInboxRoute,
+} as any)
 const AppGroupsGroupIdRoute = AppGroupsGroupIdRouteImport.update({
   id: '/$groupId',
   path: '/$groupId',
@@ -283,6 +295,7 @@ export interface FileRoutesByFullPath {
   '/devices': typeof AppDevicesRouteWithChildren
   '/groups': typeof AppGroupsRouteWithChildren
   '/history': typeof AppHistoryRoute
+  '/inbox': typeof AppInboxRouteWithChildren
   '/more': typeof AppMoreRoute
   '/rooms': typeof AppRoomsRouteWithChildren
   '/scenes': typeof AppScenesRouteWithChildren
@@ -301,6 +314,7 @@ export interface FileRoutesByFullPath {
   '/dashboards/$dashboardId': typeof AppDashboardsDashboardIdRouteWithChildren
   '/devices/$deviceId': typeof AppDevicesDeviceIdRoute
   '/groups/$groupId': typeof AppGroupsGroupIdRoute
+  '/inbox/$notificationId': typeof AppInboxNotificationIdRoute
   '/rooms/$roomId': typeof AppRoomsRoomIdRoute
   '/scenes/$sceneId': typeof AppScenesSceneIdRouteWithChildren
   '/settings/appearance': typeof AppSettingsAppearanceRoute
@@ -324,6 +338,7 @@ export interface FileRoutesByTo {
   '/devices': typeof AppDevicesRouteWithChildren
   '/groups': typeof AppGroupsRouteWithChildren
   '/history': typeof AppHistoryRoute
+  '/inbox': typeof AppInboxRouteWithChildren
   '/more': typeof AppMoreRoute
   '/rooms': typeof AppRoomsRouteWithChildren
   '/scenes': typeof AppScenesRouteWithChildren
@@ -342,6 +357,7 @@ export interface FileRoutesByTo {
   '/automations/new': typeof AppAutomationsNewRoute
   '/devices/$deviceId': typeof AppDevicesDeviceIdRoute
   '/groups/$groupId': typeof AppGroupsGroupIdRoute
+  '/inbox/$notificationId': typeof AppInboxNotificationIdRoute
   '/rooms/$roomId': typeof AppRoomsRoomIdRoute
   '/scenes/$sceneId': typeof AppScenesSceneIdRouteWithChildren
   '/settings/appearance': typeof AppSettingsAppearanceRoute
@@ -369,6 +385,7 @@ export interface FileRoutesById {
   '/_app/devices': typeof AppDevicesRouteWithChildren
   '/_app/groups': typeof AppGroupsRouteWithChildren
   '/_app/history': typeof AppHistoryRoute
+  '/_app/inbox': typeof AppInboxRouteWithChildren
   '/_app/more': typeof AppMoreRoute
   '/_app/rooms': typeof AppRoomsRouteWithChildren
   '/_app/scenes': typeof AppScenesRouteWithChildren
@@ -388,6 +405,7 @@ export interface FileRoutesById {
   '/_app/dashboards/$dashboardId': typeof AppDashboardsDashboardIdRouteWithChildren
   '/_app/devices/$deviceId': typeof AppDevicesDeviceIdRoute
   '/_app/groups/$groupId': typeof AppGroupsGroupIdRoute
+  '/_app/inbox/$notificationId': typeof AppInboxNotificationIdRoute
   '/_app/rooms/$roomId': typeof AppRoomsRoomIdRoute
   '/_app/scenes/$sceneId': typeof AppScenesSceneIdRouteWithChildren
   '/_app/settings/appearance': typeof AppSettingsAppearanceRoute
@@ -416,6 +434,7 @@ export interface FileRouteTypes {
     | '/devices'
     | '/groups'
     | '/history'
+    | '/inbox'
     | '/more'
     | '/rooms'
     | '/scenes'
@@ -434,6 +453,7 @@ export interface FileRouteTypes {
     | '/dashboards/$dashboardId'
     | '/devices/$deviceId'
     | '/groups/$groupId'
+    | '/inbox/$notificationId'
     | '/rooms/$roomId'
     | '/scenes/$sceneId'
     | '/settings/appearance'
@@ -457,6 +477,7 @@ export interface FileRouteTypes {
     | '/devices'
     | '/groups'
     | '/history'
+    | '/inbox'
     | '/more'
     | '/rooms'
     | '/scenes'
@@ -475,6 +496,7 @@ export interface FileRouteTypes {
     | '/automations/new'
     | '/devices/$deviceId'
     | '/groups/$groupId'
+    | '/inbox/$notificationId'
     | '/rooms/$roomId'
     | '/scenes/$sceneId'
     | '/settings/appearance'
@@ -501,6 +523,7 @@ export interface FileRouteTypes {
     | '/_app/devices'
     | '/_app/groups'
     | '/_app/history'
+    | '/_app/inbox'
     | '/_app/more'
     | '/_app/rooms'
     | '/_app/scenes'
@@ -520,6 +543,7 @@ export interface FileRouteTypes {
     | '/_app/dashboards/$dashboardId'
     | '/_app/devices/$deviceId'
     | '/_app/groups/$groupId'
+    | '/_app/inbox/$notificationId'
     | '/_app/rooms/$roomId'
     | '/_app/scenes/$sceneId'
     | '/_app/settings/appearance'
@@ -657,6 +681,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppMoreRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/inbox': {
+      id: '/_app/inbox'
+      path: '/inbox'
+      fullPath: '/inbox'
+      preLoaderRoute: typeof AppInboxRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/history': {
       id: '/_app/history'
       path: '/history'
@@ -768,6 +799,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/rooms/$roomId'
       preLoaderRoute: typeof AppRoomsRoomIdRouteImport
       parentRoute: typeof AppRoomsRoute
+    }
+    '/_app/inbox/$notificationId': {
+      id: '/_app/inbox/$notificationId'
+      path: '/$notificationId'
+      fullPath: '/inbox/$notificationId'
+      preLoaderRoute: typeof AppInboxNotificationIdRouteImport
+      parentRoute: typeof AppInboxRoute
     }
     '/_app/groups/$groupId': {
       id: '/_app/groups/$groupId'
@@ -931,6 +969,18 @@ const AppGroupsRouteWithChildren = AppGroupsRoute._addFileChildren(
   AppGroupsRouteChildren,
 )
 
+interface AppInboxRouteChildren {
+  AppInboxNotificationIdRoute: typeof AppInboxNotificationIdRoute
+}
+
+const AppInboxRouteChildren: AppInboxRouteChildren = {
+  AppInboxNotificationIdRoute: AppInboxNotificationIdRoute,
+}
+
+const AppInboxRouteWithChildren = AppInboxRoute._addFileChildren(
+  AppInboxRouteChildren,
+)
+
 interface AppRoomsRouteChildren {
   AppRoomsRoomIdRoute: typeof AppRoomsRoomIdRoute
 }
@@ -1010,6 +1060,7 @@ interface AppRouteChildren {
   AppDevicesRoute: typeof AppDevicesRouteWithChildren
   AppGroupsRoute: typeof AppGroupsRouteWithChildren
   AppHistoryRoute: typeof AppHistoryRoute
+  AppInboxRoute: typeof AppInboxRouteWithChildren
   AppMoreRoute: typeof AppMoreRoute
   AppRoomsRoute: typeof AppRoomsRouteWithChildren
   AppScenesRoute: typeof AppScenesRouteWithChildren
@@ -1026,6 +1077,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppDevicesRoute: AppDevicesRouteWithChildren,
   AppGroupsRoute: AppGroupsRouteWithChildren,
   AppHistoryRoute: AppHistoryRoute,
+  AppInboxRoute: AppInboxRouteWithChildren,
   AppMoreRoute: AppMoreRoute,
   AppRoomsRoute: AppRoomsRouteWithChildren,
   AppScenesRoute: AppScenesRouteWithChildren,

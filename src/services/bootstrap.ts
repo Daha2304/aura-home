@@ -37,6 +37,7 @@ import { bootstrapGroups, stopGroups } from "@/services/groups";
 import { bootstrapAutomations, stopAutomations } from "@/services/automations";
 import { bootstrapTimeline, stopTimeline } from "@/services/timeline";
 import { automationDebugger } from "@/services/automations/AutomationDebugger";
+import { startEventCenter, stopEventCenter } from "@/services/notifications";
 
 
 const log = createLogger("bootstrap");
@@ -181,6 +182,11 @@ export function startCommunicationLayer(): void {
   bootstrapTimeline();
   automationDebugger.register();
 
+  // Event Center (Teil 11): startet Notification-Producer und registriert
+  // die Notification-Timeline-Source. Neue Ereignisquellen kommen ausschließlich
+  // über NotificationRegistry.registerProducer(...) hinzu — keine Änderung hier.
+  startEventCenter();
+
 
 
 
@@ -216,6 +222,7 @@ export function stopCommunicationLayer(): void {
   unsubActiveServer?.();
   unsubActiveServer = null;
   stopIntelligence();
+  stopEventCenter();
   stopTimeline();
   stopAutomations();
   stopGroups();
