@@ -40,10 +40,8 @@ async function flush(reason: string): Promise<void> {
   store.setSyncing(true);
   log.info("sync flush", reason);
   try {
-    // Trigger existing communication layer to reconnect + drain.
-    if (!wsManager.isConnected?.()) {
-      await wsManager.connect().catch(() => {});
-    }
+    // Trigger existing communication layer to (re)connect + drain.
+    await wsManager.connect().catch(() => {});
     // Delta sync providers (opt-in). No-op when empty.
     for (const d of deltaSyncRegistry.list()) {
       try { await d.run(); } catch (err) { log.debug("delta sync failed", d.id, err); }
