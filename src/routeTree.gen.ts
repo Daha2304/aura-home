@@ -25,6 +25,7 @@ import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppScenesRouteImport } from './routes/_app.scenes'
 import { Route as AppRoomsRouteImport } from './routes/_app.rooms'
 import { Route as AppMoreRouteImport } from './routes/_app.more'
+import { Route as AppHistoryRouteImport } from './routes/_app.history'
 import { Route as AppGroupsRouteImport } from './routes/_app.groups'
 import { Route as AppDevicesRouteImport } from './routes/_app.devices'
 import { Route as AppDashboardsRouteImport } from './routes/_app.dashboards'
@@ -128,6 +129,11 @@ const AppRoomsRoute = AppRoomsRouteImport.update({
 const AppMoreRoute = AppMoreRouteImport.update({
   id: '/more',
   path: '/more',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppHistoryRoute = AppHistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
   getParentRoute: () => AppRoute,
 } as any)
 const AppGroupsRoute = AppGroupsRouteImport.update({
@@ -269,6 +275,7 @@ export interface FileRoutesByFullPath {
   '/dashboards': typeof AppDashboardsRouteWithChildren
   '/devices': typeof AppDevicesRouteWithChildren
   '/groups': typeof AppGroupsRouteWithChildren
+  '/history': typeof AppHistoryRoute
   '/more': typeof AppMoreRoute
   '/rooms': typeof AppRoomsRouteWithChildren
   '/scenes': typeof AppScenesRouteWithChildren
@@ -308,6 +315,7 @@ export interface FileRoutesByTo {
   '/automations': typeof AppAutomationsRouteWithChildren
   '/devices': typeof AppDevicesRouteWithChildren
   '/groups': typeof AppGroupsRouteWithChildren
+  '/history': typeof AppHistoryRoute
   '/more': typeof AppMoreRoute
   '/rooms': typeof AppRoomsRouteWithChildren
   '/scenes': typeof AppScenesRouteWithChildren
@@ -351,6 +359,7 @@ export interface FileRoutesById {
   '/_app/dashboards': typeof AppDashboardsRouteWithChildren
   '/_app/devices': typeof AppDevicesRouteWithChildren
   '/_app/groups': typeof AppGroupsRouteWithChildren
+  '/_app/history': typeof AppHistoryRoute
   '/_app/more': typeof AppMoreRoute
   '/_app/rooms': typeof AppRoomsRouteWithChildren
   '/_app/scenes': typeof AppScenesRouteWithChildren
@@ -396,6 +405,7 @@ export interface FileRouteTypes {
     | '/dashboards'
     | '/devices'
     | '/groups'
+    | '/history'
     | '/more'
     | '/rooms'
     | '/scenes'
@@ -435,6 +445,7 @@ export interface FileRouteTypes {
     | '/automations'
     | '/devices'
     | '/groups'
+    | '/history'
     | '/more'
     | '/rooms'
     | '/scenes'
@@ -477,6 +488,7 @@ export interface FileRouteTypes {
     | '/_app/dashboards'
     | '/_app/devices'
     | '/_app/groups'
+    | '/_app/history'
     | '/_app/more'
     | '/_app/rooms'
     | '/_app/scenes'
@@ -631,6 +643,13 @@ declare module '@tanstack/react-router' {
       path: '/more'
       fullPath: '/more'
       preLoaderRoute: typeof AppMoreRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/history': {
+      id: '/_app/history'
+      path: '/history'
+      fullPath: '/history'
+      preLoaderRoute: typeof AppHistoryRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/groups': {
@@ -970,6 +989,7 @@ interface AppRouteChildren {
   AppDashboardsRoute: typeof AppDashboardsRouteWithChildren
   AppDevicesRoute: typeof AppDevicesRouteWithChildren
   AppGroupsRoute: typeof AppGroupsRouteWithChildren
+  AppHistoryRoute: typeof AppHistoryRoute
   AppMoreRoute: typeof AppMoreRoute
   AppRoomsRoute: typeof AppRoomsRouteWithChildren
   AppScenesRoute: typeof AppScenesRouteWithChildren
@@ -984,6 +1004,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppDashboardsRoute: AppDashboardsRouteWithChildren,
   AppDevicesRoute: AppDevicesRouteWithChildren,
   AppGroupsRoute: AppGroupsRouteWithChildren,
+  AppHistoryRoute: AppHistoryRoute,
   AppMoreRoute: AppMoreRoute,
   AppRoomsRoute: AppRoomsRouteWithChildren,
   AppScenesRoute: AppScenesRouteWithChildren,

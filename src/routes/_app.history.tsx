@@ -21,7 +21,7 @@ function HistoryPage() {
         <EmptyState
           icon={History}
           title="Keine Historie"
-          description={<span>Ausführungen erscheinen hier. Vollständige Live-Ansicht: <Link to="/timeline" className="underline">Timeline</Link>.</span>}
+          description="Ausführungen erscheinen hier. Vollständige Live-Ansicht siehe Timeline."
         />
       ) : (
         <ul className="space-y-1.5">
