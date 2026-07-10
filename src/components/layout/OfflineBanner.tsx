@@ -23,7 +23,8 @@ export function OfflineBanner() {
   if (!hydrated) return null;
   if (!activeServer) return null;
 
-  const connected = status === "connected" && authenticated;
+  const connected =
+    (status === "connected" || status === "authenticated") && authenticated;
   const connecting = status === "connecting" || status === "reconnecting";
 
   // Wenn alles gut ist, keinen Banner rendern.

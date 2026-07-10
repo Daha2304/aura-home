@@ -16,7 +16,7 @@ export function registerBuiltinHealthChecks(): void {
     category: "network",
     run: () => {
       const s = useConnectionStore.getState();
-      if (s.status === "connected" && s.authenticated) {
+      if ((s.status === "connected" || s.status === "authenticated") && s.authenticated) {
         return {
           status: "ok",
           detail: `verbunden${s.latencyMs != null ? ` · ${s.latencyMs} ms` : ""}`,

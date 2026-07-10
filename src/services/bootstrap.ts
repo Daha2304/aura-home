@@ -105,10 +105,12 @@ export function startCommunicationLayer(): void {
     }),
     wsManager.on("connected", () => {
       useConnectionStore.getState().markConnected();
+      useConnectionStore.getState().setError(undefined);
       devLog("open", "WebSocket geöffnet");
     }),
     wsManager.on("authenticated", () => {
       useConnectionStore.getState().setAuthenticated(true);
+      useConnectionStore.getState().setError(undefined);
       devLog("auth", "Authentifiziert");
     }),
     wsManager.on("authentication_failed", ({ reason }) => {
