@@ -33,6 +33,7 @@ export type WsIncomingEvent =
   | { type: "automation.updated"; automationId: ID; patch: Record<string, unknown> }
   | { type: "notification"; notification: AppNotification }
   | { type: "pong"; ts?: number }
+  | { type: "noop" }
   | { type: "error"; message: string; code?: string };
 
 export type ConnectionStatus =

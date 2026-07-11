@@ -433,6 +433,9 @@ function decodeInternal(msg: Record<string, unknown>): WsIncomingEvent | null {
     }
     case "pong":
       return { type: "pong", ts: asNumber(msg.ts) };
+    case "subscribe":
+    case "unsubscribe":
+      return { type: "noop" };
     case "error":
       return {
         type: "error",

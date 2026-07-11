@@ -14,7 +14,7 @@ export type LifecycleState =
   | "removed";
 
 export const LIFECYCLE_TRANSITIONS: Readonly<Record<LifecycleState, readonly LifecycleState[]>> = {
-  new: ["initializing", "discovering", "removed", "error"],
+  new: ["initializing", "discovering", "ready", "removed", "error"],
   initializing: ["discovering", "ready", "error", "offline", "removed"],
   discovering: ["ready", "error", "offline", "removed"],
   ready: ["updating", "offline", "error", "removing"],

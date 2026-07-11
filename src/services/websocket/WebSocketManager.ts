@@ -1,8 +1,4 @@
-import type {
-  ConnectionStatus,
-  WsIncomingEvent,
-  WsOutgoingMessage,
-} from "@/models/events";
+import type { ConnectionStatus, WsIncomingEvent, WsOutgoingMessage } from "@/models/events";
 import { buildServerUrl } from "@/models/server";
 import { AppError } from "@/services/errors/AppError";
 import { errorBus } from "@/services/errors/ErrorBus";
@@ -12,20 +8,9 @@ import { MessageDispatcher } from "./dispatcher";
 import { createHeartbeat, type Heartbeat } from "./heartbeat";
 import { defaultJsonProtocol, type Protocol } from "./protocol";
 import { createOutgoingQueue, type OutgoingQueue } from "./queue";
-import {
-  createExponentialBackoff,
-  type ReconnectStrategy,
-} from "./reconnect";
-import {
-  createSubscriptionRegistry,
-  type SubscriptionRegistry,
-} from "./subscriptions";
-import type {
-  IWebSocketManager,
-  WsClientOptions,
-  WsManagerEventMap,
-  WsUnsubscribe,
-} from "./types";
+import { createExponentialBackoff, type ReconnectStrategy } from "./reconnect";
+import { createSubscriptionRegistry, type SubscriptionRegistry } from "./subscriptions";
+import type { IWebSocketManager, WsClientOptions, WsManagerEventMap, WsUnsubscribe } from "./types";
 
 const log = createLogger("ws");
 
@@ -44,10 +29,7 @@ const DEFAULTS = {
  * Kein UI-Code darf jemals `new WebSocket` benutzen — Kommunikation läuft
  * ausschließlich über diese Klasse und den {@link MessageDispatcher}.
  */
-export class WebSocketManager
-  extends TypedEmitter<WsManagerEventMap>
-  implements IWebSocketManager
-{
+export class WebSocketManager extends TypedEmitter<WsManagerEventMap> implements IWebSocketManager {
   readonly dispatcher = new MessageDispatcher();
 
   private options: WsClientOptions | null = null;
@@ -100,9 +82,7 @@ export class WebSocketManager
       this.connectTimeout = setTimeout(() => {
         if (this._status === "connecting") {
           log.warn("connect timeout");
-          errorBus.report(
-            new AppError("timeout", "Verbindungs-Timeout", { context: { url } }),
-          );
+          errorBus.report(new AppError("timeout", "Verbindungs-Timeout", { context: { url } }));
           this.forceClose(4000, "connect_timeout");
         }
       }, timeoutMs);
@@ -232,6 +212,9 @@ export class WebSocketManager
       if (typeof latency === "number") this.emit("heartbeat", { latencyMs: latency });
       return;
     }
+    if (event.type === "noop") {
+      return;
+    }
 
     if (this.protocol.isAuthSuccess(event)) {
       this.setStatus("authenticated");
@@ -240,8 +223,7 @@ export class WebSocketManager
       return;
     }
     if (this.protocol.isAuthFailure(event)) {
-      const reason =
-        event.type === "auth_failed" ? event.reason : undefined;
+      const reason = event.type === "auth_failed" ? event.reason : undefined;
       this.emit("authentication_failed", { reason });
       errorBus.report(
         new AppError("auth", "Authentifizierung fehlgeschlagen", {
@@ -252,9 +234,7 @@ export class WebSocketManager
       return;
     }
     if (event.type === "error") {
-      errorBus.report(
-        new AppError("server", event.message, { code: event.code }),
-      );
+      errorBus.report(new AppError("server", event.message, { code: event.code }));
     }
 
     this.emit("message", event);
@@ -262,9 +242,7 @@ export class WebSocketManager
   }
 
   private handleError(): void {
-    const payload = errorBus.report(
-      new AppError("network", "WebSocket-Fehler"),
-    );
+    const payload = errorBus.report(new AppError("network", "WebSocket-Fehler"));
     this.emit("error", payload);
   }
 
@@ -284,8 +262,7 @@ export class WebSocketManager
 
   private scheduleReconnect(): void {
     if (!this.options) return;
-    const maxAttempts =
-      this.options.reconnectMaxAttempts ?? DEFAULTS.reconnectMaxAttempts;
+    const maxAttempts = this.options.reconnectMaxAttempts ?? DEFAULTS.reconnectMaxAttempts;
     if (this.backoff.attempts() >= maxAttempts) {
       log.warn("reconnect: max attempts reached");
       this.setStatus("error");
@@ -303,10 +280,8 @@ export class WebSocketManager
   private startHeartbeat(): void {
     if (!this.options) return;
     this.stopHeartbeat();
-    const intervalMs =
-      this.options.heartbeatIntervalMs ?? DEFAULTS.heartbeatIntervalMs;
-    const timeoutMs =
-      this.options.heartbeatTimeoutMs ?? DEFAULTS.heartbeatTimeoutMs;
+    const intervalMs = this.options.heartbeatIntervalMs ?? DEFAULTS.heartbeatIntervalMs;
+    const timeoutMs = this.options.heartbeatTimeoutMs ?? DEFAULTS.heartbeatTimeoutMs;
     this.heartbeat = createHeartbeat({
       intervalMs,
       timeoutMs,
