@@ -30,6 +30,8 @@ class DiscoveryEngine {
   private started = false;
   private unsubs: Array<() => void> = [];
   private cacheUnsub: (() => void) | null = null;
+  private fullSyncInFlight = false;
+  private fullSyncTimer: ReturnType<typeof setTimeout> | null = null;
 
   start(): void {
     if (this.started) return;
@@ -58,9 +60,7 @@ class DiscoveryEngine {
     );
 
     // 3) Nach erfolgreicher Authentifizierung Full-Sync anfordern.
-    this.unsubs.push(
-      wsManager.on("authenticated", () => this.requestFullSync()),
-    );
+    this.unsubs.push(wsManager.on("authenticated", () => this.requestFullSync()));
 
     // 4) Cache automatisch fortschreiben — debounced.
     this.cacheUnsub = useDevicesStore.subscribe((s, prev) => {
@@ -71,6 +71,10 @@ class DiscoveryEngine {
 
     useDiscoveryStore.getState().setState("idle");
     log.info("started");
+
+    if (wsManager.status === "authenticated") {
+      this.requestFullSync();
+    }
   }
 
   stop(): void {
@@ -79,10 +83,19 @@ class DiscoveryEngine {
     this.unsubs = [];
     this.cacheUnsub?.();
     this.cacheUnsub = null;
+    this.clearFullSyncGuard();
     this.started = false;
   }
 
   requestFullSync(): void {
+    if (this.fullSyncInFlight) return;
+    this.fullSyncInFlight = true;
+    this.fullSyncTimer = setTimeout(() => {
+      this.fullSyncInFlight = false;
+      this.fullSyncTimer = null;
+      useDiscoveryStore.getState().setState("idle");
+      log.warn("full sync timed out");
+    }, 15_000);
     const requestId = createId("sync");
     useDiscoveryStore.getState().setState("syncing");
     useDiscoveryStore.getState().setLastSyncRequest(requestId);
@@ -112,6 +125,7 @@ class DiscoveryEngine {
    */
   ingestFull(devices: unknown): void {
     if (!Array.isArray(devices)) {
+      this.clearFullSyncGuard();
       errorBus.report(
         new AppError("parse", "fullSync: erwartet Array", {
           code: "sync_bad_payload",
@@ -122,13 +136,12 @@ class DiscoveryEngine {
     useDiscoveryStore.getState().setState("syncing");
     DeviceSync.fullSync(devices as Device[]);
     useDiscoveryStore.getState().markSynced();
+    this.clearFullSyncGuard();
   }
 
   ingestDelta(payload: unknown): void {
     if (!payload || typeof payload !== "object") {
-      errorBus.report(
-        new AppError("parse", "deltaSync: ungültig", { code: "sync_bad_payload" }),
-      );
+      errorBus.report(new AppError("parse", "deltaSync: ungültig", { code: "sync_bad_payload" }));
       return;
     }
     DeviceSync.deltaSync(payload as never);
@@ -164,6 +177,14 @@ class DiscoveryEngine {
     });
     store.removeDevice(id);
     discoveryEvents.emit("deviceRemoved", { deviceId: id });
+  }
+
+  private clearFullSyncGuard(): void {
+    this.fullSyncInFlight = false;
+    if (this.fullSyncTimer) {
+      clearTimeout(this.fullSyncTimer);
+      this.fullSyncTimer = null;
+    }
   }
 }
 
