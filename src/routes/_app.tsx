@@ -21,6 +21,10 @@ function AppLayout() {
   const hasServers = useSettingsStore((s) => s.servers.length > 0);
   const ensureDefaultServer = useSettingsStore((s) => s.ensureDefaultServer);
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [pathname]);
+
   // Only force onboarding when no server profile exists at all.
   // A failed connection MUST NEVER redirect back to onboarding — the
   // connection is an app status, never a navigation gate.
