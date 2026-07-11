@@ -1,5 +1,4 @@
 import { memo, useMemo } from "react";
-import { motion } from "framer-motion";
 import { GlassSwitch } from "@/components/ds/controls/GlassSwitch";
 import { GlassSlider } from "@/components/ds/controls/GlassSlider";
 import { SegmentedControl } from "@/components/ds/controls/SegmentedControl";
@@ -41,11 +40,7 @@ function ControlRow({
 }) {
   const Icon = spec.descriptor.icon;
   return (
-    <motion.div
-      layout
-      className="flex flex-col gap-2"
-      transition={{ type: "spring", stiffness: 500, damping: 32 }}
-    >
+    <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
           {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
@@ -56,7 +51,7 @@ function ControlRow({
         <div className="flex shrink-0 items-center gap-2">{trailing}</div>
       </div>
       {children}
-    </motion.div>
+    </div>
   );
 }
 
@@ -359,11 +354,9 @@ const ProgressReadout = memo(function ProgressReadout({ spec }: ControlProps) {
       }
     >
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-foreground/10">
-        <motion.div
+        <div
           className="h-full rounded-full bg-primary"
-          initial={false}
-          animate={{ width: `${pct}%` }}
-          transition={{ type: "spring", stiffness: 280, damping: 30 }}
+          style={{ width: `${pct}%` }}
         />
       </div>
     </ControlRow>

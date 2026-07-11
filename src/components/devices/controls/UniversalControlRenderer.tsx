@@ -94,7 +94,7 @@ const ControlRow = memo(function ControlRow({ spec }: { spec: ControlSpec }) {
   return (
     <div className="flex flex-col gap-1">
       <Component spec={spec} onCommit={handleCommit} />
-      <div className="min-h-[20px]">
+      <div className="h-6 overflow-hidden">
         <ControlFeedback deviceId={spec.deviceId} commandKey={spec.commandKey} />
       </div>
     </div>

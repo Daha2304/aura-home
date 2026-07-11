@@ -1,5 +1,4 @@
 import { memo, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, Check, X, RotateCw } from "lucide-react";
 import { useCommandsStore } from "@/store/slices/commandsStore";
 import { StatusBadge } from "@/components/ds/controls/StatusBadge";
@@ -31,19 +30,9 @@ export const ControlFeedback = memo(function ControlFeedback({
   const { tone, label, icon } = describe(cmd);
 
   return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={cmd.state}
-        initial={{ opacity: 0, y: -4 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 4 }}
-        transition={{ duration: 0.15 }}
-      >
-        <StatusBadge tone={tone} icon={icon}>
-          {label}
-        </StatusBadge>
-      </motion.div>
-    </AnimatePresence>
+    <StatusBadge tone={tone} icon={icon}>
+      {label}
+    </StatusBadge>
   );
 });
 
