@@ -1,7 +1,7 @@
 /* Smart Home Service Worker — generic, versioned, business-logic-free. */
 /* eslint-disable no-restricted-globals */
 
-const SW_VERSION = "v1";
+const SW_VERSION = "v2";
 const CACHE_PREFIX = "smarthome";
 const CACHES = {
   shell: `${CACHE_PREFIX}-shell-${SW_VERSION}`,
