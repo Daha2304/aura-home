@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { createId } from "@/utils/ids";
 import type { ServerConfig } from "@/models/server";
 import { createServerConfig } from "@/models/server";
+import { ensureDefaultAuraBackendServer } from "@/config/auraBackendDefault";
 
 interface NotificationSettings {
   enabled: boolean;
@@ -29,15 +30,18 @@ interface SettingsState {
   setDeveloperMode: (v: boolean) => void;
   setDebugWebSocket: (v: boolean) => void;
   setNotifications: (n: Partial<NotificationSettings>) => void;
+  ensureDefaultServer: () => void;
 
   activeServer: () => ServerConfig | undefined;
 }
 
+const initialServers = ensureDefaultAuraBackendServer([], undefined);
+
 export const useSettingsStore = create<SettingsState>()(
   persist(
     (set, get) => ({
-      servers: [],
-      activeServerId: undefined,
+      servers: initialServers.servers,
+      activeServerId: initialServers.activeServerId,
       developerMode: false,
       debugWebSocket: false,
       notifications: {
@@ -53,15 +57,12 @@ export const useSettingsStore = create<SettingsState>()(
         })),
       updateServer: (s) =>
         set({
-          servers: get().servers.map((x) =>
-            x.id === s.id ? { ...s, updatedAt: Date.now() } : x,
-          ),
+          servers: get().servers.map((x) => (x.id === s.id ? { ...s, updatedAt: Date.now() } : x)),
         }),
       removeServer: (id) =>
         set((state) => ({
           servers: state.servers.filter((s) => s.id !== id),
-          activeServerId:
-            state.activeServerId === id ? undefined : state.activeServerId,
+          activeServerId: state.activeServerId === id ? undefined : state.activeServerId,
         })),
       duplicateServer: (id) => {
         const src = get().servers.find((s) => s.id === id);
@@ -87,9 +88,7 @@ export const useSettingsStore = create<SettingsState>()(
       markServerConnected: (id) =>
         set({
           servers: get().servers.map((s) =>
-            s.id === id
-              ? { ...s, lastConnectedAt: Date.now(), updatedAt: Date.now() }
-              : s,
+            s.id === id ? { ...s, lastConnectedAt: Date.now(), updatedAt: Date.now() } : s,
           ),
         }),
       replaceServers: (incoming, mode) => {
@@ -107,14 +106,21 @@ export const useSettingsStore = create<SettingsState>()(
       setActiveServer: (id) => set({ activeServerId: id }),
       setDeveloperMode: (developerMode) => set({ developerMode }),
       setDebugWebSocket: (debugWebSocket) => set({ debugWebSocket }),
-      setNotifications: (n) =>
-        set({ notifications: { ...get().notifications, ...n } }),
-      activeServer: () =>
-        get().servers.find((s) => s.id === get().activeServerId),
+      setNotifications: (n) => set({ notifications: { ...get().notifications, ...n } }),
+      ensureDefaultServer: () => {
+        const next = ensureDefaultAuraBackendServer(get().servers, get().activeServerId);
+        if (next.servers !== get().servers || next.activeServerId !== get().activeServerId) {
+          set(next);
+        }
+      },
+      activeServer: () => get().servers.find((s) => s.id === get().activeServerId),
     }),
     {
       name: "smarthome.settings",
       storage: createJSONStorage(() => localStorage),
+      onRehydrateStorage: () => (state) => {
+        state?.ensureDefaultServer();
+      },
     },
   ),
 );

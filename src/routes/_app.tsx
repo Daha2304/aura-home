@@ -19,15 +19,18 @@ function AppLayout() {
   const navigate = useNavigate();
   const hydrated = useHydrated();
   const hasServers = useSettingsStore((s) => s.servers.length > 0);
+  const ensureDefaultServer = useSettingsStore((s) => s.ensureDefaultServer);
 
   // Only force onboarding when no server profile exists at all.
   // A failed connection MUST NEVER redirect back to onboarding — the
   // connection is an app status, never a navigation gate.
   useEffect(() => {
-    if (hydrated && !hasServers) {
+    if (!hydrated || hasServers) return;
+    ensureDefaultServer();
+    if (useSettingsStore.getState().servers.length === 0) {
       navigate({ to: "/onboarding/welcome", replace: true });
     }
-  }, [hydrated, hasServers, navigate]);
+  }, [ensureDefaultServer, hydrated, hasServers, navigate]);
 
   return (
     <AppShell>
