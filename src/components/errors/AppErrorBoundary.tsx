@@ -39,7 +39,7 @@ export class AppErrorBoundary extends Component<Props, State> {
     if (this.state.error) {
       if (this.props.fallback) return this.props.fallback(this.state.error, this.reset);
       return (
-        <div className="flex min-h-[40vh] items-center justify-center px-4">
+        <div className="px-4 pt-2">
           <div className="glass-card max-w-sm p-6 text-center">
             <h2 className="text-lg font-semibold">Etwas ist schiefgelaufen</h2>
             <p className="mt-2 text-sm text-muted-foreground break-words">

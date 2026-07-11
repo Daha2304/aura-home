@@ -23,7 +23,7 @@ function DashboardIndex() {
 
 function RouteLoading({ label }: { label: string }) {
   return (
-    <div className="flex min-h-[50dvh] items-center justify-center text-sm text-muted-foreground">
+    <div className="pt-2 text-sm text-muted-foreground">
       {label}
     </div>
   );

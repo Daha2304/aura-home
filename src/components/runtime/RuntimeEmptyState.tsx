@@ -14,7 +14,7 @@ export function RuntimeEmptyState({ dashboardId }: Props) {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-      className="mx-auto flex min-h-[60vh] w-full max-w-md items-center justify-center px-4"
+      className="mx-auto w-full max-w-md px-4 pt-2"
     >
       <GlassSurface variant="liquid" radius="2xl" className="w-full p-10 text-center">
         <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 text-primary">

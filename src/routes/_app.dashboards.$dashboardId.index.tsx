@@ -37,7 +37,7 @@ function DashboardRuntimeRoute() {
 
   if (!dashboard) {
     return (
-      <div className="flex min-h-[50dvh] items-center justify-center text-sm text-muted-foreground">
+      <div className="pt-2 text-sm text-muted-foreground">
         Dashboard wird vorbereitet …
       </div>
     );

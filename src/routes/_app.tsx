@@ -16,14 +16,36 @@ export const Route = createFileRoute("/_app")({
 function AppLayout() {
   useCommunicationLayer();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const routeKey = useRouterState({ select: (s) => s.location.href });
   const navigate = useNavigate();
   const hydrated = useHydrated();
   const hasServers = useSettingsStore((s) => s.servers.length > 0);
   const ensureDefaultServer = useSettingsStore((s) => s.ensureDefaultServer);
 
   useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
-  }, [pathname]);
+    if ("scrollRestoration" in window.history) {
+      window.history.scrollRestoration = "manual";
+    }
+
+    const resetScroll = () => {
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+      window.scrollTo(0, 0);
+    };
+
+    resetScroll();
+    const frame = window.requestAnimationFrame(resetScroll);
+    const lateFrame = window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(resetScroll);
+    });
+    const timeout = window.setTimeout(resetScroll, 250);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.cancelAnimationFrame(lateFrame);
+      window.clearTimeout(timeout);
+    };
+  }, [routeKey]);
 
   // Only force onboarding when no server profile exists at all.
   // A failed connection MUST NEVER redirect back to onboarding — the
