@@ -47,9 +47,9 @@ export const DeviceCardLarge = memo(function DeviceCardLarge({
           }
         }}
       >
-        <GlassCard interactive className="flex flex-col gap-3 p-4">
+        <GlassCard interactive className="flex flex-col gap-2.5 p-3">
           <div className="flex items-start justify-between gap-3">
-            <DeviceIconTile device={device} size="lg" />
+            <DeviceIconTile device={device} size="md" />
             <div className="flex items-center gap-1">
               {onFavoriteToggle && (
                 <IconButton
@@ -67,7 +67,9 @@ export const DeviceCardLarge = memo(function DeviceCardLarge({
             </div>
           </div>
           <div className="min-w-0">
-            <div className="truncate text-base font-semibold">{device.name}</div>
+            <div className="line-clamp-2 break-words text-base font-semibold leading-tight">
+              {device.name}
+            </div>
             <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
               {desc && <span className="capitalize">{desc.name}</span>}
               {room && (

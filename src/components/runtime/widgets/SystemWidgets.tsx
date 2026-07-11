@@ -1,5 +1,18 @@
 import { useEffect, useState } from "react";
-import { Clock, Calendar, Wifi, WifiOff, Server, Radar, RefreshCw, Info, User, Zap, Sparkles, CheckCircle2 } from "lucide-react";
+import {
+  Clock,
+  Calendar,
+  Wifi,
+  WifiOff,
+  Server,
+  Radar,
+  RefreshCw,
+  Info,
+  User,
+  Zap,
+  Sparkles,
+  CheckCircle2,
+} from "lucide-react";
 import { useSettingsStore } from "@/store/slices/settingsStore";
 import { useConnectionStore } from "@/store/slices/connectionStore";
 import { useDiscoveryStore } from "@/store/slices/discoveryStore";
@@ -81,7 +94,9 @@ export function WelcomeWidget() {
   const g = greetingForTime();
   return (
     <div className="flex h-full w-full flex-col justify-center p-6">
-      <div className="text-[11px] font-medium uppercase tracking-widest text-primary">Willkommen</div>
+      <div className="text-[11px] font-medium uppercase tracking-widest text-primary">
+        Willkommen
+      </div>
       <div className="mt-1 text-3xl font-semibold tracking-tight">{g}</div>
       <div className="mt-2 text-sm text-muted-foreground">Schön, dich zu sehen.</div>
     </div>
@@ -91,12 +106,14 @@ export function WelcomeWidget() {
 export function ServerStatusWidget() {
   const active = useSettingsStore((s) => s.activeServer());
   const status = useConnectionStore((s) => s.status);
-  const ok = status === "connected";
+  const ok = status === "connected" || status === "authenticated";
   return (
     <div className="flex h-full w-full flex-col justify-between p-4">
       <TileTitle icon={<Server className="h-3 w-3" />}>Server</TileTitle>
       <div>
-        <div className="truncate text-lg font-semibold tracking-tight">{active?.name ?? "Kein Server"}</div>
+        <div className="truncate text-lg font-semibold tracking-tight">
+          {active?.name ?? "Kein Server"}
+        </div>
         <div className={`text-xs ${ok ? "text-success" : "text-muted-foreground"}`}>
           {ok ? "Verbunden" : status}
         </div>
@@ -108,14 +125,16 @@ export function ServerStatusWidget() {
 export function ConnectionStatusWidget() {
   const status = useConnectionStore((s) => s.status);
   const latency = useConnectionStore((s) => s.latencyMs);
-  const ok = status === "connected";
+  const ok = status === "connected" || status === "authenticated";
   return (
     <div className="flex h-full w-full flex-col justify-between p-4">
       <TileTitle icon={ok ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}>
         Verbindung
       </TileTitle>
       <div>
-        <div className={`text-lg font-semibold tracking-tight ${ok ? "text-success" : "text-destructive"}`}>
+        <div
+          className={`text-lg font-semibold tracking-tight ${ok ? "text-success" : "text-destructive"}`}
+        >
           {ok ? "Online" : "Offline"}
         </div>
         {latency !== undefined ? (
@@ -142,7 +161,9 @@ export function DiscoveryStatusWidget() {
 
 export function SyncStatusWidget() {
   const last = useDiscoveryStore((s) => s.lastSyncAt);
-  const rel = last ? new Date(last).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }) : "—";
+  const rel = last
+    ? new Date(last).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })
+    : "—";
   return (
     <div className="flex h-full w-full flex-col justify-between p-4">
       <TileTitle icon={<RefreshCw className="h-3 w-3" />}>Sync</TileTitle>
@@ -211,7 +232,9 @@ export function HeroGreetingWidget() {
     <div className="relative flex h-full w-full flex-col justify-end p-6">
       <div className="absolute inset-0 bg-[radial-gradient(120%_80%_at_0%_0%,var(--color-primary)/25,transparent_60%)]" />
       <div className="relative">
-        <div className="text-[11px] font-medium uppercase tracking-widest text-primary/80">Hero</div>
+        <div className="text-[11px] font-medium uppercase tracking-widest text-primary/80">
+          Hero
+        </div>
         <div className="mt-1 text-4xl font-semibold tracking-tight">{g}</div>
         <div className="mt-2 max-w-md text-sm text-muted-foreground">
           Alles Wichtige auf einen Blick.
@@ -226,13 +249,19 @@ export function HeroStatusWidget() {
   const disc = useDiscoveryStore((s) => s.state);
   const active = useSettingsStore((s) => s.activeServer());
   const hero = systemHeroMessage({
-    connected: status === "connected",
+    connected: status === "connected" || status === "authenticated",
     discoveryReady: disc === "ready",
     syncing: disc === "syncing",
     serverName: active?.name,
   });
   const toneIcon =
-    hero.tone === "ok" ? <CheckCircle2 className="h-6 w-6 text-success" /> : hero.tone === "warn" ? <WifiOff className="h-6 w-6 text-destructive" /> : <Sparkles className="h-6 w-6 text-info" />;
+    hero.tone === "ok" ? (
+      <CheckCircle2 className="h-6 w-6 text-success" />
+    ) : hero.tone === "warn" ? (
+      <WifiOff className="h-6 w-6 text-destructive" />
+    ) : (
+      <Sparkles className="h-6 w-6 text-info" />
+    );
   return (
     <div className="flex h-full w-full items-center gap-4 p-6">
       <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-surface-elevated/70">

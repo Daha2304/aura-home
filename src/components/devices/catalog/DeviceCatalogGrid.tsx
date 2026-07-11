@@ -12,17 +12,12 @@ interface Props {
 }
 
 /** Layout-Wrapper. Wählt das Grid ausschließlich anhand des ViewMode. */
-export function DeviceCatalogGrid({
-  devices,
-  view,
-  onFavoriteToggle,
-  onOpenActions,
-}: Props) {
+export function DeviceCatalogGrid({ devices, view, onFavoriteToggle, onOpenActions }: Props) {
   const gridClass =
     view === "list" || view === "compact"
-      ? "grid grid-cols-1 gap-2"
+      ? "grid grid-cols-1 gap-1.5"
       : view === "large"
-        ? "grid grid-cols-1 gap-3 sm:grid-cols-2"
+        ? "grid grid-cols-1 gap-2 sm:grid-cols-2"
         : "grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5";
   return (
     <motion.div layout className={cn(gridClass)}>

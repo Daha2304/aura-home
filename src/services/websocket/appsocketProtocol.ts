@@ -195,6 +195,53 @@ function asNumber(v: unknown): number | undefined {
   return typeof v === "number" && Number.isFinite(v) ? v : undefined;
 }
 
+function toTitle(text: string): string {
+  return text
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function stripStateSuffix(name: string): string {
+  return name
+    .replace(/\s+(POWER|STATE|ON|Bri|Brightness|Dimmer)$/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isGenericDeviceName(name: string | undefined): boolean {
+  if (!name) return true;
+  const n = name.trim().toLowerCase();
+  return ["brightness", "switch", "state", "on", "on / off", "power", "dimmer", "light"].includes(
+    n,
+  );
+}
+
+function deriveDeviceName(raw: RawDevice, id: string): string {
+  const rawName = stripStateSuffix(asString(raw.name) ?? "");
+  if (!isGenericDeviceName(rawName)) return rawName;
+
+  const parts = id.split(".");
+  const adapter = parts[0]?.toLowerCase();
+  const deviceParts = parts.slice(2);
+  const primary = deviceParts[0] ?? id;
+  const tail = deviceParts.slice(1);
+
+  if (adapter === "sonoff") return toTitle(primary);
+  if (adapter === "wifilight") return `WiFi-Light ${primary.replace(/_/g, ".")}`;
+  if (adapter === "zigbee2mqtt") {
+    if (primary.startsWith("group_")) return `Zigbee Gruppe ${primary.slice(6)}`;
+    return `Zigbee ${primary}`;
+  }
+  if (adapter === "wled") {
+    const suffix =
+      tail[0] === "nl" ? " Nachtlicht" : tail[0] === "seg" && tail[1] ? ` Segment ${tail[1]}` : "";
+    return `WLED ${primary}${suffix}`;
+  }
+  return toTitle(primary);
+}
+
 function mapRole(role: string | undefined): DeviceFunctionKind {
   if (!role) return "custom";
   const r = role.toLowerCase();
@@ -235,13 +282,7 @@ function stateToCapabilityAndFunction(
     ? (raw.states as unknown[]).filter((x): x is string => typeof x === "string")
     : undefined;
 
-  const cap: CustomCapability = {
-    kind: "custom",
-    id,
-    label,
-    value: raw.value,
-    readonly: !writable,
-  };
+  const cap = stateToCapability(id, kind, raw, label, !writable);
   const fn: DeviceFunction = {
     id,
     kind,
@@ -256,6 +297,32 @@ function stateToCapabilityAndFunction(
     meta: { role },
   };
   return { cap, fn };
+}
+
+function stateToCapability(
+  id: string,
+  kind: DeviceFunctionKind,
+  raw: RawState,
+  label: string | undefined,
+  readonly: boolean,
+): CustomCapability {
+  const base = { id, label, readonly };
+  if (kind === "power" && typeof raw.value === "boolean") {
+    return { ...base, kind: "onOff", value: raw.value } as unknown as CustomCapability;
+  }
+  if (kind === "dimmer" && typeof raw.value === "number") {
+    return {
+      ...base,
+      kind: "dimmer",
+      value: raw.value,
+      min: asNumber(raw.min) ?? asNumber(raw.common?.min),
+      max: asNumber(raw.max) ?? asNumber(raw.common?.max),
+    } as unknown as CustomCapability;
+  }
+  if (kind === "position" && typeof raw.value === "number") {
+    return { ...base, kind: "position", value: raw.value } as unknown as CustomCapability;
+  }
+  return { ...base, kind: "custom", value: raw.value };
 }
 
 function pickDeviceType(raw: RawDevice): Device["type"] {
@@ -309,7 +376,7 @@ export function appsocketNormalizeDevice(raw: unknown): Device | null {
 
   const device: Device = {
     id,
-    name: asString(r.name) ?? id,
+    name: deriveDeviceName(r, id),
     type: pickDeviceType(r) as Device["type"],
     roomId: asString(r.roomId) ?? asString(r.room),
     online: r.online !== false,

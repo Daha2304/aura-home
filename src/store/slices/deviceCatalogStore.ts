@@ -23,7 +23,7 @@ interface DeviceCatalogState {
 }
 
 const defaults = {
-  view: "grid" as ViewMode,
+  view: "list" as ViewMode,
   sortKey: "name" as SortKey,
   sortDirection: "asc" as SortDirection,
   group: "none" as GroupKey,

@@ -25,10 +25,12 @@ export const DeviceCardCompact = memo(function DeviceCardCompact({
       exit="exit"
     >
       <Link to="/devices/$deviceId" params={{ deviceId: device.id }} className="block">
-        <GlassCard interactive className="flex items-center gap-3 p-3">
-          <DeviceIconTile device={device} size="md" />
+        <GlassCard interactive className="flex items-center gap-3 p-2.5">
+          <DeviceIconTile device={device} size="sm" />
           <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-semibold">{device.name}</div>
+            <div className="line-clamp-2 break-words text-sm font-semibold leading-tight">
+              {device.name}
+            </div>
             <div className="mt-0.5">
               <StatusBadge tone={device.online ? "success" : "neutral"}>
                 {device.online ? "Online" : "Offline"}
@@ -43,7 +45,9 @@ export const DeviceCardCompact = memo(function DeviceCardCompact({
                 onFavoriteToggle(device.id);
               }}
             >
-              <Heart className={cn("h-4 w-4", device.favorite && "fill-current text-destructive")} />
+              <Heart
+                className={cn("h-4 w-4", device.favorite && "fill-current text-destructive")}
+              />
             </IconButton>
           )}
         </GlassCard>
