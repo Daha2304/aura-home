@@ -7,6 +7,7 @@ import { useCommunicationLayer } from "@/hooks/useCommunicationLayer";
 import { useSettingsStore } from "@/store/slices/settingsStore";
 import { ToastHost } from "@/components/notifications/ToastHost";
 import { CommandPaletteHost } from "@/components/search/CommandPaletteHost";
+import { useHydrated } from "@/hooks/useHydrated";
 
 export const Route = createFileRoute("/_app")({
   component: AppLayout,
@@ -16,20 +17,21 @@ function AppLayout() {
   useCommunicationLayer();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
+  const hydrated = useHydrated();
   const hasServers = useSettingsStore((s) => s.servers.length > 0);
 
   // Only force onboarding when no server profile exists at all.
   // A failed connection MUST NEVER redirect back to onboarding — the
   // connection is an app status, never a navigation gate.
   useEffect(() => {
-    if (!hasServers) {
+    if (hydrated && !hasServers) {
       navigate({ to: "/onboarding/welcome", replace: true });
     }
-  }, [hasServers, navigate]);
+  }, [hydrated, hasServers, navigate]);
 
   return (
     <AppShell>
-      <AnimatePresence mode="wait" initial={false}>
+      <AnimatePresence initial={false}>
         <motion.div
           key={pathname}
           variants={pageTransition}

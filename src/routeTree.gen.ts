@@ -38,6 +38,7 @@ import { Route as AppDashboardsRouteImport } from './routes/_app.dashboards'
 import { Route as AppAutomationsRouteImport } from './routes/_app.automations'
 import { Route as AppAnalyticsRouteImport } from './routes/_app.analytics'
 import { Route as AppUsersIndexRouteImport } from './routes/_app.users.index'
+import { Route as AppSettingsIndexRouteImport } from './routes/_app.settings.index'
 import { Route as AppDashboardsIndexRouteImport } from './routes/_app.dashboards.index'
 import { Route as AppUsersUserIdRouteImport } from './routes/_app.users.$userId'
 import { Route as AppSettingsUsersRouteImport } from './routes/_app.settings.users'
@@ -218,6 +219,11 @@ const AppUsersIndexRoute = AppUsersIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AppUsersRoute,
+} as any)
+const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppSettingsRoute,
 } as any)
 const AppDashboardsIndexRoute = AppDashboardsIndexRouteImport.update({
   id: '/',
@@ -462,6 +468,7 @@ export interface FileRoutesByFullPath {
   '/settings/users': typeof AppSettingsUsersRoute
   '/users/$userId': typeof AppUsersUserIdRouteWithChildren
   '/dashboards/': typeof AppDashboardsIndexRoute
+  '/settings/': typeof AppSettingsIndexRoute
   '/users/': typeof AppUsersIndexRoute
   '/automations/$automationId/edit': typeof AppAutomationsAutomationIdEditRoute
   '/dashboards/$dashboardId/edit': typeof AppDashboardsDashboardIdEditRoute
@@ -486,7 +493,6 @@ export interface FileRoutesByTo {
   '/rooms': typeof AppRoomsRouteWithChildren
   '/scenes': typeof AppScenesRouteWithChildren
   '/search': typeof AppSearchRouteWithChildren
-  '/settings': typeof AppSettingsRouteWithChildren
   '/statistics': typeof AppStatisticsRoute
   '/timeline': typeof AppTimelineRoute
   '/onboarding/configure': typeof OnboardingConfigureRoute
@@ -523,6 +529,7 @@ export interface FileRoutesByTo {
   '/settings/update': typeof AppSettingsUpdateRoute
   '/settings/users': typeof AppSettingsUsersRoute
   '/dashboards': typeof AppDashboardsIndexRoute
+  '/settings': typeof AppSettingsIndexRoute
   '/users': typeof AppUsersIndexRoute
   '/automations/$automationId/edit': typeof AppAutomationsAutomationIdEditRoute
   '/dashboards/$dashboardId/edit': typeof AppDashboardsDashboardIdEditRoute
@@ -591,6 +598,7 @@ export interface FileRoutesById {
   '/_app/settings/users': typeof AppSettingsUsersRoute
   '/_app/users/$userId': typeof AppUsersUserIdRouteWithChildren
   '/_app/dashboards/': typeof AppDashboardsIndexRoute
+  '/_app/settings/': typeof AppSettingsIndexRoute
   '/_app/users/': typeof AppUsersIndexRoute
   '/_app/automations/$automationId/edit': typeof AppAutomationsAutomationIdEditRoute
   '/_app/dashboards/$dashboardId/edit': typeof AppDashboardsDashboardIdEditRoute
@@ -659,6 +667,7 @@ export interface FileRouteTypes {
     | '/settings/users'
     | '/users/$userId'
     | '/dashboards/'
+    | '/settings/'
     | '/users/'
     | '/automations/$automationId/edit'
     | '/dashboards/$dashboardId/edit'
@@ -683,7 +692,6 @@ export interface FileRouteTypes {
     | '/rooms'
     | '/scenes'
     | '/search'
-    | '/settings'
     | '/statistics'
     | '/timeline'
     | '/onboarding/configure'
@@ -720,6 +728,7 @@ export interface FileRouteTypes {
     | '/settings/update'
     | '/settings/users'
     | '/dashboards'
+    | '/settings'
     | '/users'
     | '/automations/$automationId/edit'
     | '/dashboards/$dashboardId/edit'
@@ -787,6 +796,7 @@ export interface FileRouteTypes {
     | '/_app/settings/users'
     | '/_app/users/$userId'
     | '/_app/dashboards/'
+    | '/_app/settings/'
     | '/_app/users/'
     | '/_app/automations/$automationId/edit'
     | '/_app/dashboards/$dashboardId/edit'
@@ -1007,6 +1017,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/users/'
       preLoaderRoute: typeof AppUsersIndexRouteImport
       parentRoute: typeof AppUsersRoute
+    }
+    '/_app/settings/': {
+      id: '/_app/settings/'
+      path: '/'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof AppSettingsIndexRouteImport
+      parentRoute: typeof AppSettingsRoute
     }
     '/_app/dashboards/': {
       id: '/_app/dashboards/'
@@ -1437,6 +1454,7 @@ interface AppSettingsRouteChildren {
   AppSettingsStorageRoute: typeof AppSettingsStorageRoute
   AppSettingsUpdateRoute: typeof AppSettingsUpdateRoute
   AppSettingsUsersRoute: typeof AppSettingsUsersRoute
+  AppSettingsIndexRoute: typeof AppSettingsIndexRoute
 }
 
 const AppSettingsRouteChildren: AppSettingsRouteChildren = {
@@ -1455,6 +1473,7 @@ const AppSettingsRouteChildren: AppSettingsRouteChildren = {
   AppSettingsStorageRoute: AppSettingsStorageRoute,
   AppSettingsUpdateRoute: AppSettingsUpdateRoute,
   AppSettingsUsersRoute: AppSettingsUsersRoute,
+  AppSettingsIndexRoute: AppSettingsIndexRoute,
 }
 
 const AppSettingsRouteWithChildren = AppSettingsRoute._addFileChildren(
@@ -1566,3 +1585,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

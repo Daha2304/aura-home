@@ -35,7 +35,12 @@ function DashboardRuntimeRoute() {
     }
   }, [dashboard, navigate]);
 
-  if (!dashboard) return null;
+  if (!dashboard) {
+    return (
+      <div className="flex min-h-[50dvh] items-center justify-center text-sm text-muted-foreground">
+        Dashboard wird vorbereitet …
+      </div>
+    );
+  }
   return <DashboardRuntime dashboard={dashboard} />;
 }
-

@@ -18,5 +18,13 @@ function DashboardIndex() {
     navigate({ to: "/dashboards/$dashboardId", params: { dashboardId: target }, replace: true });
   }, [activeId, first, navigate]);
 
-  return null;
+  return <RouteLoading label="Dashboard wird geöffnet …" />;
+}
+
+function RouteLoading({ label }: { label: string }) {
+  return (
+    <div className="flex min-h-[50dvh] items-center justify-center text-sm text-muted-foreground">
+      {label}
+    </div>
+  );
 }

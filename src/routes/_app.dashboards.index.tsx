@@ -17,5 +17,9 @@ function DashboardsIndex() {
     navigate({ to: "/dashboards/$dashboardId", params: { dashboardId: target }, replace: true });
   }, [activeId, first, navigate]);
 
-  return null;
+  return (
+    <div className="flex min-h-[50dvh] items-center justify-center text-sm text-muted-foreground">
+      Dashboard wird geöffnet …
+    </div>
+  );
 }

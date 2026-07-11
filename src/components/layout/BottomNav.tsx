@@ -1,12 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import {
-  LayoutDashboard,
-  Home,
-  Cpu,
-  Sparkles,
-  MoreHorizontal,
-} from "lucide-react";
+import { LayoutDashboard, Home, Cpu, Sparkles, MoreHorizontal } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useHapticFeedback } from "@/hooks/useHapticFeedback";
@@ -55,7 +49,7 @@ export function BottomNav() {
               onClick={() => haptic("light")}
               className={cn(
                 "relative flex flex-1 flex-col items-center gap-0.5 rounded-full px-2 py-2 text-[11px] font-medium transition-colors",
-                active ? "text-accent-foreground" : "text-muted-foreground",
+                active ? "text-accent-foreground" : "text-foreground/70 hover:text-foreground",
               )}
             >
               {active && (
@@ -68,7 +62,7 @@ export function BottomNav() {
               <Icon
                 className={cn(
                   "relative z-10 h-5 w-5",
-                  active ? "text-accent-foreground" : "",
+                  active ? "text-accent-foreground" : "text-current",
                 )}
                 strokeWidth={active ? 2.4 : 2}
               />
