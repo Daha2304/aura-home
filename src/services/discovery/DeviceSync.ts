@@ -4,6 +4,7 @@ import { AppError } from "@/services/errors/AppError";
 import { errorBus } from "@/services/errors/ErrorBus";
 import { createLogger } from "@/services/logger/Logger";
 import { useDevicesStore } from "@/store/slices/devicesStore";
+import { useDiscoveryStore } from "@/store/slices/discoveryStore";
 import { discoveryEvents } from "./DiscoveryEvents";
 import { LifecycleMachine } from "./LifecycleMachine";
 import { validateIncomingDevice } from "./Validators";
@@ -112,6 +113,8 @@ export const DeviceSync = {
         discoveryEvents.emit("deviceRemoved", { deviceId: existing.id });
       }
     }
+    useDiscoveryStore.getState().incFullSync();
+    useDiscoveryStore.getState().setDeviceCount(count);
     discoveryEvents.emit("discoveryFinished", { count });
     discoveryEvents.emit("syncFinished", { kind: "full", count });
     log.info("full sync", count, "devices");
@@ -134,6 +137,9 @@ export const DeviceSync = {
         count += 1;
       }
     }
+    const discovery = useDiscoveryStore.getState();
+    discovery.incDeltaSync();
+    discovery.setDeviceCount(useDevicesStore.getState().devices.length);
     discoveryEvents.emit("syncFinished", { kind: "delta", count });
   },
 
