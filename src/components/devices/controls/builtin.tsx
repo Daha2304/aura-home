@@ -23,6 +23,11 @@ function formatDisplay(spec: ControlProps["spec"]): string {
   return fmt ? fmt(spec.currentValue) : String(spec.currentValue ?? "—");
 }
 
+function controlLabel(spec: ControlProps["spec"]): string {
+  const label = "label" in spec.capability ? spec.capability.label : undefined;
+  return label || spec.descriptor.name;
+}
+
 /* ---------------- Row wrapper ---------------- */
 
 function ControlRow({
@@ -44,7 +49,9 @@ function ControlRow({
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
           {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
-          <span className="truncate text-sm font-medium">{spec.descriptor.name}</span>
+          <span className="line-clamp-2 text-sm font-medium leading-tight">
+            {controlLabel(spec)}
+          </span>
         </div>
         <div className="flex shrink-0 items-center gap-2">{trailing}</div>
       </div>
@@ -62,9 +69,7 @@ const PowerToggle = memo(function PowerToggle({ spec, onCommit, disabled }: Cont
       spec={spec}
       trailing={
         <>
-          <StatusBadge tone={value ? "success" : "neutral"}>
-            {value ? "An" : "Aus"}
-          </StatusBadge>
+          <StatusBadge tone={value ? "success" : "neutral"}>{value ? "An" : "Aus"}</StatusBadge>
           <GlassSwitch
             aria-label={spec.descriptor.name}
             checked={value}
@@ -88,9 +93,7 @@ const PercentageSlider = memo(function PercentageSlider({
     <ControlRow
       spec={spec}
       trailing={
-        <span className="text-sm tabular-nums text-muted-foreground">
-          {formatDisplay(spec)}
-        </span>
+        <span className="text-sm tabular-nums text-muted-foreground">{formatDisplay(spec)}</span>
       }
     >
       <GlassSlider
@@ -110,9 +113,10 @@ const TemperatureSlider = memo(function TemperatureSlider({
   onCommit,
   disabled,
 }: ControlProps) {
-  const raw = spec.capability.kind === "temperature"
-    ? (spec.capability.target ?? asNumber(spec.currentValue))
-    : asNumber(spec.currentValue);
+  const raw =
+    spec.capability.kind === "temperature"
+      ? (spec.capability.target ?? asNumber(spec.currentValue))
+      : asNumber(spec.currentValue);
   const value = asNumber(raw);
   const { min = 5, max = 35, step = 0.5 } = spec.descriptor.validation ?? {};
   return (
@@ -136,11 +140,7 @@ const TemperatureSlider = memo(function TemperatureSlider({
   );
 });
 
-const NumericStepper = memo(function NumericStepper({
-  spec,
-  onCommit,
-  disabled,
-}: ControlProps) {
+const NumericStepper = memo(function NumericStepper({ spec, onCommit, disabled }: ControlProps) {
   const value = asNumber(spec.currentValue);
   const { min, max, step = 1 } = spec.descriptor.validation ?? {};
   const clamp = (n: number) => {
@@ -160,9 +160,7 @@ const NumericStepper = memo(function NumericStepper({
           >
             −
           </IconButton>
-          <span className="min-w-10 text-center text-sm tabular-nums">
-            {formatDisplay(spec)}
-          </span>
+          <span className="min-w-10 text-center text-sm tabular-nums">{formatDisplay(spec)}</span>
           <IconButton
             aria-label="Erhöhen"
             onClick={() => !disabled && !spec.readOnly && onCommit(clamp(value + step))}
@@ -224,11 +222,7 @@ const ColorPicker = memo(function ColorPicker({ spec, onCommit, disabled }: Cont
     <ControlRow
       spec={spec}
       trailing={
-        <span
-          className="hairline h-6 w-6 rounded-full"
-          style={{ background: hex }}
-          aria-hidden
-        />
+        <span className="hairline h-6 w-6 rounded-full" style={{ background: hex }} aria-hidden />
       }
     >
       <div className="flex items-center gap-3">
@@ -246,14 +240,10 @@ const ColorPicker = memo(function ColorPicker({ spec, onCommit, disabled }: Cont
   );
 });
 
-const MediaTransport = memo(function MediaTransport({
-  spec,
-  onCommit,
-  disabled,
-}: ControlProps) {
+const MediaTransport = memo(function MediaTransport({ spec, onCommit, disabled }: ControlProps) {
   const cap = spec.capability;
   const state = cap.kind === "mediaTransport" ? cap.state : "stop";
-  const volume = cap.kind === "mediaTransport" ? cap.volume ?? 0 : 0;
+  const volume = cap.kind === "mediaTransport" ? (cap.volume ?? 0) : 0;
   return (
     <ControlRow
       spec={spec}
@@ -320,9 +310,7 @@ const NumberReadout = memo(function NumberReadout({ spec }: ControlProps) {
     <ControlRow
       spec={spec}
       trailing={
-        <span className="text-sm tabular-nums text-muted-foreground">
-          {formatDisplay(spec)}
-        </span>
+        <span className="text-sm tabular-nums text-muted-foreground">{formatDisplay(spec)}</span>
       }
     />
   );
@@ -367,9 +355,7 @@ const ProgressReadout = memo(function ProgressReadout({ spec }: ControlProps) {
     <ControlRow
       spec={spec}
       trailing={
-        <span className="text-sm tabular-nums text-muted-foreground">
-          {formatDisplay(spec)}
-        </span>
+        <span className="text-sm tabular-nums text-muted-foreground">{formatDisplay(spec)}</span>
       }
     >
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-foreground/10">
@@ -419,7 +405,10 @@ const CustomGeneric = memo(function CustomGeneric({ spec }: ControlProps) {
 /* ---------- utils ---------- */
 
 function rgbToHex({ r, g, b }: { r: number; g: number; b: number }): string {
-  const to = (n: number) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, "0");
+  const to = (n: number) =>
+    Math.max(0, Math.min(255, Math.round(n)))
+      .toString(16)
+      .padStart(2, "0");
   return `#${to(r)}${to(g)}${to(b)}`;
 }
 function hexToRgb(hex: string): { r: number; g: number; b: number } {

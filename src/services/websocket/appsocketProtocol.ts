@@ -242,6 +242,19 @@ function deriveDeviceName(raw: RawDevice, id: string): string {
   return toTitle(primary);
 }
 
+function deriveStateLabel(id: string, label: string | undefined, kind: DeviceFunctionKind): string {
+  const suffix = id.split(".").at(-1) ?? id;
+  const generic = isGenericDeviceName(label);
+  if (!generic && label) return stripStateSuffix(label);
+  if (kind === "dimmer") return "Helligkeit";
+  if (suffix.toLowerCase() === "bri") return "Helligkeit";
+  if (suffix.toLowerCase() === "ct" || suffix.toLowerCase() === "colortemp") {
+    return "Farbtemperatur";
+  }
+  if (suffix.toLowerCase() === "state") return "Schalter";
+  return toTitle(suffix);
+}
+
 function mapRole(role: string | undefined): DeviceFunctionKind {
   if (!role) return "custom";
   const r = role.toLowerCase();
@@ -271,7 +284,7 @@ function stateToCapabilityAndFunction(
   if (!id) return null;
   const role = asString(raw.role) ?? asString(raw.common?.role);
   const kind = mapRole(role);
-  const label = asString(raw.name) ?? asString(raw.common?.name);
+  const label = deriveStateLabel(id, asString(raw.name) ?? asString(raw.common?.name), kind);
   const unit = asString(raw.unit) ?? asString(raw.common?.unit);
   const min = asNumber(raw.min) ?? asNumber(raw.common?.min);
   const max = asNumber(raw.max) ?? asNumber(raw.common?.max);
@@ -502,6 +515,8 @@ function decodeInternal(msg: Record<string, unknown>): WsIncomingEvent | null {
       return { type: "pong", ts: asNumber(msg.ts) };
     case "subscribe":
     case "unsubscribe":
+    case "set_state":
+    case "setState":
       return { type: "noop" };
     case "error":
       return {
