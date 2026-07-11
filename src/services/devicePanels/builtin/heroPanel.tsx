@@ -10,7 +10,6 @@ import { IconButton } from "@/components/ds/controls/IconButton";
 import { StatusBadge } from "@/components/ds/controls/StatusBadge";
 import { DeviceIcon } from "@/components/devices/DeviceIcon";
 import { DeviceStatusChips } from "@/components/devices/renderer/DeviceStatusChips";
-import { layoutIds } from "@/components/ds/motion/SharedLayout";
 
 const HeroPanelComponent = memo(function HeroPanel({ device }: DevicePanelProps) {
   const room = useRoomsStore((s) =>
@@ -26,7 +25,6 @@ const HeroPanelComponent = memo(function HeroPanel({ device }: DevicePanelProps)
 
   return (
     <HeroCard
-      layoutId={layoutIds.deviceCard(device.id)}
       title={device.name}
       subtitle={room?.name ?? desc?.name ?? device.type}
       accent={presenter.accent}

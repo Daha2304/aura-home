@@ -1,26 +1,13 @@
 /**
- * Guarded Service Worker registration.
+ * Service Worker cleanup.
  *
- * Registers ONLY in production and outside any Lovable preview / iframe context.
- * In dev / preview / iframe / `?sw=off`, existing /sw.js registrations are removed
- * so stale caches from a previous production visit cannot leak.
+ * Aura Home currently favors always-fresh UI over offline shell caching. We
+ * unregister existing `/sw.js` workers so stale app bundles cannot keep old
+ * layouts alive after a server deploy.
  */
 import { createLogger } from "@/services/logger/Logger";
 
 const log = createLogger("pwa");
-
-function isRefused(): boolean {
-  if (typeof window === "undefined") return true;
-  if (!import.meta.env.PROD) return true;
-  if (window.self !== window.top) return true;
-  const host = window.location.hostname;
-  if (host.startsWith("id-preview--") || host.startsWith("preview--")) return true;
-  if (host === "lovableproject.com" || host.endsWith(".lovableproject.com")) return true;
-  if (host === "lovableproject-dev.com" || host.endsWith(".lovableproject-dev.com")) return true;
-  if (host === "beta.lovable.dev" || host.endsWith(".beta.lovable.dev")) return true;
-  if (new URL(window.location.href).searchParams.get("sw") === "off") return true;
-  return false;
-}
 
 async function unregisterExisting(): Promise<void> {
   if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
@@ -51,29 +38,9 @@ export async function registerServiceWorker(
   onUpdate?: (r: ServiceWorkerRegistration) => void,
 ): Promise<ServiceWorkerRegistration | null> {
   if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return null;
-  if (isRefused()) {
-    await unregisterExisting();
-    return null;
-  }
-  try {
-    const reg = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
-    handle.registration = reg;
-    handle.onUpdate = onUpdate;
-    reg.addEventListener("updatefound", () => {
-      const nw = reg.installing;
-      if (!nw) return;
-      nw.addEventListener("statechange", () => {
-        if (nw.state === "installed" && navigator.serviceWorker.controller) {
-          onUpdate?.(reg);
-        }
-      });
-    });
-    log.info("service worker registered");
-    return reg;
-  } catch (err) {
-    log.warn("service worker registration failed", err);
-    return null;
-  }
+  await unregisterExisting();
+  void onUpdate;
+  return null;
 }
 
 export async function unregisterServiceWorker(): Promise<void> {

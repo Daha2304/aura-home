@@ -1,7 +1,7 @@
 /* Smart Home Service Worker — generic, versioned, business-logic-free. */
 /* eslint-disable no-restricted-globals */
 
-const SW_VERSION = "v2";
+const SW_VERSION = "v3";
 const CACHE_PREFIX = "smarthome";
 const CACHES = {
   shell: `${CACHE_PREFIX}-shell-${SW_VERSION}`,
@@ -15,10 +15,10 @@ const IMAGE_CACHE_MAX = 80;
 self.addEventListener("install", (event) => {
   event.waitUntil(
     (async () => {
-      const shell = await caches.open(CACHES.shell);
-      try {
-        await shell.addAll([OFFLINE_URL, "/manifest.webmanifest"]);
-      } catch (_) { /* offline install tolerated */ }
+      const names = await caches.keys();
+      await Promise.allSettled(
+        names.filter((n) => n.startsWith(`${CACHE_PREFIX}-`)).map((n) => caches.delete(n)),
+      );
       await self.skipWaiting();
     })(),
   );
@@ -31,10 +31,11 @@ self.addEventListener("activate", (event) => {
       const keep = new Set(Object.values(CACHES));
       await Promise.allSettled(
         names
-          .filter((n) => n.startsWith(`${CACHE_PREFIX}-`) && !keep.has(n))
+          .filter((n) => n.startsWith(`${CACHE_PREFIX}-`))
           .map((n) => caches.delete(n)),
       );
       await self.clients.claim();
+      await self.registration.unregister();
     })(),
   );
 });
