@@ -1,5 +1,4 @@
 import { memo, useMemo } from "react";
-import { AnimatePresence, motion } from "framer-motion";
 import type { DevicePanelDescriptor, DevicePanelProps } from "@/models/devicePanel";
 import { PropertyList } from "@/components/devices/properties/PropertyList";
 import { useCommandsStore } from "@/store/slices/commandsStore";
@@ -44,27 +43,21 @@ const DiagnosticsPanelComponent = memo(function DiagnosticsPanel({
             Noch keine Befehle registriert.
           </p>
         ) : (
-          <AnimatePresence initial={false}>
-            <ul className="flex flex-col gap-1.5">
-              {commands.map((c) => (
-                <motion.li
-                  key={c.id}
-                  layout
-                  initial={{ opacity: 0, y: 4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -4 }}
-                  className="flex items-center justify-between gap-2 rounded-lg bg-foreground/[0.03] px-2 py-1.5"
-                >
-                  <span className="truncate text-xs font-mono text-muted-foreground">
-                    {c.key} · {new Date(c.updatedAt).toLocaleTimeString()}
-                  </span>
-                  <StatusBadge tone={TONE_BY_STATE[c.state]}>
-                    {c.state}
-                  </StatusBadge>
-                </motion.li>
-              ))}
-            </ul>
-          </AnimatePresence>
+          <ul className="flex flex-col gap-1.5">
+            {commands.map((c) => (
+              <li
+                key={c.id}
+                className="flex items-center justify-between gap-2 rounded-lg bg-foreground/[0.03] px-2 py-1.5"
+              >
+                <span className="truncate text-xs font-mono text-muted-foreground">
+                  {c.key} · {new Date(c.updatedAt).toLocaleTimeString()}
+                </span>
+                <StatusBadge tone={TONE_BY_STATE[c.state]}>
+                  {c.state}
+                </StatusBadge>
+              </li>
+            ))}
+          </ul>
         )}
       </div>
     </div>

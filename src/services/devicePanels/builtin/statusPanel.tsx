@@ -3,15 +3,8 @@ import { Battery, Cog, Radar, Signal } from "lucide-react";
 import type { DevicePanelDescriptor, DevicePanelProps } from "@/models/devicePanel";
 import { MetricCard } from "@/components/ds/cards/MetricCard";
 import { StatusCard } from "@/components/ds/cards/StatusCard";
-import { StatusBadge } from "@/components/ds/controls/StatusBadge";
-import { useCommandsStore } from "@/store/slices/commandsStore";
-import { AnimatePresence, motion } from "framer-motion";
 
 const StatusPanelComponent = memo(function StatusPanel({ device }: DevicePanelProps) {
-  const active = useCommandsStore((s) => s.active).filter(
-    (c) => c.deviceId === device.id,
-  );
-
   return (
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -45,23 +38,6 @@ const StatusPanelComponent = memo(function StatusPanel({ device }: DevicePanelPr
           icon={<Cog className="h-4 w-4" />}
         />
       </div>
-      <AnimatePresence>
-        {active.length > 0 && (
-          <motion.div
-            layout
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="flex flex-wrap items-center gap-1.5"
-          >
-            {active.map((c) => (
-              <StatusBadge key={c.id} tone="info">
-                {c.state} · {c.key}
-              </StatusBadge>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 });
