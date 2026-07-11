@@ -3,6 +3,7 @@ import { isCapabilityFlag } from "@/models/deviceCapability";
 import { AppError } from "@/services/errors/AppError";
 import { errorBus } from "@/services/errors/ErrorBus";
 import { deviceRegistry } from "@/services/registry/DeviceRegistry";
+import type { DeviceTypeId } from "@/models/deviceType";
 
 export interface ValidationResult {
   ok: boolean;
@@ -20,6 +21,53 @@ function fail(deviceId: unknown, code: string, reason: string): ValidationResult
   return { ok: false, code, reason };
 }
 
+const KNOWN_DEVICE_TYPES: ReadonlySet<DeviceTypeId> = new Set([
+  "light",
+  "rgb",
+  "dimmer",
+  "outlet",
+  "blinds",
+  "jalousie",
+  "awning",
+  "garage",
+  "door",
+  "window",
+  "doorContact",
+  "windowContact",
+  "motion",
+  "presence",
+  "temperature",
+  "humidity",
+  "pressure",
+  "co2",
+  "voc",
+  "smoke",
+  "water",
+  "sensor",
+  "thermostat",
+  "heating",
+  "ac",
+  "fan",
+  "tv",
+  "avr",
+  "speaker",
+  "mediaPlayer",
+  "camera",
+  "doorbell",
+  "alarm",
+  "energy",
+  "energyMeter",
+  "pv",
+  "battery",
+  "wallbox",
+  "vacuum",
+  "custom",
+]);
+
+function isKnownDeviceType(type: string): type is DeviceTypeId {
+  return KNOWN_DEVICE_TYPES.has(type as DeviceTypeId);
+}
+
 /**
  * Prüft ein rohes Gerät auf strukturelle Gültigkeit, bevor es Registry/Store
  * erreicht. Alle Fehler laufen über den zentralen ErrorBus.
@@ -35,7 +83,7 @@ export function validateIncomingDevice(raw: unknown): ValidationResult {
   if (!d.type || typeof d.type !== "string") {
     return fail(d.id, "missing_type", "Gerät ohne Typ");
   }
-  if (!deviceRegistry.has(d.type)) {
+  if (!deviceRegistry.has(d.type) && !isKnownDeviceType(d.type)) {
     return fail(d.id, "unknown_device_type", `Unbekannter Gerätetyp: ${d.type}`);
   }
   if (!Array.isArray(d.capabilities)) {

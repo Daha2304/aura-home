@@ -24,7 +24,7 @@ import { devLog } from "@/store/slices/devLogStore";
 import { buildServerUrl } from "@/models/server";
 
 // Built-in-Gerätetypen und Registry-Store einmalig als Side-Effect laden.
-import "@/services/registry/builtin";
+import "@/services/registry/builtin/index";
 import "@/store/slices/registryStore";
 
 // Widget-Registry & Widget-Store (Plugin-Einstiegspunkt, Teil 5A).
@@ -53,7 +53,6 @@ import { offlineEngine, backgroundSync } from "@/services/offline";
 import { appLifecycle } from "@/services/lifecycle";
 import { deepLinkRouter } from "@/services/deeplinks";
 import { updateManager } from "@/services/pwa";
-
 
 const log = createLogger("bootstrap");
 
@@ -94,11 +93,7 @@ export function startCommunicationLayer(): void {
       if (status === "connecting") {
         const s = useSettingsStore.getState();
         const srv = s.servers.find((x) => x.id === s.activeServerId);
-        devLog(
-          "connect",
-          "Verbindungsversuch gestartet",
-          srv ? buildServerUrl(srv) : undefined,
-        );
+        devLog("connect", "Verbindungsversuch gestartet", srv ? buildServerUrl(srv) : undefined);
       } else {
         devLog("info", `Status: ${status}`);
       }
@@ -133,10 +128,7 @@ export function startCommunicationLayer(): void {
     }),
     wsManager.on("reconnecting", ({ attempt, delayMs }) => {
       useConnectionStore.getState().setReconnectAttempt(attempt);
-      devLog(
-        "reconnect",
-        `Reconnect #${attempt} in ${Math.round(delayMs)} ms`,
-      );
+      devLog("reconnect", `Reconnect #${attempt} in ${Math.round(delayMs)} ms`);
     }),
     wsManager.on("error", (payload) => {
       useConnectionStore.getState().setError(payload.message);
@@ -243,11 +235,6 @@ export function startCommunicationLayer(): void {
   healthManager.start();
   recoveryManager.start();
   void runStartupValidation();
-
-
-
-
-
 
   // Aktiven Server beobachten und Manager entsprechend (neu) konfigurieren.
   const applyActiveServer = () => {

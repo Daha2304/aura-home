@@ -1,5 +1,6 @@
 import type { Capability, CustomCapability } from "@/models/capability";
 import type { Device, DeviceFunction, DeviceFunctionKind } from "@/models/device";
+import type { DeviceTypeId } from "@/models/deviceType";
 import type { WsIncomingEvent, WsOutgoingMessage } from "@/models/events";
 import type { ServerConfig } from "@/models/server";
 import { deviceRegistry } from "@/services/registry/DeviceRegistry";
@@ -29,6 +30,53 @@ const log = createLogger("ws:appsocket");
 
 const CLIENT_NAME = "Lovable Smart Home";
 const CLIENT_VERSION = 1;
+
+const KNOWN_DEVICE_TYPES: ReadonlySet<DeviceTypeId> = new Set([
+  "light",
+  "rgb",
+  "dimmer",
+  "outlet",
+  "blinds",
+  "jalousie",
+  "awning",
+  "garage",
+  "door",
+  "window",
+  "doorContact",
+  "windowContact",
+  "motion",
+  "presence",
+  "temperature",
+  "humidity",
+  "pressure",
+  "co2",
+  "voc",
+  "smoke",
+  "water",
+  "sensor",
+  "thermostat",
+  "heating",
+  "ac",
+  "fan",
+  "tv",
+  "avr",
+  "speaker",
+  "mediaPlayer",
+  "camera",
+  "doorbell",
+  "alarm",
+  "energy",
+  "energyMeter",
+  "pv",
+  "battery",
+  "wallbox",
+  "vacuum",
+  "custom",
+]);
+
+function isKnownDeviceType(type: string | undefined): type is DeviceTypeId {
+  return !!type && KNOWN_DEVICE_TYPES.has(type as DeviceTypeId);
+}
 
 // ---------------------------------------------------------------------------
 // StateId ↔ Device-Index. Wird beim Import von discover_result/snapshot
@@ -110,7 +158,15 @@ type RawState = {
   max?: unknown;
   step?: unknown;
   states?: unknown;
-  common?: { name?: unknown; write?: unknown; unit?: unknown; min?: unknown; max?: unknown; step?: unknown; role?: unknown };
+  common?: {
+    name?: unknown;
+    write?: unknown;
+    unit?: unknown;
+    min?: unknown;
+    max?: unknown;
+    step?: unknown;
+    role?: unknown;
+  };
   writable?: unknown;
 };
 
@@ -174,8 +230,7 @@ function stateToCapabilityAndFunction(
   const max = asNumber(raw.max) ?? asNumber(raw.common?.max);
   const step = asNumber(raw.step) ?? asNumber(raw.common?.step);
   const writable =
-    raw.writable === true ||
-    (raw.common?.write !== undefined ? raw.common.write !== false : true);
+    raw.writable === true || (raw.common?.write !== undefined ? raw.common.write !== false : true);
   const options = Array.isArray(raw.states)
     ? (raw.states as unknown[]).filter((x): x is string => typeof x === "string")
     : undefined;
@@ -205,7 +260,9 @@ function stateToCapabilityAndFunction(
 
 function pickDeviceType(raw: RawDevice): Device["type"] {
   const t = asString(raw.type) ?? asString(raw.role);
-  if (t && deviceRegistry.has(t as Device["type"])) return t as Device["type"];
+  if (t && (deviceRegistry.has(t as Device["type"]) || isKnownDeviceType(t))) {
+    return t as Device["type"];
+  }
   // Bekannte appsocket-Rollen grob auf unsere Kategorien mappen.
   const map: Record<string, string> = {
     light: "light",
@@ -228,7 +285,7 @@ function pickDeviceType(raw: RawDevice): Device["type"] {
     media: "mediaPlayer",
   };
   const mapped = t ? map[t.toLowerCase()] : undefined;
-  if (mapped && deviceRegistry.has(mapped as Device["type"])) {
+  if (mapped && (deviceRegistry.has(mapped as Device["type"]) || isKnownDeviceType(mapped))) {
     return mapped as Device["type"];
   }
   return "custom" as Device["type"];
