@@ -53,6 +53,7 @@ class ControlFactoryImpl {
     // branching. Skip ids that already exist as native capabilities.
     const takenIds = new Set(specs.map((s) => s.capabilityId));
     for (const fn of device.functions ?? []) {
+      if (fn.meta?.visibleControl === false) continue;
       if (takenIds.has(fn.id)) continue;
       const descriptor = capabilityRegistry.get(fn.kind);
       if (!descriptor) continue;

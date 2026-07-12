@@ -184,6 +184,7 @@ type RawDevice = {
   firmware?: unknown;
   serial?: unknown;
   mac?: unknown;
+  capabilities?: unknown;
   states?: unknown;
 };
 
@@ -279,6 +280,7 @@ function mapRole(role: string | undefined): DeviceFunctionKind {
 
 function stateToCapabilityAndFunction(
   raw: RawState,
+  visibleControl = true,
 ): { cap: CustomCapability; fn: DeviceFunction } | null {
   const id = asString(raw.id) ?? asString(raw.stateId);
   if (!id) return null;
@@ -307,7 +309,7 @@ function stateToCapabilityAndFunction(
     step,
     options,
     readonly: !writable,
-    meta: { role },
+    meta: { role, visibleControl },
   };
   return { cap, fn };
 }
@@ -377,14 +379,25 @@ export function appsocketNormalizeDevice(raw: unknown): Device | null {
   const id = asString(r.id) ?? asString(r.deviceId);
   if (!id) return null;
 
+  const rawCapabilities = Array.isArray(r.capabilities) ? (r.capabilities as RawState[]) : [];
   const rawStates = Array.isArray(r.states) ? (r.states as RawState[]) : [];
   const capabilities: Capability[] = [];
   const functions: DeviceFunction[] = [];
-  for (const s of rawStates) {
-    const pair = stateToCapabilityAndFunction(s);
+  const capabilitySource = rawCapabilities.length > 0 ? rawCapabilities : rawStates;
+
+  for (const s of capabilitySource) {
+    const pair = stateToCapabilityAndFunction(s, true);
     if (!pair) continue;
     capabilities.push(pair.cap);
-    functions.push(pair.fn);
+    if (rawCapabilities.length === 0) functions.push(pair.fn);
+  }
+
+  if (rawCapabilities.length > 0) {
+    for (const s of rawStates) {
+      const pair = stateToCapabilityAndFunction(s, false);
+      if (!pair) continue;
+      functions.push(pair.fn);
+    }
   }
 
   const device: Device = {

@@ -6,6 +6,7 @@ import {
   sensorsPanelDescriptor,
 } from "./builtin/controlsPanel";
 import { informationPanelDescriptor } from "./builtin/informationPanel";
+import { objectsPanelDescriptor } from "./builtin/objectsPanel";
 import {
   networkPanelDescriptor,
   firmwarePanelDescriptor,
@@ -23,6 +24,7 @@ export function bootstrapDevicePanels(): void {
   devicePanelRegistry.register(controlsPanelDescriptor);
   devicePanelRegistry.register(sensorsPanelDescriptor);
   devicePanelRegistry.register(informationPanelDescriptor);
+  devicePanelRegistry.register(objectsPanelDescriptor);
   devicePanelRegistry.register(networkPanelDescriptor);
   devicePanelRegistry.register(firmwarePanelDescriptor);
   devicePanelRegistry.register(diagnosticsPanelDescriptor);

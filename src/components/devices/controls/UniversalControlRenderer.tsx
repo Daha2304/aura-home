@@ -26,16 +26,22 @@ const CATEGORY_ORDER: CapabilityCategory[] = [
 
 export interface UniversalControlRendererProps {
   deviceId: string;
+  mode?: "all" | "writable" | "readonly";
 }
 
 export const UniversalControlRenderer = memo(function UniversalControlRenderer({
   deviceId,
+  mode = "all",
 }: UniversalControlRendererProps) {
   const device = useDevicesStore((s) => s.byId(deviceId));
-  const specs = useMemo(
-    () => (device ? controlFactory.buildForDevice(device) : []),
-    [device],
-  );
+  const specs = useMemo(() => {
+    const all = device ? controlFactory.buildForDevice(device) : [];
+
+    if (mode === "writable") return all.filter((spec) => !spec.readOnly);
+    if (mode === "readonly") return all.filter((spec) => spec.readOnly);
+
+    return all;
+  }, [device, mode]);
 
   const grouped = useMemo(() => {
     const map = new Map<CapabilityCategory, ControlSpec[]>();
