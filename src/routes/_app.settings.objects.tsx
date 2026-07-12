@@ -152,6 +152,9 @@ function TreeNode({
           {node.role && <StatusBadge tone="neutral">{node.role}</StatusBadge>}
           {node.valueType && <StatusBadge tone="neutral">{node.valueType}</StatusBadge>}
           {node.writable && <StatusBadge tone="info">write</StatusBadge>}
+          {node.value !== undefined && (
+            <StatusBadge tone="neutral">{formatValue(node.value, node.unit)}</StatusBadge>
+          )}
         </div>
       </div>
       {hasChildren && open && (
@@ -194,4 +197,10 @@ function filterTree(nodes: IoBrokerObjectTreeNode[], query: string): IoBrokerObj
 
 function countNodes(nodes: IoBrokerObjectTreeNode[]): number {
   return nodes.reduce((sum, node) => sum + 1 + countNodes(node.children), 0);
+}
+
+function formatValue(value: unknown, unit?: string): string {
+  if (value === null) return "null";
+  if (typeof value === "object") return "{...}";
+  return `${String(value)}${unit ? ` ${unit}` : ""}`;
 }

@@ -60,7 +60,10 @@ class DiscoveryEngine {
     );
 
     // 3) Nach erfolgreicher Authentifizierung Full-Sync anfordern.
-    this.unsubs.push(wsManager.on("authenticated", () => this.requestFullSync()));
+    this.unsubs.push(wsManager.on("authenticated", () => {
+      this.requestFullSync();
+      this.subscribeManualStates();
+    }));
 
     // 4) Cache automatisch fortschreiben — debounced.
     this.cacheUnsub = useDevicesStore.subscribe((s, prev) => {
@@ -74,6 +77,7 @@ class DiscoveryEngine {
 
     if (wsManager.status === "authenticated") {
       this.requestFullSync();
+      this.subscribeManualStates();
     }
   }
 
@@ -116,6 +120,18 @@ class DiscoveryEngine {
       payload: { since },
       requestId,
     });
+  }
+
+  private subscribeManualStates(): void {
+    const ids = new Set<string>();
+
+    for (const device of useDevicesStore.getState().devices) {
+      if (device.customProperties?.auraManual !== true) continue;
+      for (const capability of device.capabilities) ids.add(capability.id);
+      for (const fn of device.functions ?? []) ids.add(fn.id);
+    }
+
+    for (const id of ids) wsManager.subscribe(id);
   }
 
   /**

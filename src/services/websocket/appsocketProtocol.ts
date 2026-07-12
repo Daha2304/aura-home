@@ -6,6 +6,7 @@ import type { WsIncomingEvent, WsOutgoingMessage } from "@/models/events";
 import type { ServerConfig } from "@/models/server";
 import { deviceRegistry } from "@/services/registry/DeviceRegistry";
 import { createLogger } from "@/services/logger/Logger";
+import { useDevicesStore } from "@/store/slices/devicesStore";
 import type { Protocol } from "./protocol";
 
 /**
@@ -441,8 +442,8 @@ function encodeInternal(message: WsOutgoingMessage): Record<string, unknown> {
       return { type: "unsubscribe", stateIds: [message.topic] };
     case "command":
       return {
-        type: "setState",
-        stateId: message.key,
+        type: "set_state",
+        id: message.key,
         value: message.value,
         requestId: message.requestId,
       };
@@ -513,6 +514,22 @@ function decodeInternal(msg: Record<string, unknown>): WsIncomingEvent | null {
       if (!stateId) return null;
       const binding = stateIndex.get(stateId);
       if (!binding) {
+        const manualDevice = useDevicesStore
+          .getState()
+          .devices.find((device) =>
+            device.capabilities.some((cap) => cap.id === stateId) ||
+            (device.functions ?? []).some((fn) => fn.id === stateId),
+          );
+
+        if (manualDevice) {
+          return {
+            type: "device.state",
+            deviceId: manualDevice.id,
+            key: stateId,
+            value: msg.value,
+          };
+        }
+
         // Fallback: nutze stateId als deviceId+key (DeviceManager verwirft dann still).
         return {
           type: "device.state",
@@ -577,6 +594,9 @@ function normalizeObjectTreeNode(value: IoBrokerObjectTreeNode): IoBrokerObjectT
     readable: typeof value.readable === "boolean" ? value.readable : undefined,
     writable: typeof value.writable === "boolean" ? value.writable : undefined,
     unit: typeof value.unit === "string" ? value.unit : undefined,
+    value: value.value,
+    ack: typeof value.ack === "boolean" ? value.ack : undefined,
+    ts: typeof value.ts === "number" ? value.ts : undefined,
     children: Array.isArray(value.children)
       ? value.children.filter(isObjectTreeNode).map(normalizeObjectTreeNode)
       : [],

@@ -133,7 +133,13 @@ function patchDeviceValue(device: Device, key: string, value: unknown): Device {
   if (device.functions && fnIndex >= 0) {
     const functions = device.functions.slice();
     functions[fnIndex] = { ...functions[fnIndex], value, updatedAt: Date.now() };
-    return { ...device, functions };
+    const patch: Partial<Device> = { functions };
+
+    if (functions[fnIndex].kind === "battery" && typeof value === "number") {
+      patch.battery = value;
+    }
+
+    return { ...device, ...patch };
   }
   // Unbekannter Key → in attributes protokollieren, damit nichts verlorengeht.
   return {

@@ -108,6 +108,11 @@ export const DeviceSync = {
     }
     // Geräte, die der Server nicht mehr liefert, werden entfernt.
     for (const existing of store.devices) {
+      if (existing.customProperties?.auraManual === true) {
+        seen.add(existing.id);
+        continue;
+      }
+
       if (!seen.has(existing.id)) {
         store.removeDevice(existing.id);
         discoveryEvents.emit("deviceRemoved", { deviceId: existing.id });

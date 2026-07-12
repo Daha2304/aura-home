@@ -1,5 +1,5 @@
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
-import { ChevronLeft, Heart, Home, Pencil, Trash2, Radar, Wifi, WifiOff } from "lucide-react";
+import { ChevronLeft, Heart, Home, Pencil, Plus, Trash2, Radar, Wifi, WifiOff } from "lucide-react";
 import { useState } from "react";
 import { useRoomsStore } from "@/store/slices/roomsStore";
 import { useDevicesStore } from "@/store/slices/devicesStore";
@@ -22,6 +22,7 @@ import { RoomForm, type RoomFormValue } from "@/components/rooms/RoomForm";
 import { layoutIds } from "@/components/ds/motion/SharedLayout";
 import { getRoomCategoryMeta } from "@/models/roomCategory";
 import { DeviceCatalog } from "@/components/devices/catalog";
+import { ManualDeviceSheet } from "@/components/devices/manual/ManualDeviceSheet";
 
 export const Route = createFileRoute("/_app/rooms/$roomId")({
   component: RoomDetail,
@@ -41,6 +42,7 @@ function RoomDetail() {
   const discovering = useDiscoveryStore((s) => s.state === "discovering");
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [addDeviceOpen, setAddDeviceOpen] = useState(false);
 
   if (!room) throw notFound();
 
@@ -134,7 +136,16 @@ function RoomDetail() {
         />
       </div>
 
-      <SectionCard title="Geräte" description="Live aus Discovery und Intelligence Layer.">
+      <SectionCard
+        title="Geräte"
+        description="Live-Geräte und eigene Aura-Geräte in diesem Raum."
+        trailing={
+          <GlassButton variant="ghost" onClick={() => setAddDeviceOpen(true)}>
+            <Plus className="h-4 w-4" />
+            Gerät
+          </GlassButton>
+        }
+      >
         <DeviceCatalog roomId={room.id} />
       </SectionCard>
 
@@ -173,6 +184,12 @@ function RoomDetail() {
             </GlassButton>
           </>
         }
+      />
+
+      <ManualDeviceSheet
+        open={addDeviceOpen}
+        roomId={room.id}
+        onClose={() => setAddDeviceOpen(false)}
       />
     </PageTransition>
   );
