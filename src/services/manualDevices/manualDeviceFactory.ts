@@ -44,15 +44,18 @@ export function createManualDevice(input: ManualDeviceInput): Device {
 function createFunction(node: IoBrokerObjectTreeNode, label: string): DeviceFunction {
   const kind = inferFunctionKind(node);
   const readonly = node.writable !== true;
+  const scale = getPercentageScale(node, kind);
 
   return {
     id: node.id,
     kind,
     label: label.trim() || node.name || node.id.split(".").at(-1) || node.id,
-    value: normalizeValue(node.value, node.valueType),
+    value: kind === "dimmer"
+      ? rawToPercent(normalizeNumber(node.value), scale?.min ?? 0, scale?.max ?? 100)
+      : normalizeValue(node.value, node.valueType),
     unit: node.unit,
-    min: kind === "battery" ? 0 : undefined,
-    max: kind === "battery" ? 100 : undefined,
+    min: kind === "battery" || kind === "dimmer" ? 0 : node.min,
+    max: kind === "battery" || kind === "dimmer" ? 100 : node.max,
     readonly,
     updatedAt: node.ts,
     meta: {
@@ -61,6 +64,9 @@ function createFunction(node: IoBrokerObjectTreeNode, label: string): DeviceFunc
       valueType: node.valueType,
       writable: node.writable,
       readable: node.readable,
+      rawMin: scale?.min ?? node.min,
+      rawMax: scale?.max ?? node.max,
+      valueScale: scale ? "percent" : undefined,
     },
   };
 }
@@ -71,6 +77,7 @@ function inferFunctionKind(node: IoBrokerObjectTreeNode): DeviceFunctionKind {
   const unit = (node.unit ?? "").toLowerCase();
 
   if (role.includes("battery") || id.endsWith(".battery") || id.includes("battery")) return "battery";
+  if (role.includes("dimmer") || role.includes("brightness") || id.includes("dimmer") || id.includes("brightness") || id.endsWith(".bri")) return "dimmer";
   if (role.includes("humidity") || id.includes("humidity")) return "humidity";
   if (role.includes("temperature") || id.includes("temperature")) return "temperature";
   if (role.includes("voltage") || id.includes("voltage")) return "voltage";
@@ -82,6 +89,49 @@ function inferFunctionKind(node: IoBrokerObjectTreeNode): DeviceFunctionKind {
   if (node.valueType === "string") return "text";
 
   return "custom";
+}
+
+function getPercentageScale(
+  node: IoBrokerObjectTreeNode,
+  kind: DeviceFunctionKind,
+): { min: number; max: number } | null {
+  if (kind !== "dimmer") return null;
+
+  const min = typeof node.min === "number" ? node.min : 0;
+  const max = typeof node.max === "number" ? node.max : inferRawMax(node);
+
+  return max > 100 ? { min, max } : null;
+}
+
+function inferRawMax(node: IoBrokerObjectTreeNode): number {
+  const id = node.id.toLowerCase();
+  const value = normalizeNumber(node.value);
+
+  if (value > 100) {
+    return 255;
+  }
+
+  if (id.includes("zigbee2mqtt") || id.includes("wled") || id.endsWith(".bri")) {
+    return 255;
+  }
+
+  return 100;
+}
+
+function normalizeNumber(value: unknown): number {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number(value.replace(",", "."));
+    if (Number.isFinite(parsed)) return parsed;
+  }
+
+  return 0;
+}
+
+function rawToPercent(value: number, rawMin: number, rawMax: number): number {
+  if (rawMax <= rawMin) return 0;
+  const percent = ((value - rawMin) / (rawMax - rawMin)) * 100;
+  return Math.max(0, Math.min(100, Math.round(percent)));
 }
 
 function normalizeValue(value: unknown, valueType?: string): unknown {

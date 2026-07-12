@@ -7,6 +7,8 @@ export interface IoBrokerObjectTreeNode {
   readable?: boolean;
   writable?: boolean;
   unit?: string;
+  min?: number;
+  max?: number;
   value?: unknown;
   ack?: boolean;
   ts?: number;

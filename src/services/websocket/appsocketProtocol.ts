@@ -444,7 +444,7 @@ function encodeInternal(message: WsOutgoingMessage): Record<string, unknown> {
       return {
         type: "set_state",
         id: message.key,
-        value: message.value,
+        value: encodeCommandValue(message.deviceId, message.key, message.value),
         requestId: message.requestId,
       };
     case "request":
@@ -512,36 +512,10 @@ function decodeInternal(msg: Record<string, unknown>): WsIncomingEvent | null {
     case "state_changed": {
       const stateId = asString(msg.stateId) ?? asString(msg.id);
       if (!stateId) return null;
-      const binding = stateIndex.get(stateId);
-      if (!binding) {
-        const manualDevice = useDevicesStore
-          .getState()
-          .devices.find((device) =>
-            device.capabilities.some((cap) => cap.id === stateId) ||
-            (device.functions ?? []).some((fn) => fn.id === stateId),
-          );
-
-        if (manualDevice) {
-          return {
-            type: "device.state",
-            deviceId: manualDevice.id,
-            key: stateId,
-            value: msg.value,
-          };
-        }
-
-        // Fallback: nutze stateId als deviceId+key (DeviceManager verwirft dann still).
-        return {
-          type: "device.state",
-          deviceId: stateId,
-          key: stateId,
-          value: msg.value,
-        };
-      }
-      return {
+      return stateChangedEventFor(stateId, msg.value) ?? {
         type: "device.state",
-        deviceId: binding.deviceId,
-        key: binding.key,
+        deviceId: stateId,
+        key: stateId,
         value: msg.value,
       };
     }
@@ -604,8 +578,68 @@ function stateChangedEventFor(stateId: string, value: unknown): WsIncomingEvent 
     type: "device.state",
     deviceId: manualDevice.id,
     key: stateId,
-    value,
+    value: decodeStateValue(manualDevice.id, stateId, value),
   };
+}
+
+function encodeCommandValue(deviceId: string, stateId: string, value: unknown): unknown {
+  const binding = findManualBinding(deviceId, stateId);
+  const scale = getPercentScale(binding);
+  if (!scale) return value;
+
+  const percent = asFiniteNumber(value, 0);
+
+  return Math.round(scale.min + (Math.max(0, Math.min(100, percent)) / 100) * (scale.max - scale.min));
+}
+
+function decodeStateValue(deviceId: string, stateId: string, value: unknown): unknown {
+  const binding = findManualBinding(deviceId, stateId);
+  const scale = getPercentScale(binding, value);
+  if (!scale) return value;
+
+  const rawValue = asFiniteNumber(value, scale.min);
+
+  return Math.max(0, Math.min(100, Math.round(((rawValue - scale.min) / (scale.max - scale.min)) * 100)));
+}
+
+function findManualBinding(deviceId: string, stateId: string) {
+  const device = useDevicesStore.getState().byId(deviceId);
+  if (!device || device.customProperties?.auraManual !== true) return undefined;
+
+  return device.functions?.find((fn) => fn.id === stateId);
+}
+
+function getPercentScale(binding: ReturnType<typeof findManualBinding>, rawValue?: unknown): { min: number; max: number } | null {
+  if (!binding) return null;
+
+  const role = typeof binding.meta?.role === "string" ? binding.meta.role.toLowerCase() : "";
+  const id = binding.id.toLowerCase();
+  const isDimmer =
+    binding.kind === "dimmer" ||
+    role.includes("dimmer") ||
+    role.includes("brightness") ||
+    id.includes("dimmer") ||
+    id.includes("brightness") ||
+    id.endsWith(".bri");
+
+  if (!isDimmer) return null;
+
+  const min = asFiniteNumber(binding.meta?.rawMin, 0);
+  const explicitMax = typeof binding.meta?.rawMax === "number" ? binding.meta.rawMax : undefined;
+  const observed = Math.max(asFiniteNumber(binding.value, 0), asFiniteNumber(rawValue, 0));
+  const max = explicitMax ?? (observed > 100 || id.includes("zigbee2mqtt") || id.includes("wled") || id.endsWith(".bri") ? 255 : 100);
+
+  return max > 100 ? { min, max } : null;
+}
+
+function asFiniteNumber(value: unknown, fallback: number): number {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number(value.replace(",", "."));
+    if (Number.isFinite(parsed)) return parsed;
+  }
+
+  return fallback;
 }
 
 function readObjectTree(msg: Record<string, unknown>): IoBrokerObjectTreeNode[] {
@@ -633,6 +667,8 @@ function normalizeObjectTreeNode(value: IoBrokerObjectTreeNode): IoBrokerObjectT
     readable: typeof value.readable === "boolean" ? value.readable : undefined,
     writable: typeof value.writable === "boolean" ? value.writable : undefined,
     unit: typeof value.unit === "string" ? value.unit : undefined,
+    min: typeof value.min === "number" ? value.min : undefined,
+    max: typeof value.max === "number" ? value.max : undefined,
     value: value.value,
     ack: typeof value.ack === "boolean" ? value.ack : undefined,
     ts: typeof value.ts === "number" ? value.ts : undefined,

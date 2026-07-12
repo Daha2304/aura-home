@@ -1,7 +1,7 @@
 import type { Capability } from "@/models/capability";
 import type { CapabilityDescriptor } from "@/models/capabilityDescriptor";
 import type { ControlSpec } from "@/models/controlSpec";
-import type { Device } from "@/models/device";
+import type { Device, DeviceFunction, DeviceFunctionKind } from "@/models/device";
 import { capabilityRegistry } from "@/services/capabilities/CapabilityRegistry";
 import { controlRegistry } from "./ControlRegistry";
 
@@ -55,31 +55,33 @@ class ControlFactoryImpl {
     for (const fn of device.functions ?? []) {
       if (fn.meta?.visibleControl === false) continue;
       if (takenIds.has(fn.id)) continue;
-      const descriptor = capabilityRegistry.get(fn.kind);
+      const kind = normalizeFunctionKind(fn);
+      const descriptor = capabilityRegistry.get(kind);
       if (!descriptor) continue;
       const controlType = pickControlType(descriptor);
       if (!controlType) continue;
+      const value = normalizeFunctionValue(fn, kind);
       const synthetic = {
-        kind: fn.kind,
+        kind,
         id: fn.id,
         label: fn.label,
         readonly: fn.readonly,
-        value: fn.value,
+        value,
         // enum options passthrough for mode-like functions
         options: fn.options,
         unit: fn.unit,
-        min: fn.min,
-        max: fn.max,
+        min: kind === "dimmer" ? 0 : fn.min,
+        max: kind === "dimmer" ? 100 : fn.max,
         step: fn.step,
       } as unknown as Capability;
       specs.push({
         id: `${device.id}:${fn.id}:${controlType}`,
         deviceId: device.id,
         capabilityId: fn.id,
-        capabilityKind: fn.kind,
+        capabilityKind: kind,
         controlType,
         descriptor,
-        currentValue: fn.value,
+        currentValue: value,
         commandKey: fn.id,
         group: descriptor.category,
         priority: descriptor.priority - 5,
@@ -92,6 +94,46 @@ class ControlFactoryImpl {
     this.cache.set(device, { capsRef: device.capabilities, specs });
     return specs;
   }
+}
+
+function normalizeFunctionKind(fn: DeviceFunction): DeviceFunctionKind {
+  const role = typeof fn.meta?.role === "string" ? fn.meta.role.toLowerCase() : "";
+  const id = fn.id.toLowerCase();
+
+  if (
+    fn.kind === "dimmer" ||
+    role.includes("dimmer") ||
+    role.includes("brightness") ||
+    id.includes("dimmer") ||
+    id.includes("brightness") ||
+    id.endsWith(".bri")
+  ) {
+    return "dimmer";
+  }
+
+  return fn.kind;
+}
+
+function normalizeFunctionValue(fn: DeviceFunction, kind: DeviceFunctionKind): unknown {
+  if (kind !== "dimmer") return fn.value;
+
+  if (fn.meta?.valueScale === "percent") return clampPercent(asNumber(fn.value));
+
+  return clampPercent(asNumber(fn.value));
+}
+
+function asNumber(value: unknown): number {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number(value.replace(",", "."));
+    if (Number.isFinite(parsed)) return parsed;
+  }
+
+  return 0;
+}
+
+function clampPercent(value: number): number {
+  return Math.max(0, Math.min(100, Math.round(value)));
 }
 
 function pickControlType(descriptor: CapabilityDescriptor): string | undefined {
