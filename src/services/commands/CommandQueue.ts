@@ -10,8 +10,8 @@ import { createId } from "@/utils/ids";
 
 const log = createLogger("commands");
 
-const DEFAULT_TIMEOUT_MS = 5_000;
-const DEFAULT_MAX_ATTEMPTS = 3;
+const DEFAULT_TIMEOUT_MS = 8_000;
+const DEFAULT_MAX_ATTEMPTS = 1;
 
 interface CommandQueueEventMap {
   enqueued: Command;
@@ -50,6 +50,12 @@ class CommandQueueImpl extends TypedEmitter<CommandQueueEventMap> {
       // Ack-Erkennung: eine device.state auf den gleichen key gilt als Bestätigung.
       wsManager.dispatcher.on("device.state", (e) => {
         this.onPossibleAck(e.deviceId, e.key);
+      }),
+      wsManager.dispatcher.on("command.ack", (e) => {
+        this.onCommandAck(e.requestId, e.success, e.code ?? e.message ?? "server_error");
+      }),
+      wsManager.dispatcher.on("error", (e) => {
+        if (e.requestId) this.onCommandAck(e.requestId, false, e.code ?? e.message);
       }),
     );
     log.info("started");
@@ -122,7 +128,7 @@ class CommandQueueImpl extends TypedEmitter<CommandQueueEventMap> {
   ack(id: string): void {
     const cmd = this.pending.get(id);
     if (!cmd) return;
-    this.transition(cmd, "acknowledged");
+    this.complete(cmd);
   }
 
   private dispatch(cmd: Command): void {
@@ -163,6 +169,17 @@ class CommandQueueImpl extends TypedEmitter<CommandQueueEventMap> {
         }
       }
     }
+  }
+
+  private onCommandAck(id: string | undefined, success: boolean, errorCode: string): void {
+    if (!id) return;
+    const cmd = this.pending.get(id);
+    if (!cmd) return;
+    if (success) {
+      this.complete(cmd);
+      return;
+    }
+    this.fail(cmd, errorCode || "server_error");
   }
 
   private complete(cmd: Command): void {

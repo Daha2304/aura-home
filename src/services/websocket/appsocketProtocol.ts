@@ -512,11 +512,12 @@ function decodeInternal(msg: Record<string, unknown>): WsIncomingEvent | null {
     case "state_changed": {
       const stateId = asString(msg.stateId) ?? asString(msg.id);
       if (!stateId) return null;
-      return stateChangedEventFor(stateId, msg.value) ?? {
+      const value = readMessageValue(msg);
+      return stateChangedEventFor(stateId, value) ?? {
         type: "device.state",
         deviceId: stateId,
         key: stateId,
-        value: msg.value,
+        value,
       };
     }
     case "device_online":
@@ -531,9 +532,17 @@ function decodeInternal(msg: Record<string, unknown>): WsIncomingEvent | null {
     case "setState": {
       if (msg.success === true || msg.ok === true) {
         const stateId = asString(msg.stateId) ?? asString(msg.id);
+        const value = readMessageValue(msg);
         if (stateId) {
-          const mapped = stateChangedEventFor(stateId, msg.value);
-          if (mapped) return mapped;
+          const mapped = stateBindingFor(stateId);
+          return {
+            type: "command.ack",
+            requestId: asString(msg.requestId),
+            success: true,
+            deviceId: mapped?.deviceId,
+            key: mapped?.key ?? stateId,
+            value: mapped ? decodeStateValue(mapped.deviceId, mapped.key, value) : value,
+          };
         }
       }
 
@@ -547,23 +556,20 @@ function decodeInternal(msg: Record<string, unknown>): WsIncomingEvent | null {
         type: "error",
         message: asString(msg.message) ?? "Serverfehler",
         code: asString(msg.code),
+        requestId: asString(msg.requestId),
       };
     default:
       return null;
   }
 }
 
-function stateChangedEventFor(stateId: string, value: unknown): WsIncomingEvent | null {
-  const binding = stateIndex.get(stateId);
+function readMessageValue(msg: Record<string, unknown>): unknown {
+  return "value" in msg ? msg.value : msg.val;
+}
 
-  if (binding) {
-    return {
-      type: "device.state",
-      deviceId: binding.deviceId,
-      key: binding.key,
-      value,
-    };
-  }
+function stateBindingFor(stateId: string): StateBinding | null {
+  const binding = stateIndex.get(stateId);
+  if (binding) return binding;
 
   const manualDevice = useDevicesStore
     .getState()
@@ -572,14 +578,22 @@ function stateChangedEventFor(stateId: string, value: unknown): WsIncomingEvent 
       (device.functions ?? []).some((fn) => fn.id === stateId),
     );
 
-  if (!manualDevice) return null;
+  return manualDevice ? { deviceId: manualDevice.id, key: stateId } : null;
+}
 
-  return {
-    type: "device.state",
-    deviceId: manualDevice.id,
-    key: stateId,
-    value: decodeStateValue(manualDevice.id, stateId, value),
-  };
+function stateChangedEventFor(stateId: string, value: unknown): WsIncomingEvent | null {
+  const binding = stateBindingFor(stateId);
+
+  if (binding) {
+    return {
+      type: "device.state",
+      deviceId: binding.deviceId,
+      key: binding.key,
+      value: decodeStateValue(binding.deviceId, binding.key, value),
+    };
+  }
+
+  return null;
 }
 
 function encodeCommandValue(deviceId: string, stateId: string, value: unknown): unknown {

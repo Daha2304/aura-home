@@ -7,6 +7,7 @@ import { controlRegistry } from "./ControlRegistry";
 
 interface CacheEntry {
   capsRef: Capability[];
+  functionsRef: Device["functions"];
   specs: ControlSpec[];
 }
 
@@ -19,7 +20,9 @@ class ControlFactoryImpl {
 
   buildForDevice(device: Device): ControlSpec[] {
     const cached = this.cache.get(device);
-    if (cached && cached.capsRef === device.capabilities) return cached.specs;
+    if (cached && cached.capsRef === device.capabilities && cached.functionsRef === device.functions) {
+      return cached.specs;
+    }
 
     const specs: ControlSpec[] = [];
     for (const cap of device.capabilities ?? []) {
@@ -91,7 +94,7 @@ class ControlFactoryImpl {
     }
 
     specs.sort((a, b) => b.priority - a.priority);
-    this.cache.set(device, { capsRef: device.capabilities, specs });
+    this.cache.set(device, { capsRef: device.capabilities, functionsRef: device.functions, specs });
     return specs;
   }
 }

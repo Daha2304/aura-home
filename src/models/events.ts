@@ -34,9 +34,19 @@ export type WsIncomingEvent =
   | { type: "scene.updated"; sceneId: ID; patch: Record<string, unknown> }
   | { type: "automation.updated"; automationId: ID; patch: Record<string, unknown> }
   | { type: "notification"; notification: AppNotification }
+  | {
+      type: "command.ack";
+      requestId?: string;
+      success: boolean;
+      deviceId?: ID;
+      key?: string;
+      value?: unknown;
+      code?: string;
+      message?: string;
+    }
   | { type: "pong"; ts?: number }
   | { type: "noop" }
-  | { type: "error"; message: string; code?: string };
+  | { type: "error"; message: string; code?: string; requestId?: string };
 
 export type ConnectionStatus =
   | "idle"
