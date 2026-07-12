@@ -553,10 +553,20 @@ function decodeInternal(msg: Record<string, unknown>): WsIncomingEvent | null {
     }
     case "pong":
       return { type: "pong", ts: asNumber(msg.ts) };
+    case "set_state":
+    case "setState": {
+      if (msg.success === true || msg.ok === true) {
+        const stateId = asString(msg.stateId) ?? asString(msg.id);
+        if (stateId) {
+          const mapped = stateChangedEventFor(stateId, msg.value);
+          if (mapped) return mapped;
+        }
+      }
+
+      return { type: "noop" };
+    }
     case "subscribe":
     case "unsubscribe":
-    case "set_state":
-    case "setState":
       return { type: "noop" };
     case "error":
       return {
@@ -567,6 +577,35 @@ function decodeInternal(msg: Record<string, unknown>): WsIncomingEvent | null {
     default:
       return null;
   }
+}
+
+function stateChangedEventFor(stateId: string, value: unknown): WsIncomingEvent | null {
+  const binding = stateIndex.get(stateId);
+
+  if (binding) {
+    return {
+      type: "device.state",
+      deviceId: binding.deviceId,
+      key: binding.key,
+      value,
+    };
+  }
+
+  const manualDevice = useDevicesStore
+    .getState()
+    .devices.find((device) =>
+      device.capabilities.some((cap) => cap.id === stateId) ||
+      (device.functions ?? []).some((fn) => fn.id === stateId),
+    );
+
+  if (!manualDevice) return null;
+
+  return {
+    type: "device.state",
+    deviceId: manualDevice.id,
+    key: stateId,
+    value,
+  };
 }
 
 function readObjectTree(msg: Record<string, unknown>): IoBrokerObjectTreeNode[] {
