@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Database, Plus, RefreshCw, Search } from "lucide-react";
+import { ChevronDown, ChevronRight, Database, FileText, Folder, Plus, RefreshCw, Search } from "lucide-react";
 import { BottomSheet } from "@/components/ds/cards/BottomSheet";
 import { EmptyStateCard } from "@/components/ds/cards/EmptyStateCard";
 import { GlassInput } from "@/components/ds/controls/GlassInput";
@@ -43,24 +43,17 @@ export function ManualDeviceSheet({ open, roomId, onClose }: Props) {
   const [type, setType] = useState<DeviceTypeId>("custom");
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Record<string, string>>({});
+  const [expanded, setExpanded] = useState<Set<string>>(
+    () => new Set(["zigbee2mqtt", "sonoff", "shelly", "wled", "tuya", "denon", "sony-bravia", "zidoo", "mqtt"]),
+  );
 
   const states = useMemo(() => flattenStates(tree), [tree]);
-  const visibleStates = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const base = q
-      ? states.filter((node) =>
-          [node.name, node.id, node.role, node.valueType]
-            .filter((value): value is string => typeof value === "string")
-            .some((value) => value.toLowerCase().includes(q)),
-        )
-      : states;
-
-    return base.slice(0, 120);
-  }, [states, query]);
+  const filteredTree = useMemo(() => filterTree(tree, query), [tree, query]);
+  const stateIndex = useMemo(() => new Map(states.map((node) => [node.id, node])), [states]);
 
   const selectedNodes = useMemo(
-    () => Object.keys(selected).map((id) => states.find((node) => node.id === id)).filter(Boolean) as IoBrokerObjectTreeNode[],
-    [selected, states],
+    () => Object.keys(selected).map((id) => stateIndex.get(id)).filter(Boolean) as IoBrokerObjectTreeNode[],
+    [selected, stateIndex],
   );
 
   const requestTree = () => {
@@ -79,10 +72,24 @@ export function ManualDeviceSheet({ open, roomId, onClose }: Props) {
   }, [open, authenticated, tree.length, loading]);
 
   const toggle = (node: IoBrokerObjectTreeNode) => {
+    if (node.type !== "state") {
+      toggleExpanded(node.id);
+      return;
+    }
+
     setSelected((prev) => {
       const next = { ...prev };
       if (next[node.id] !== undefined) delete next[node.id];
       else next[node.id] = suggestedLabel(node);
+      return next;
+    });
+  };
+
+  const toggleExpanded = (id: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   };
@@ -144,7 +151,7 @@ export function ManualDeviceSheet({ open, roomId, onClose }: Props) {
           <GlassInput
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="State suchen, z. B. contact, battery, Eingang ..."
+            placeholder="Im Objektbaum suchen, z. B. sonoff, Eingang, battery ..."
             aria-label="ioBroker-State suchen"
           />
           <GlassButton variant="ghost" onClick={requestTree} disabled={!authenticated || loading}>
@@ -174,20 +181,23 @@ export function ManualDeviceSheet({ open, roomId, onClose }: Props) {
             title="Nicht verbunden"
             description="Verbinde Aura mit dem Adapter, dann kannst du ioBroker-States auswählen."
           />
-        ) : visibleStates.length === 0 ? (
+        ) : filteredTree.length === 0 ? (
           <EmptyStateCard
             icon={Search}
-            title={loading ? "Lade Objektbaum" : "Keine States"}
-            description={loading ? "Aura lädt die ioBroker-Objekte." : "Zu deiner Suche wurden keine State-Objekte gefunden."}
+            title={loading ? "Lade Objektbaum" : "Keine Objekte"}
+            description={loading ? "Aura lädt die ioBroker-Objekte." : "Zu deiner Suche wurden keine ioBroker-Objekte gefunden."}
           />
         ) : (
-          <div className="max-h-[42dvh] overflow-y-auto rounded-xl border border-white/10">
-            {visibleStates.map((node) => (
-              <StateOption
+          <div className="max-h-[46dvh] overflow-y-auto rounded-xl border border-white/10">
+            {filteredTree.map((node) => (
+              <ObjectTreeOption
                 key={node.id}
                 node={node}
-                selected={selected[node.id] !== undefined}
-                onToggle={() => toggle(node)}
+                depth={0}
+                selected={selected}
+                expanded={expanded}
+                query={query}
+                onToggle={toggle}
               />
             ))}
           </div>
@@ -211,46 +221,92 @@ export function ManualDeviceSheet({ open, roomId, onClose }: Props) {
   );
 }
 
-function StateOption({
+function ObjectTreeOption({
   node,
+  depth,
   selected,
+  expanded,
+  query,
   onToggle,
 }: {
   node: IoBrokerObjectTreeNode;
-  selected: boolean;
-  onToggle: () => void;
+  depth: number;
+  selected: Record<string, string>;
+  expanded: Set<string>;
+  query: string;
+  onToggle: (node: IoBrokerObjectTreeNode) => void;
 }) {
+  const isState = node.type === "state";
+  const hasChildren = node.children.length > 0;
+  const isOpen = query.trim().length > 0 || expanded.has(node.id);
+  const isSelected = selected[node.id] !== undefined;
+
   return (
-    <button
-      type="button"
-      onClick={onToggle}
-      className={cn(
-        "flex w-full items-start gap-3 border-b border-white/10 px-3 py-2 text-left last:border-b-0 hover:bg-white/5",
-        selected && "bg-accent/10",
-      )}
-    >
-      <span
+    <div>
+      <button
+        type="button"
+        onClick={() => onToggle(node)}
         className={cn(
-          "mt-1 grid h-5 w-5 shrink-0 place-items-center rounded border",
-          selected ? "border-accent bg-accent text-accent-foreground" : "border-white/30",
+          "flex w-full items-start gap-2 border-b border-white/10 px-2 py-2 text-left last:border-b-0 hover:bg-white/5",
+          isSelected && "bg-accent/10",
         )}
+        style={{ paddingLeft: `${8 + depth * 14}px` }}
       >
-        {selected ? "✓" : ""}
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-medium">{suggestedLabel(node)}</span>
-        <span className="block truncate font-mono text-[11px] text-muted-foreground">{node.id}</span>
-        <span className="mt-1 flex flex-wrap gap-1">
-          {node.role && <StatusBadge tone="neutral">{node.role}</StatusBadge>}
-          {node.valueType && <StatusBadge tone="neutral">{node.valueType}</StatusBadge>}
-          {node.unit && <StatusBadge tone="neutral">{node.unit}</StatusBadge>}
-          {node.writable && <StatusBadge tone="info">write</StatusBadge>}
+        <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-md text-muted-foreground">
+          {hasChildren ? (
+            isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />
+          ) : isState ? (
+            <FileText className="h-4 w-4" />
+          ) : (
+            <Folder className="h-4 w-4" />
+          )}
         </span>
-      </span>
-      <span className="max-w-[9rem] truncate text-xs text-muted-foreground">
-        {formatValue(node.value, node.unit)}
-      </span>
-    </button>
+        {isState ? (
+          <span
+            className={cn(
+              "mt-1 grid h-5 w-5 shrink-0 place-items-center rounded border text-xs",
+              isSelected ? "border-accent bg-accent text-accent-foreground" : "border-white/30",
+            )}
+          >
+            {isSelected ? "✓" : ""}
+          </span>
+        ) : (
+          <span className="mt-1 h-5 w-5 shrink-0" />
+        )}
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-medium">{suggestedLabel(node)}</span>
+          <span className="block truncate font-mono text-[11px] text-muted-foreground">{node.id}</span>
+          <span className="mt-1 flex flex-wrap gap-1">
+            <StatusBadge tone="neutral">{node.type}</StatusBadge>
+            {node.role && <StatusBadge tone="neutral">{node.role}</StatusBadge>}
+            {node.valueType && <StatusBadge tone="neutral">{node.valueType}</StatusBadge>}
+            {node.unit && <StatusBadge tone="neutral">{node.unit}</StatusBadge>}
+            {node.writable && <StatusBadge tone="info">write</StatusBadge>}
+          </span>
+        </span>
+        {isState && (
+          <span className="max-w-[9rem] truncate text-xs text-muted-foreground">
+            {formatValue(node.value, node.unit)}
+          </span>
+        )}
+      </button>
+
+      {hasChildren && isOpen && (
+        <div>
+          {node.children.map((child) => (
+            <ObjectTreeOption
+              key={child.id}
+              node={child}
+              depth={depth + 1}
+              selected={selected}
+              expanded={expanded}
+              query={query}
+              onToggle={onToggle}
+            />
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -260,6 +316,26 @@ function flattenStates(nodes: IoBrokerObjectTreeNode[]): IoBrokerObjectTreeNode[
   for (const node of nodes) {
     if (node.type === "state") result.push(node);
     result.push(...flattenStates(node.children));
+  }
+
+  return result;
+}
+
+function filterTree(nodes: IoBrokerObjectTreeNode[], query: string): IoBrokerObjectTreeNode[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return nodes;
+
+  const result: IoBrokerObjectTreeNode[] = [];
+
+  for (const node of nodes) {
+    const children = filterTree(node.children, query);
+    const matches = [node.id, node.name, node.type, node.role, node.valueType, formatValue(node.value, node.unit)]
+      .filter((value): value is string => typeof value === "string")
+      .some((value) => value.toLowerCase().includes(q));
+
+    if (matches || children.length > 0) {
+      result.push({ ...node, children });
+    }
   }
 
   return result;
