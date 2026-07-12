@@ -17,6 +17,7 @@ import {
   Activity,
   HeartPulse,
   FileText,
+  Network,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -53,6 +54,7 @@ const entries: Entry[] = [
   { to: "/settings/storage", label: "Speicher", hint: "Caches verwalten", icon: HardDrive },
   { to: "/settings/app", label: "App-Informationen", hint: "Versionen", icon: Info },
   { to: "/settings/diagnostics", label: "Diagnose", hint: "System-Gesundheit", icon: HeartPulse },
+  { to: "/settings/objects", label: "ioBroker-Objekte", hint: "Objektbaum durchsuchen", icon: Network },
   { to: "/settings/performance", label: "Performance", hint: "FPS, Flags", icon: Activity },
   { to: "/settings/logs", label: "Logs", hint: "Filter & Export", icon: FileText },
   { to: "/settings/developer", label: "Entwickler", hint: "Diagnose, Logs", icon: TerminalSquare },

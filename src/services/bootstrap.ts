@@ -19,6 +19,7 @@ import { commandQueue } from "@/services/commands/CommandQueue";
 import { useConnectionStore } from "@/store/slices/connectionStore";
 import { useDiscoveryStore } from "@/store/slices/discoveryStore";
 import { useNotificationsStore } from "@/store/slices/notificationsStore";
+import { useObjectTreeStore } from "@/store/slices/objectTreeStore";
 import { useSettingsStore } from "@/store/slices/settingsStore";
 import { devLog } from "@/store/slices/devLogStore";
 import { buildServerUrl } from "@/models/server";
@@ -147,6 +148,9 @@ export function startCommunicationLayer(): void {
     }),
     wsManager.dispatcher.on("notification", (ev) =>
       useNotificationsStore.getState().push(ev.notification),
+    ),
+    wsManager.dispatcher.on("object_tree", (ev) =>
+      useObjectTreeStore.getState().setTree(ev.tree),
     ),
     // Snapshot / discover_result: Geräte in Discovery importieren und
     // anschließend alle bekannten stateIds abonnieren.

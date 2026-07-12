@@ -1,5 +1,6 @@
 import type { Capability, CustomCapability } from "@/models/capability";
 import type { Device, DeviceFunction, DeviceFunctionKind } from "@/models/device";
+import type { IoBrokerObjectTreeNode } from "@/models/iobrokerObject";
 import type { DeviceTypeId } from "@/models/deviceType";
 import type { WsIncomingEvent, WsOutgoingMessage } from "@/models/events";
 import type { ServerConfig } from "@/models/server";
@@ -452,7 +453,12 @@ function encodeInternal(message: WsOutgoingMessage): Record<string, unknown> {
       if (message.op === "devices.sync") {
         return { type: "discover" };
       }
-      return { type: message.op, ...(message.payload as object | undefined) };
+      return {
+        type: "request",
+        op: message.op,
+        requestId: message.requestId,
+        payload: message.payload,
+      };
     case "ping":
       return { type: "ping" };
     default: {
@@ -487,6 +493,10 @@ function decodeInternal(msg: Record<string, unknown>): WsIncomingEvent | null {
     case "device_added": {
       const d = appsocketNormalizeDevice(msg.device);
       return d ? { type: "device.added", device: d } : null;
+    }
+    case "object_tree": {
+      const tree = readObjectTree(msg);
+      return { type: "object_tree", tree, requestId: asString(msg.requestId) };
     }
     case "device_updated": {
       const d = appsocketNormalizeDevice(msg.device);
@@ -540,6 +550,37 @@ function decodeInternal(msg: Record<string, unknown>): WsIncomingEvent | null {
     default:
       return null;
   }
+}
+
+function readObjectTree(msg: Record<string, unknown>): IoBrokerObjectTreeNode[] {
+  const direct = Array.isArray(msg.tree) ? msg.tree : undefined;
+  const data = msg.data && typeof msg.data === "object" ? (msg.data as Record<string, unknown>) : undefined;
+  const payload = msg.payload && typeof msg.payload === "object" ? (msg.payload as Record<string, unknown>) : undefined;
+  const candidate = direct ?? (Array.isArray(data?.tree) ? data.tree : undefined) ?? (Array.isArray(payload?.tree) ? payload.tree : undefined);
+
+  return Array.isArray(candidate)
+    ? candidate.filter(isObjectTreeNode).map(normalizeObjectTreeNode)
+    : [];
+}
+
+function isObjectTreeNode(value: unknown): value is IoBrokerObjectTreeNode {
+  return !!value && typeof value === "object" && typeof (value as { id?: unknown }).id === "string";
+}
+
+function normalizeObjectTreeNode(value: IoBrokerObjectTreeNode): IoBrokerObjectTreeNode {
+  return {
+    id: value.id,
+    name: typeof value.name === "string" && value.name.length > 0 ? value.name : value.id.split(".").at(-1) ?? value.id,
+    type: typeof value.type === "string" ? value.type : "folder",
+    role: typeof value.role === "string" ? value.role : undefined,
+    valueType: typeof value.valueType === "string" ? value.valueType : undefined,
+    readable: typeof value.readable === "boolean" ? value.readable : undefined,
+    writable: typeof value.writable === "boolean" ? value.writable : undefined,
+    unit: typeof value.unit === "string" ? value.unit : undefined,
+    children: Array.isArray(value.children)
+      ? value.children.filter(isObjectTreeNode).map(normalizeObjectTreeNode)
+      : [],
+  };
 }
 
 // ---------------------------------------------------------------------------

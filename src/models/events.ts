@@ -1,6 +1,7 @@
 import type { Device } from "./device";
 import type { ID } from "./common";
 import type { AppNotification } from "./notification";
+import type { IoBrokerObjectTreeNode } from "./iobrokerObject";
 
 /**
  * Ausgehende Nachrichten (App → Server). Bewusst offen gehalten:
@@ -23,6 +24,7 @@ export type WsIncomingEvent =
   | { type: "auth_ok"; payload?: Record<string, unknown> }
   | { type: "auth_failed"; reason?: string }
   | { type: "snapshot"; devices: Device[] }
+  | { type: "object_tree"; tree: IoBrokerObjectTreeNode[]; requestId?: string }
   | { type: "device.added"; device: Device }
   | { type: "device.updated"; device: Device }
   | { type: "device.removed"; deviceId: ID }
