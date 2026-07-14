@@ -105,7 +105,7 @@ function ScenesPage() {
             aria-selected={cat === c.id}
             onClick={() => setCat(c.id)}
             className={cn(
-              "inline-flex h-8 shrink-0 items-center gap-1 rounded-full px-3 text-xs font-medium",
+              "inline-flex h-10 shrink-0 items-center gap-1 rounded-full px-4 text-sm font-medium",
               cat === c.id
                 ? "bg-primary text-primary-foreground"
                 : "border border-border bg-background/40 text-muted-foreground hover:text-foreground",

@@ -35,7 +35,7 @@ export function BottomNav() {
 
   return (
     <nav
-      className="z-30 flex shrink-0 justify-center px-4 pb-[max(env(safe-area-inset-bottom),0.75rem)]"
+      className="z-30 flex h-[8.5rem] shrink-0 items-start justify-center px-4 pt-2 pb-[max(env(safe-area-inset-bottom),0.75rem)]"
       aria-label="Hauptnavigation"
     >
       <div className="glass-nav flex w-full max-w-md items-center justify-around gap-1 p-1.5">
