@@ -35,10 +35,10 @@ export function BottomNav() {
 
   return (
     <nav
-      className="pointer-events-none fixed inset-x-0 bottom-0 z-30 flex justify-center px-4 pb-[max(env(safe-area-inset-bottom),0.75rem)]"
+      className="z-30 flex shrink-0 justify-center px-4 pb-[max(env(safe-area-inset-bottom),0.75rem)]"
       aria-label="Hauptnavigation"
     >
-      <div className="glass-nav pointer-events-auto flex w-full max-w-md items-center justify-around gap-1 p-1.5">
+      <div className="glass-nav flex w-full max-w-md items-center justify-around gap-1 p-1.5">
         {tabs.map((tab) => {
           const active = tab.match ? tab.match(pathname) : pathname === tab.to;
           const Icon = tab.icon;

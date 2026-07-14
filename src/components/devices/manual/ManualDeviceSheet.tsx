@@ -247,12 +247,12 @@ function ObjectTreeOption({
         type="button"
         onClick={() => onToggle(node)}
         className={cn(
-          "flex w-full items-start gap-2 border-b border-white/10 px-2 py-2 text-left last:border-b-0 hover:bg-white/5",
+          "flex min-h-14 w-full items-start gap-2 border-b border-white/10 px-2 py-2 text-left last:border-b-0 hover:bg-white/5",
           isSelected && "bg-accent/10",
         )}
-        style={{ paddingLeft: `${8 + depth * 14}px` }}
+        style={{ paddingLeft: `${8 + depth * 16}px` }}
       >
-        <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-md text-muted-foreground">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-muted-foreground">
           {hasChildren ? (
             isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />
           ) : isState ? (
@@ -264,14 +264,14 @@ function ObjectTreeOption({
         {isState ? (
           <span
             className={cn(
-              "mt-1 grid h-5 w-5 shrink-0 place-items-center rounded border text-xs",
+              "mt-2 grid h-6 w-6 shrink-0 place-items-center rounded border text-xs",
               isSelected ? "border-accent bg-accent text-accent-foreground" : "border-white/30",
             )}
           >
             {isSelected ? "✓" : ""}
           </span>
         ) : (
-          <span className="mt-1 h-5 w-5 shrink-0" />
+          <span className="mt-2 h-6 w-6 shrink-0" />
         )}
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-medium">{suggestedLabel(node)}</span>

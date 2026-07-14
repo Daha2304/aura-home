@@ -25,6 +25,8 @@ function AppLayout() {
     }
 
     const resetScroll = () => {
+      const scrollRoot = document.getElementById("app-scroll-root");
+      if (scrollRoot) scrollRoot.scrollTop = 0;
       document.documentElement.scrollTop = 0;
       document.body.scrollTop = 0;
       window.scrollTo(0, 0);

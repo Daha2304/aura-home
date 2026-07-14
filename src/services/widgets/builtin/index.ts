@@ -29,15 +29,24 @@ export { registerSearchWidgets, SEARCH_WIDGET_IDS } from "./search";
 export { registerPwaWidgets, PWA_WIDGET_IDS } from "./pwa";
 export { registerDiagnosticsWidgets, DIAGNOSTICS_WIDGET_IDS } from "./diagnostics";
 
-registerSystemWidgets();
-registerRoomWidgets();
-registerDeviceWidgets();
-registerSceneWidgets();
-registerGroupWidgets();
-registerAutomationWidgets();
-registerAnalyticsWidgets();
-registerNotificationWidgets();
-registerUserWidgets();
-registerSearchWidgets();
-registerPwaWidgets();
-registerDiagnosticsWidgets();
+let registered = false;
+
+export function registerBuiltinWidgets(): void {
+  if (registered) return;
+  registered = true;
+
+  registerSystemWidgets();
+  registerRoomWidgets();
+  registerDeviceWidgets();
+  registerSceneWidgets();
+  registerGroupWidgets();
+  registerAutomationWidgets();
+  registerAnalyticsWidgets();
+  registerNotificationWidgets();
+  registerUserWidgets();
+  registerSearchWidgets();
+  registerPwaWidgets();
+  registerDiagnosticsWidgets();
+}
+
+registerBuiltinWidgets();

@@ -29,7 +29,7 @@ import "@/services/registry/builtin/index";
 import "@/store/slices/registryStore";
 
 // Widget-Registry & Widget-Store (Plugin-Einstiegspunkt, Teil 5A).
-import "@/services/widgets/builtin";
+import { registerBuiltinWidgets } from "@/services/widgets/builtin";
 import "@/store/slices/widgetRegistryStore";
 import { dashboardManager } from "@/services/dashboards/DashboardManager";
 import { registerBuiltinRoomTypes, roomManager } from "@/services/rooms";
@@ -167,6 +167,7 @@ export function startCommunicationLayer(): void {
   );
 
   // Dashboards aus Cache hydratisieren und Bootstrap-Dashboard sicherstellen.
+  registerBuiltinWidgets();
   dashboardManager.hydrate();
   dashboardManager.ensureBootstrapDashboard();
 

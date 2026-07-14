@@ -127,13 +127,13 @@ function TreeNode({
   return (
     <div>
       <div
-        className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-white/5"
-        style={{ paddingLeft: `${8 + depth * 14}px` }}
+        className="flex min-h-12 items-center gap-2 rounded-lg px-2 py-2 hover:bg-white/5"
+        style={{ paddingLeft: `${8 + depth * 16}px` }}
       >
         <button
           type="button"
           onClick={() => hasChildren && onToggle(node.id)}
-          className="grid h-6 w-6 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-white/10"
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-muted-foreground hover:bg-white/10 disabled:opacity-60"
           aria-label={open ? "Schließen" : "Öffnen"}
           disabled={!hasChildren}
         >
