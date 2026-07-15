@@ -19,7 +19,15 @@ function asBool(v: unknown): boolean {
 
 function formatDisplay(spec: ControlProps["spec"]): string {
   const fmt = spec.descriptor.format;
-  return fmt ? fmt(spec.currentValue) : String(spec.currentValue ?? "—");
+  if (fmt) return fmt(spec.currentValue);
+  if (spec.currentValue == null) return "—";
+  const unit = "unit" in spec.capability && typeof spec.capability.unit === "string"
+    ? spec.capability.unit
+    : spec.descriptor.unit;
+  const value = typeof spec.currentValue === "boolean"
+    ? (spec.currentValue ? "Ja" : "Nein")
+    : String(spec.currentValue);
+  return unit ? `${value} ${unit}` : value;
 }
 
 function controlLabel(spec: ControlProps["spec"]): string {
@@ -48,7 +56,7 @@ function ControlRow({
             {controlLabel(spec)}
           </span>
         </div>
-        <div className="flex shrink-0 items-center gap-2">{trailing}</div>
+        <div className="flex min-w-0 shrink-0 items-center justify-end gap-2">{trailing}</div>
       </div>
       {children}
     </div>
@@ -316,7 +324,7 @@ const TextReadout = memo(function TextReadout({ spec }: ControlProps) {
     <ControlRow
       spec={spec}
       trailing={
-        <span className="max-w-[60%] truncate text-sm text-muted-foreground">
+        <span className="max-w-[70vw] break-words text-right text-sm text-muted-foreground">
           {formatDisplay(spec)}
         </span>
       }
@@ -387,7 +395,7 @@ const CustomGeneric = memo(function CustomGeneric({ spec }: ControlProps) {
     <ControlRow
       spec={spec}
       trailing={
-        <span className="max-w-[60%] truncate font-mono text-xs text-muted-foreground">
+        <span className="max-w-[70vw] break-words text-right font-mono text-xs text-muted-foreground">
           {safeStringify(spec.currentValue)}
         </span>
       }

@@ -29,10 +29,9 @@ class ControlFactoryImpl {
       const descriptor = capabilityRegistry.get(cap.kind);
       if (!descriptor) continue;
 
-      const controlType = pickControlType(descriptor);
-      if (!controlType) continue;
-
       const readOnly = Boolean(descriptor.readOnly || cap.readonly);
+      const controlType = pickControlType(descriptor, readOnly);
+      if (!controlType) continue;
       const value = "value" in cap ? (cap as { value: unknown }).value : cap;
 
       specs.push({
@@ -61,7 +60,8 @@ class ControlFactoryImpl {
       const kind = normalizeFunctionKind(fn);
       const descriptor = capabilityRegistry.get(kind);
       if (!descriptor) continue;
-      const controlType = pickControlType(descriptor);
+      const readOnly = Boolean(descriptor.readOnly || fn.readonly);
+      const controlType = pickControlType(descriptor, readOnly);
       if (!controlType) continue;
       const value = normalizeFunctionValue(fn, kind);
       const synthetic = {
@@ -88,7 +88,7 @@ class ControlFactoryImpl {
         commandKey: fn.id,
         group: descriptor.category,
         priority: descriptor.priority - 5,
-        readOnly: Boolean(descriptor.readOnly || fn.readonly),
+        readOnly,
         capability: synthetic,
       });
     }
@@ -113,6 +113,9 @@ function normalizeFunctionKind(fn: DeviceFunction): DeviceFunctionKind {
   ) {
     return "dimmer";
   }
+
+  if (fn.kind === "power_watts") return "powerConsumption" as DeviceFunctionKind;
+  if (fn.kind === "battery" || fn.kind === "signal") return "number";
 
   return fn.kind;
 }
@@ -139,7 +142,15 @@ function clampPercent(value: number): number {
   return Math.max(0, Math.min(100, Math.round(value)));
 }
 
-function pickControlType(descriptor: CapabilityDescriptor): string | undefined {
+function pickControlType(descriptor: CapabilityDescriptor, readOnly = false): string | undefined {
+  if (readOnly) {
+    const readout = descriptor.altControlTypes?.find((type) => type.startsWith("readout."));
+    if (readout && controlRegistry.resolve(readout)) return readout;
+    if (descriptor.controlType.startsWith("readout.") && controlRegistry.resolve(descriptor.controlType)) {
+      return descriptor.controlType;
+    }
+  }
+
   const primary = controlRegistry.resolve(descriptor.controlType);
   if (primary) return descriptor.controlType;
   const fallback = controlRegistry.resolveWithFallback(

@@ -157,6 +157,8 @@ type RawState = {
   stateId?: unknown;
   name?: unknown;
   role?: unknown;
+  type?: unknown;
+  valueType?: unknown;
   value?: unknown;
   unit?: unknown;
   min?: unknown;
@@ -171,7 +173,9 @@ type RawState = {
     max?: unknown;
     step?: unknown;
     role?: unknown;
+    type?: unknown;
   };
+  readable?: unknown;
   writable?: unknown;
 };
 
@@ -292,20 +296,54 @@ function mapRole(role: string | undefined): DeviceFunctionKind {
   if (r.startsWith("value.energy")) return "energy";
   if (r.startsWith("value.battery") || r === "battery") return "battery";
   if (r.startsWith("value.rssi") || r.startsWith("value.signal")) return "signal";
+  if (r === "button" || r.startsWith("button.")) return "boolean";
+  if (r.startsWith("sensor.motion") || r.startsWith("sensor.presence")) return "boolean";
+  if (r.startsWith("sensor.window") || r.startsWith("sensor.door")) return "boolean";
   if (r.startsWith("indicator") || r.startsWith("sensor")) return "boolean";
   if (r.startsWith("value")) return "number";
   if (r.startsWith("text")) return "text";
   return "custom";
 }
 
+function readRawStateId(raw: RawState): string | undefined {
+  return asString(raw.stateId) ?? asString(raw.id);
+}
+
+function readRawStateRole(raw: RawState): string | undefined {
+  return asString(raw.role) ?? asString(raw.common?.role);
+}
+
+function readRawStateType(raw: RawState): string | undefined {
+  return asString(raw.type) ?? asString(raw.valueType) ?? asString(raw.common?.type);
+}
+
+function stateOptions(raw: RawState): string[] | undefined {
+  const source = raw.states ?? raw.common?.states;
+  if (Array.isArray(source)) {
+    return source.map(String).filter((value) => value.length > 0);
+  }
+  if (source && typeof source === "object") {
+    return Object.entries(source as Record<string, unknown>).map(([value, label]) =>
+      typeof label === "string" && label.length > 0 ? label : value,
+    );
+  }
+  return undefined;
+}
+
+function readableRawStateValue(raw: RawState): unknown {
+  if (raw.value !== undefined) return raw.value;
+  return null;
+}
+
 function stateToCapabilityAndFunction(
   raw: RawState,
   visibleControl = true,
 ): { cap: CustomCapability; fn: DeviceFunction } | null {
-  const id = asString(raw.id) ?? asString(raw.stateId);
+  const id = readRawStateId(raw);
   if (!id) return null;
-  const role = asString(raw.role) ?? asString(raw.common?.role);
-  const kind = mapRole(role);
+  const role = readRawStateRole(raw);
+  const valueType = readRawStateType(raw);
+  const kind = normalizeStateKind(mapRole(role), valueType, raw.value);
   const label = deriveStateLabel(id, asString(raw.name) ?? asString(raw.common?.name), kind);
   const unit = asString(raw.unit) ?? asString(raw.common?.unit);
   const min = asNumber(raw.min) ?? asNumber(raw.common?.min);
@@ -313,25 +351,32 @@ function stateToCapabilityAndFunction(
   const step = asNumber(raw.step) ?? asNumber(raw.common?.step);
   const writable =
     raw.writable === true || (raw.common?.write !== undefined ? raw.common.write !== false : true);
-  const options = Array.isArray(raw.states)
-    ? (raw.states as unknown[]).filter((x): x is string => typeof x === "string")
-    : undefined;
+  const options = stateOptions(raw);
+  const value = readableRawStateValue(raw);
 
   const cap = stateToCapability(id, kind, raw, label, !writable);
   const fn: DeviceFunction = {
     id,
     kind,
     label,
-    value: raw.value,
+    value,
     unit,
     min,
     max,
     step,
     options,
     readonly: !writable,
-    meta: { role, visibleControl },
+    meta: { role, valueType, visibleControl, rawMin: min, rawMax: max },
   };
   return { cap, fn };
+}
+
+function normalizeStateKind(kind: DeviceFunctionKind, valueType: string | undefined, value: unknown): DeviceFunctionKind {
+  if (kind !== "custom") return kind;
+  if (valueType === "boolean" || typeof value === "boolean") return "boolean";
+  if (valueType === "number" || typeof value === "number") return "number";
+  if (valueType === "string" || typeof value === "string") return "text";
+  return "custom";
 }
 
 function stateToCapability(
@@ -356,6 +401,51 @@ function stateToCapability(
   }
   if (kind === "position" && typeof raw.value === "number") {
     return { ...base, kind: "position", value: raw.value } as unknown as CustomCapability;
+  }
+  if (kind === "temperature" && typeof raw.value === "number") {
+    return {
+      ...base,
+      kind: "temperature",
+      value: raw.value,
+      unit: (asString(raw.unit) ?? asString(raw.common?.unit) ?? "C").replace(/^°/, "") || "C",
+      readonly,
+    } as unknown as CustomCapability;
+  }
+  if (kind === "humidity" && typeof raw.value === "number") {
+    return { ...base, kind: "humidity", value: raw.value, readonly } as unknown as CustomCapability;
+  }
+  if (kind === "boolean") {
+    return { ...base, kind: "boolean", value: Boolean(raw.value), readonly } as unknown as CustomCapability;
+  }
+  if ((kind === "number" || kind === "battery" || kind === "signal") && typeof raw.value === "number") {
+    return {
+      ...base,
+      kind: "number",
+      value: raw.value,
+      unit: asString(raw.unit) ?? asString(raw.common?.unit),
+      readonly,
+    } as unknown as CustomCapability;
+  }
+  if (kind === "power_watts" && typeof raw.value === "number") {
+    return {
+      ...base,
+      kind: "powerConsumption",
+      value: raw.value,
+      unit: asString(raw.unit) ?? asString(raw.common?.unit) ?? "W",
+      readonly,
+    } as unknown as CustomCapability;
+  }
+  if ((kind === "voltage" || kind === "current" || kind === "energy") && typeof raw.value === "number") {
+    return {
+      ...base,
+      kind: "number",
+      value: raw.value,
+      unit: asString(raw.unit) ?? asString(raw.common?.unit),
+      readonly,
+    } as unknown as CustomCapability;
+  }
+  if (kind === "text" || typeof raw.value === "string") {
+    return { ...base, kind: "text", value: raw.value, readonly } as unknown as CustomCapability;
   }
   return { ...base, kind: "custom", value: raw.value };
 }
@@ -476,18 +566,29 @@ export function appsocketNormalizeDevice(raw: unknown): Device | null {
   const functions: DeviceFunction[] = [];
   const seenCapabilityIds = new Set<string>();
 
-  for (const s of rawCapabilities) {
-    const pair = stateToCapabilityAndFunction(s, true);
-    if (!pair) continue;
-    capabilities.push(pair.cap);
-    seenCapabilityIds.add(pair.cap.id);
+  const stateById = new Map<string, RawState>();
+  for (const state of rawStates) {
+    const stateId = readRawStateId(state);
+    if (stateId) stateById.set(stateId, state);
   }
 
   for (const s of rawStates) {
-    const pair = stateToCapabilityAndFunction(s, rawCapabilities.length === 0);
+    const pair = stateToCapabilityAndFunction(s, true);
     if (!pair) continue;
     functions.push(pair.fn);
 
+    if (!seenCapabilityIds.has(pair.cap.id)) {
+      capabilities.push(pair.cap);
+      seenCapabilityIds.add(pair.cap.id);
+    }
+  }
+
+  for (const rawCapability of rawCapabilities) {
+    const stateId = readRawStateId(rawCapability);
+    if (stateId && stateById.has(stateId)) continue;
+    const pair = stateToCapabilityAndFunction(rawCapability, true);
+    if (!pair) continue;
+    functions.push(pair.fn);
     if (!seenCapabilityIds.has(pair.cap.id)) {
       capabilities.push(pair.cap);
       seenCapabilityIds.add(pair.cap.id);
