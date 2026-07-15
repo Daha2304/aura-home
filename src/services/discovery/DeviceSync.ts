@@ -48,10 +48,12 @@ function applyRegistryDefaults(device: Device): Device {
  */
 function mergeWithLocal(next: Device, prev: Device | undefined): Device {
   if (!prev) return next;
+  const roomId = isAliasDevice(next) ? next.roomId : (prev.roomId ?? next.roomId);
+
   return {
     ...next,
     favorite: prev.favorite ?? next.favorite,
-    roomId: prev.roomId ?? next.roomId,
+    roomId,
     groupIds: prev.groupIds ?? next.groupIds,
     tags: prev.tags ?? next.tags,
     customProperties: {

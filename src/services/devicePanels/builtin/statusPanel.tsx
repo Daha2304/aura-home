@@ -47,6 +47,6 @@ export const statusPanelDescriptor: DevicePanelDescriptor = {
   title: "Status",
   group: "status",
   priority: 900,
-  isVisible: () => true,
+  isVisible: () => false,
   component: StatusPanelComponent,
 };
