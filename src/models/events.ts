@@ -2,6 +2,7 @@ import type { Device } from "./device";
 import type { ID } from "./common";
 import type { AppNotification } from "./notification";
 import type { IoBrokerObjectTreeNode } from "./iobrokerObject";
+import type { Room } from "./room";
 
 /**
  * Ausgehende Nachrichten (App → Server). Bewusst offen gehalten:
@@ -23,7 +24,7 @@ export type WsIncomingEvent =
   | { type: "welcome"; payload?: Record<string, unknown> }
   | { type: "auth_ok"; payload?: Record<string, unknown> }
   | { type: "auth_failed"; reason?: string }
-  | { type: "snapshot"; devices: Device[] }
+  | { type: "snapshot"; devices: Device[]; rooms?: Room[] }
   | { type: "object_tree"; tree: IoBrokerObjectTreeNode[]; requestId?: string }
   | { type: "device.added"; device: Device }
   | { type: "device.updated"; device: Device }

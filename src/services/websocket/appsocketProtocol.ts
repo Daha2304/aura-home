@@ -1,12 +1,15 @@
 import type { Capability, CustomCapability } from "@/models/capability";
 import type { Device, DeviceFunction, DeviceFunctionKind } from "@/models/device";
 import type { IoBrokerObjectTreeNode } from "@/models/iobrokerObject";
+import type { Room, RoomType } from "@/models/room";
 import type { DeviceTypeId } from "@/models/deviceType";
 import type { WsIncomingEvent, WsOutgoingMessage } from "@/models/events";
 import type { ServerConfig } from "@/models/server";
+import { getRoomCategoryMeta } from "@/models/roomCategory";
 import { deviceRegistry } from "@/services/registry/DeviceRegistry";
 import { createLogger } from "@/services/logger/Logger";
 import { useDevicesStore } from "@/store/slices/devicesStore";
+import { isAliasDevice, isAliasRoomId } from "@/services/discovery/aliasFilter";
 import type { Protocol } from "./protocol";
 
 /**
@@ -190,6 +193,16 @@ type RawDevice = {
   states?: unknown;
 };
 
+type RawRoom = {
+  id?: unknown;
+  name?: unknown;
+  type?: unknown;
+  icon?: unknown;
+  color?: unknown;
+  floor?: unknown;
+  order?: unknown;
+};
+
 function asString(v: unknown): string | undefined {
   return typeof v === "string" && v.length > 0 ? v : undefined;
 }
@@ -222,6 +235,11 @@ function isGenericDeviceName(name: string | undefined): boolean {
 }
 
 function deriveDeviceName(raw: RawDevice, id: string): string {
+  if (id.startsWith("alias.")) {
+    const aliasName = id.split(".").slice(3).join(" ");
+    if (aliasName.trim().length > 0) return aliasName.replace(/[_-]+/g, " ").trim();
+  }
+
   const rawName = stripStateSuffix(asString(raw.name) ?? "");
   if (!isGenericDeviceName(rawName)) return rawName;
 
@@ -375,6 +393,77 @@ function pickDeviceType(raw: RawDevice): Device["type"] {
   return "custom" as Device["type"];
 }
 
+const ROOM_TYPE_BY_NAME: Array<[RegExp, RoomType]> = [
+  [/wohn|living/i, "living"],
+  [/küche|kueche|kitchen/i, "kitchen"],
+  [/ess|dining/i, "dining"],
+  [/schlaf|bed/i, "bedroom"],
+  [/kind|kid|child/i, "kids"],
+  [/bad|bath/i, "bathroom"],
+  [/\bwc\b|toilet/i, "wc"],
+  [/flur|diele|hall/i, "hallway"],
+  [/treppe|stair/i, "stairway"],
+  [/büro|buero|office/i, "office"],
+  [/garage/i, "garage"],
+  [/garten|garden/i, "garden"],
+  [/terrasse|terrace/i, "terrace"],
+  [/balkon|balcony/i, "balcony"],
+  [/keller|basement/i, "basement"],
+  [/dach|attic/i, "attic"],
+  [/wasch|laundry/i, "laundry"],
+  [/technik|technical/i, "technical"],
+  [/außen|aussen|outdoor/i, "outdoor"],
+];
+
+function pickRoomType(raw: RawRoom, name: string): RoomType {
+  const explicit = asString(raw.type);
+  if (explicit && getRoomCategoryMeta(explicit as RoomType).type === explicit) {
+    return explicit as RoomType;
+  }
+
+  return ROOM_TYPE_BY_NAME.find(([pattern]) => pattern.test(name))?.[1] ?? "custom";
+}
+
+function normalizeRoom(raw: unknown, order: number): Room | null {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as RawRoom;
+  const id = asString(r.id);
+  if (!isAliasRoomId(id)) return null;
+
+  const fallbackName = id.startsWith("alias.")
+    ? (id.split(".")[2] ?? id)
+    : (id.split(".").at(-1) ?? id);
+  const name = (asString(r.name) ?? fallbackName).replace(/[_-]+/g, " ").trim();
+  const type = pickRoomType(r, name);
+  const meta = getRoomCategoryMeta(type);
+
+  return {
+    id,
+    name,
+    type,
+    category: type,
+    icon: asString(r.icon) ?? meta.icon,
+    color: (asString(r.color) ?? meta.accent) as Room["color"],
+    floor: asNumber(r.floor),
+    order: asNumber(r.order) ?? order,
+    status: "active",
+    customProps: {
+      source: id.startsWith("alias.") ? "iobroker-alias" : "iobroker",
+      raw: r as unknown as Record<string, unknown>,
+    },
+  };
+}
+
+function aliasRoomIdFromDeviceId(id: string): string | undefined {
+  const parts = id.split(".");
+  if (parts.length < 4 || !id.startsWith("alias.")) return undefined;
+  return parts.slice(0, 3).join(".");
+}
+
+function normalizeAliasRoomId(id: string, order: number): Room | null {
+  return normalizeRoom({ id }, order);
+}
+
 export function appsocketNormalizeDevice(raw: unknown): Device | null {
   if (!raw || typeof raw !== "object") return null;
   const r = raw as RawDevice;
@@ -385,20 +474,23 @@ export function appsocketNormalizeDevice(raw: unknown): Device | null {
   const rawStates = Array.isArray(r.states) ? (r.states as RawState[]) : [];
   const capabilities: Capability[] = [];
   const functions: DeviceFunction[] = [];
-  const capabilitySource = rawCapabilities.length > 0 ? rawCapabilities : rawStates;
+  const seenCapabilityIds = new Set<string>();
 
-  for (const s of capabilitySource) {
+  for (const s of rawCapabilities) {
     const pair = stateToCapabilityAndFunction(s, true);
     if (!pair) continue;
     capabilities.push(pair.cap);
-    if (rawCapabilities.length === 0) functions.push(pair.fn);
+    seenCapabilityIds.add(pair.cap.id);
   }
 
-  if (rawCapabilities.length > 0) {
-    for (const s of rawStates) {
-      const pair = stateToCapabilityAndFunction(s, false);
-      if (!pair) continue;
-      functions.push(pair.fn);
+  for (const s of rawStates) {
+    const pair = stateToCapabilityAndFunction(s, rawCapabilities.length === 0);
+    if (!pair) continue;
+    functions.push(pair.fn);
+
+    if (!seenCapabilityIds.has(pair.cap.id)) {
+      capabilities.push(pair.cap);
+      seenCapabilityIds.add(pair.cap.id);
     }
   }
 
@@ -406,7 +498,7 @@ export function appsocketNormalizeDevice(raw: unknown): Device | null {
     id,
     name: deriveDeviceName(r, id),
     type: pickDeviceType(r) as Device["type"],
-    roomId: asString(r.roomId) ?? asString(r.room),
+    roomId: aliasRoomIdFromDeviceId(id) ?? asString(r.roomId) ?? asString(r.room),
     online: r.online !== false,
     manufacturer: asString(r.manufacturer),
     model: asString(r.model),
@@ -417,6 +509,8 @@ export function appsocketNormalizeDevice(raw: unknown): Device | null {
     functions,
     attributes: { raw: r as unknown as Record<string, unknown> },
   };
+  if (!isAliasDevice(device)) return null;
+
   indexDevice(device);
   return device;
 }
@@ -484,12 +578,30 @@ function decodeInternal(msg: Record<string, unknown>): WsIncomingEvent | null {
     case "discover_result":
     case "snapshot": {
       const list = Array.isArray(msg.devices) ? (msg.devices as unknown[]) : [];
+      const rawRooms = Array.isArray(msg.rooms) ? (msg.rooms as unknown[]) : [];
       const devices: Device[] = [];
+      const rooms: Room[] = [];
+
+      for (let index = 0; index < rawRooms.length; index += 1) {
+        const room = normalizeRoom(rawRooms[index], index);
+        if (room) rooms.push(room);
+      }
+
       for (const raw of list) {
         const d = appsocketNormalizeDevice(raw);
         if (d) devices.push(d);
       }
-      return { type: "snapshot", devices };
+
+      const knownRoomIds = new Set(rooms.map((room) => room.id));
+      for (const device of devices) {
+        if (!device.roomId || knownRoomIds.has(device.roomId)) continue;
+        const room = normalizeAliasRoomId(device.roomId, rooms.length);
+        if (!room) continue;
+        rooms.push(room);
+        knownRoomIds.add(room.id);
+      }
+
+      return { type: "snapshot", devices, rooms };
     }
     case "device_added": {
       const d = appsocketNormalizeDevice(msg.device);

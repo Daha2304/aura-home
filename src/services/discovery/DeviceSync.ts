@@ -10,6 +10,7 @@ import { LifecycleMachine } from "./LifecycleMachine";
 import { validateIncomingDevice } from "./Validators";
 import { deviceRegistry } from "@/services/registry/DeviceRegistry";
 import type { DeviceTypeDescriptor } from "@/services/registry/DeviceTypeDescriptor";
+import { isAliasDevice } from "./aliasFilter";
 
 const log = createLogger("sync");
 
@@ -64,6 +65,8 @@ function mergeWithLocal(next: Device, prev: Device | undefined): Device {
 
 /** Fügt ein einzelnes Gerät (validiert) in den Store. */
 function ingestDevice(raw: Device, kind: "added" | "updated"): Device | null {
+  if (!isAliasDevice(raw)) return null;
+
   const validation = validateIncomingDevice(raw);
   if (!validation.ok) return null;
 
@@ -99,7 +102,9 @@ export const DeviceSync = {
     const store = useDevicesStore.getState();
     const seen = new Set<ID>();
     let count = 0;
-    for (const raw of devices) {
+    const aliasDevices = devices.filter(isAliasDevice);
+
+    for (const raw of aliasDevices) {
       const kept = ingestDevice(raw, store.byId(raw.id) ? "updated" : "added");
       if (kept) {
         seen.add(kept.id);

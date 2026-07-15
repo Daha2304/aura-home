@@ -20,6 +20,7 @@ import { useConnectionStore } from "@/store/slices/connectionStore";
 import { useDiscoveryStore } from "@/store/slices/discoveryStore";
 import { useNotificationsStore } from "@/store/slices/notificationsStore";
 import { useObjectTreeStore } from "@/store/slices/objectTreeStore";
+import { useRoomsStore } from "@/store/slices/roomsStore";
 import { useSettingsStore } from "@/store/slices/settingsStore";
 import { devLog } from "@/store/slices/devLogStore";
 import { buildServerUrl } from "@/models/server";
@@ -155,10 +156,13 @@ export function startCommunicationLayer(): void {
     // Snapshot / discover_result: Geräte in Discovery importieren und
     // anschließend alle bekannten stateIds abonnieren.
     wsManager.dispatcher.on("snapshot", (ev) => {
+      if (ev.rooms) {
+        useRoomsStore.getState().setRooms(ev.rooms);
+      }
       discoveryEngine.ingestFull(ev.devices);
       const ids = appsocketCollectStateIds();
       for (const id of ids) wsManager.subscribe(id);
-      log.info("snapshot ingested", ev.devices.length, "devices,", ids.length, "states subscribed");
+      log.info("snapshot ingested", ev.devices.length, "devices,", ev.rooms?.length ?? 0, "rooms,", ids.length, "states subscribed");
     }),
     errorBus.on("error", (payload) => {
       log.debug("error bus:", payload.kind, payload.code ?? "-", payload.message);

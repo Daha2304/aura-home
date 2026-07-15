@@ -4,6 +4,7 @@ import { getRoomCategoryMeta } from "@/models/roomCategory";
 import { useRoomsStore } from "@/store/slices/roomsStore";
 import { readJson, writeJson } from "@/services/storage/localStorage";
 import { createLogger } from "@/services/logger/Logger";
+import { isAliasRoomId } from "@/services/discovery/aliasFilter";
 import { roomEvents } from "./RoomEvents";
 
 const log = createLogger("room-manager");
@@ -33,8 +34,9 @@ export class RoomManager {
     this.hydrated = true;
     const stored = readJson<Room[]>(STORAGE_KEY);
     if (stored && Array.isArray(stored)) {
-      useRoomsStore.getState().setRooms(stored);
-      log.info("hydrated", stored.length, "rooms");
+      const aliasRooms = stored.filter((room) => isAliasRoomId(room.id));
+      useRoomsStore.getState().setRooms(aliasRooms);
+      log.info("hydrated", aliasRooms.length, "rooms");
     }
     // Persist on every change.
     useRoomsStore.subscribe((s) => {

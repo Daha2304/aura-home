@@ -12,6 +12,7 @@ import { discoveryEvents } from "./DiscoveryEvents";
 import { LifecycleMachine } from "./LifecycleMachine";
 import { validateIncomingDevice } from "./Validators";
 import { createId } from "@/utils/ids";
+import { isAliasDevice } from "./aliasFilter";
 
 const log = createLogger("discovery");
 
@@ -40,7 +41,7 @@ class DiscoveryEngine {
     // 1) Cache hydratisieren, bevor irgendetwas geladen wird.
     const snap = deviceCache.hydrate();
     if (snap) {
-      useDevicesStore.getState().setDevices(snap.devices);
+      useDevicesStore.getState().setDevices(snap.devices.filter(isAliasDevice));
       useDevicesStore.getState().setGroups(snap.groups ?? []);
     }
 
