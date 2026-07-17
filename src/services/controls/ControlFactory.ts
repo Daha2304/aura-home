@@ -33,6 +33,7 @@ class ControlFactoryImpl {
       const controlType = pickControlType(descriptor, readOnly);
       if (!controlType) continue;
       const value = "value" in cap ? (cap as { value: unknown }).value : cap;
+      const override = readControlOverride(device, cap.id);
 
       specs.push({
         id: `${device.id}:${cap.id}:${controlType}`,
@@ -47,6 +48,8 @@ class ControlFactoryImpl {
         priority: descriptor.priority,
         readOnly,
         capability: cap,
+        displayLabel: override?.label,
+        valueLabels: override?.valueLabels,
       });
     }
 
@@ -64,6 +67,7 @@ class ControlFactoryImpl {
       const controlType = pickControlType(descriptor, readOnly);
       if (!controlType) continue;
       const value = normalizeFunctionValue(fn, kind);
+      const override = readControlOverride(device, fn.id);
       const synthetic = {
         kind,
         id: fn.id,
@@ -90,6 +94,8 @@ class ControlFactoryImpl {
         priority: descriptor.priority - 5,
         readOnly,
         capability: synthetic,
+        displayLabel: override?.label,
+        valueLabels: override?.valueLabels,
       });
     }
 
@@ -97,6 +103,22 @@ class ControlFactoryImpl {
     this.cache.set(device, { capsRef: device.capabilities, functionsRef: device.functions, specs });
     return specs;
   }
+}
+
+interface ControlOverride {
+  label?: string;
+  valueLabels?: {
+    true?: string;
+    false?: string;
+  };
+}
+
+function readControlOverride(device: Device, stateId: string): ControlOverride | undefined {
+  const overrides = device.customProperties?.controlOverrides;
+  if (!overrides || typeof overrides !== "object") return undefined;
+  const override = (overrides as Record<string, unknown>)[stateId];
+  if (!override || typeof override !== "object") return undefined;
+  return override as ControlOverride;
 }
 
 function normalizeFunctionKind(fn: DeviceFunction): DeviceFunctionKind {

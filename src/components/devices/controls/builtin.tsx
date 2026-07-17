@@ -18,6 +18,10 @@ function asBool(v: unknown): boolean {
 }
 
 function formatDisplay(spec: ControlProps["spec"]): string {
+  if (typeof spec.currentValue === "boolean") {
+    const label = spec.currentValue ? spec.valueLabels?.true : spec.valueLabels?.false;
+    if (label) return label;
+  }
   const fmt = spec.descriptor.format;
   if (fmt) return fmt(spec.currentValue);
   if (spec.currentValue == null) return "—";
@@ -31,6 +35,7 @@ function formatDisplay(spec: ControlProps["spec"]): string {
 }
 
 function controlLabel(spec: ControlProps["spec"]): string {
+  if (spec.displayLabel) return spec.displayLabel;
   const label = "label" in spec.capability ? spec.capability.label : undefined;
   return label || spec.descriptor.name;
 }
@@ -72,7 +77,7 @@ const PowerToggle = memo(function PowerToggle({ spec, onCommit, disabled }: Cont
       spec={spec}
       trailing={
         <>
-          <StatusBadge tone={value ? "success" : "neutral"}>{value ? "An" : "Aus"}</StatusBadge>
+          <StatusBadge tone={value ? "success" : "neutral"}>{formatDisplay(spec)}</StatusBadge>
           <GlassSwitch
             aria-label={spec.descriptor.name}
             checked={value}
@@ -319,7 +324,7 @@ const BooleanReadout = memo(function BooleanReadout({ spec }: ControlProps) {
   return (
     <ControlRow
       spec={spec}
-      trailing={<StatusBadge tone={v ? "success" : "neutral"}>{v ? "Ja" : "Nein"}</StatusBadge>}
+      trailing={<StatusBadge tone={v ? "success" : "neutral"}>{formatDisplay(spec)}</StatusBadge>}
     />
   );
 });
