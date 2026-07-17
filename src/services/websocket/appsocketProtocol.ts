@@ -99,11 +99,10 @@ interface StateBinding {
 const stateIndex = new Map<string, StateBinding>();
 
 function indexDevice(device: Device): void {
-  for (const cap of device.capabilities) {
-    if (cap.id) stateIndex.set(cap.id, { deviceId: device.id, key: cap.id });
-  }
   for (const fn of device.functions ?? []) {
-    if (fn.id) stateIndex.set(fn.id, { deviceId: device.id, key: fn.id });
+    if (fn.id && fn.meta?.readable !== false) {
+      stateIndex.set(fn.id, { deviceId: device.id, key: fn.id });
+    }
   }
 }
 
@@ -365,6 +364,7 @@ function stateToCapabilityAndFunction(
   const value = readableRawStateValue(raw);
   const kind = normalizeStateKind(mappedKind === "enum" && !options?.length ? "number" : mappedKind, valueType, value);
   const label = deriveStateLabel(id, asString(raw.name) ?? asString(raw.common?.name), kind);
+  const readable = raw.readable !== false && raw.common?.read !== false;
 
   const cap = stateToCapability(id, kind, raw, label, !writable);
   const fn: DeviceFunction = {
@@ -378,7 +378,7 @@ function stateToCapabilityAndFunction(
     step,
     options,
     readonly: !writable,
-    meta: { role, valueType, visibleControl, rawMin: min, rawMax: max },
+    meta: { role, valueType, visibleControl, readable, rawMin: min, rawMax: max },
   };
   return { cap, fn };
 }
