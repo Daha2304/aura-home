@@ -274,6 +274,9 @@ function deriveStateLabel(id: string, label: string | undefined, kind: DeviceFun
   if (!generic && label) return stripStateSuffix(label);
   if (kind === "power") return "Ein / Aus";
   if (kind === "dimmer") return "Helligkeit";
+  if (normalizedSuffix === "mode") return "Modus";
+  if (kind === "temperature" && normalizedSuffix === "actual") return "Aktuelle Temperatur";
+  if (kind === "temperature" && normalizedSuffix === "set") return "Zieltemperatur";
   if (kind === "temperature") return "Temperatur";
   if (kind === "humidity") return "Luftfeuchtigkeit";
   if (kind === "battery") return "Batterie";
@@ -297,6 +300,7 @@ function mapRole(role: string | undefined): DeviceFunctionKind {
   if (r.startsWith("level.color")) return "rgb";
   if (r.startsWith("level.blind") || r.startsWith("level.shutter")) return "position";
   if (r.startsWith("level.tilt")) return "tilt";
+  if (r.startsWith("level.mode") || r.startsWith("state.mode") || r === "mode") return "enum";
   if (r.startsWith("level.temperature") || r.startsWith("value.temperature")) return "temperature";
   if (r.startsWith("value.humidity")) return "humidity";
   if (r.startsWith("value.power")) return "power_watts";
@@ -332,9 +336,7 @@ function stateOptions(raw: RawState): string[] | undefined {
     return source.map(String).filter((value) => value.length > 0);
   }
   if (source && typeof source === "object") {
-    return Object.entries(source as Record<string, unknown>).map(([value, label]) =>
-      typeof label === "string" && label.length > 0 ? label : value,
-    );
+    return Object.keys(source as Record<string, unknown>).filter((value) => value.length > 0);
   }
   return undefined;
 }
@@ -352,8 +354,7 @@ function stateToCapabilityAndFunction(
   if (!id) return null;
   const role = readRawStateRole(raw);
   const valueType = readRawStateType(raw);
-  const kind = normalizeStateKind(mapRole(role), valueType, raw.value);
-  const label = deriveStateLabel(id, asString(raw.name) ?? asString(raw.common?.name), kind);
+  const mappedKind = mapRole(role);
   const unit = asString(raw.unit) ?? asString(raw.common?.unit);
   const min = asNumber(raw.min) ?? asNumber(raw.common?.min);
   const max = asNumber(raw.max) ?? asNumber(raw.common?.max);
@@ -362,6 +363,8 @@ function stateToCapabilityAndFunction(
     raw.writable === true || (raw.common?.write !== undefined ? raw.common.write !== false : true);
   const options = stateOptions(raw);
   const value = readableRawStateValue(raw);
+  const kind = normalizeStateKind(mappedKind === "enum" && !options?.length ? "number" : mappedKind, valueType, value);
+  const label = deriveStateLabel(id, asString(raw.name) ?? asString(raw.common?.name), kind);
 
   const cap = stateToCapability(id, kind, raw, label, !writable);
   const fn: DeviceFunction = {
@@ -396,14 +399,14 @@ function stateToCapability(
   readonly: boolean,
 ): CustomCapability {
   const base = { id, label, readonly };
-  if (kind === "power" && typeof raw.value === "boolean") {
-    return { ...base, kind: "onOff", value: raw.value } as unknown as CustomCapability;
+  if (kind === "power") {
+    return { ...base, kind: "onOff", value: Boolean(raw.value) } as unknown as CustomCapability;
   }
-  if (kind === "dimmer" && typeof raw.value === "number") {
+  if (kind === "dimmer") {
     return {
       ...base,
       kind: "dimmer",
-      value: raw.value,
+      value: asNumber(raw.value) ?? asNumber(raw.min) ?? asNumber(raw.common?.min) ?? 0,
       min: asNumber(raw.min) ?? asNumber(raw.common?.min),
       max: asNumber(raw.max) ?? asNumber(raw.common?.max),
     } as unknown as CustomCapability;
@@ -411,11 +414,11 @@ function stateToCapability(
   if (kind === "position" && typeof raw.value === "number") {
     return { ...base, kind: "position", value: raw.value } as unknown as CustomCapability;
   }
-  if (kind === "temperature" && typeof raw.value === "number") {
+  if (kind === "temperature") {
     return {
       ...base,
       kind: "temperature",
-      value: raw.value,
+      value: asNumber(raw.value) ?? asNumber(raw.min) ?? asNumber(raw.common?.min) ?? 20,
       unit: (asString(raw.unit) ?? asString(raw.common?.unit) ?? "C").replace(/^°/, "") || "C",
       readonly,
     } as unknown as CustomCapability;
@@ -428,6 +431,15 @@ function stateToCapability(
   }
   if (kind === "action") {
     return { ...base, kind: "action", value: false, readonly } as unknown as CustomCapability;
+  }
+  if (kind === "enum") {
+    return {
+      ...base,
+      kind: "mode",
+      value: String(raw.value ?? ""),
+      options: stateOptions(raw) ?? [],
+      readonly,
+    } as unknown as CustomCapability;
   }
   if ((kind === "number" || kind === "battery" || kind === "signal") && typeof raw.value === "number") {
     return {
