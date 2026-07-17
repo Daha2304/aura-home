@@ -58,6 +58,6 @@ export const objectsPanelDescriptor: DevicePanelDescriptor = {
   title: "Objekte",
   group: "information",
   priority: 680,
-  isVisible: (device) => (device.functions?.length ?? 0) > 0,
+  isVisible: () => false,
   component: ObjectsPanelComponent,
 };

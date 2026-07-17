@@ -12,8 +12,7 @@ export const networkPanelDescriptor: DevicePanelDescriptor = {
   title: "Netzwerk",
   group: "network",
   priority: 600,
-  isVisible: (device) =>
-    devicePropertyRegistry.readGroup("network", device).length > 0,
+  isVisible: () => false,
   component: NetworkPanelComponent,
 };
 
@@ -31,9 +30,6 @@ export const firmwarePanelDescriptor: DevicePanelDescriptor = {
   title: "Firmware & Hardware",
   group: "firmware",
   priority: 500,
-  isVisible: (device) =>
-    devicePropertyRegistry.readGroup("firmware", device).length +
-      devicePropertyRegistry.readGroup("hardware", device).length >
-    0,
+  isVisible: () => false,
   component: FirmwarePanelComponent,
 };

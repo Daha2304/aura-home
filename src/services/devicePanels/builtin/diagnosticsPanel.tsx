@@ -69,6 +69,6 @@ export const diagnosticsPanelDescriptor: DevicePanelDescriptor = {
   title: "Diagnose",
   group: "diagnostics",
   priority: 300,
-  isVisible: () => true,
+  isVisible: () => false,
   component: DiagnosticsPanelComponent,
 };

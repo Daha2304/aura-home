@@ -4,7 +4,7 @@ import { GlassSlider } from "@/components/ds/controls/GlassSlider";
 import { SegmentedControl } from "@/components/ds/controls/SegmentedControl";
 import { IconButton } from "@/components/ds/controls/IconButton";
 import { StatusBadge } from "@/components/ds/controls/StatusBadge";
-import { Play, Pause, Square, Volume2, VolumeX } from "lucide-react";
+import { Play, Pause, Square, Send, Volume2, VolumeX } from "lucide-react";
 import type { ControlProps } from "@/services/controls/ControlRegistry";
 import { controlRegistry } from "@/services/controls/ControlRegistry";
 
@@ -171,6 +171,22 @@ const NumericStepper = memo(function NumericStepper({ spec, onCommit, disabled }
             +
           </IconButton>
         </div>
+      }
+    />
+  );
+});
+
+const ActionButton = memo(function ActionButton({ spec, onCommit, disabled }: ControlProps) {
+  return (
+    <ControlRow
+      spec={spec}
+      trailing={
+        <IconButton
+          aria-label={controlLabel(spec)}
+          onClick={() => !disabled && !spec.readOnly && onCommit(true)}
+        >
+          <Send className="h-4 w-4" />
+        </IconButton>
       }
     />
   );
@@ -445,6 +461,7 @@ export function registerBuiltinControls(): void {
   R.register({ controlType: "slider.color-temperature", component: PercentageSlider });
   R.register({ controlType: "slider.temperature", component: TemperatureSlider });
   R.register({ controlType: "stepper.numeric", component: NumericStepper });
+  R.register({ controlType: "button.action", component: ActionButton });
   R.register({ controlType: "picker.color", component: ColorPicker });
   R.register({ controlType: "dropdown.enum", component: DropdownEnum });
   R.register({ controlType: "segmented.enum", component: SegmentedEnum });

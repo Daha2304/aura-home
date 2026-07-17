@@ -52,7 +52,6 @@ export const informationPanelDescriptor: DevicePanelDescriptor = {
   title: "Informationen",
   group: "information",
   priority: 700,
-  isVisible: (device) =>
-    devicePropertyRegistry.readGroup("identity", device).length > 0,
+  isVisible: () => false,
   component: InformationPanelComponent,
 };

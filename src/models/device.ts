@@ -36,6 +36,7 @@ export type DeviceFunctionKind =
   | "number"
   | "text"
   | "enum"
+  | "action"
   | "custom";
 
 export interface DeviceFunction<TValue = unknown> {

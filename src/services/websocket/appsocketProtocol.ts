@@ -233,7 +233,7 @@ function stripStateSuffix(name: string): string {
 function isGenericDeviceName(name: string | undefined): boolean {
   if (!name) return true;
   const n = name.trim().toLowerCase();
-  return ["brightness", "switch", "state", "on", "on / off", "power", "dimmer", "light"].includes(
+  return ["actual", "set", "on_set", "brightness", "switch", "state", "on", "on / off", "power", "dimmer", "light"].includes(
     n,
   );
 }
@@ -269,14 +269,23 @@ function deriveDeviceName(raw: RawDevice, id: string): string {
 
 function deriveStateLabel(id: string, label: string | undefined, kind: DeviceFunctionKind): string {
   const suffix = id.split(".").at(-1) ?? id;
+  const normalizedSuffix = suffix.toLowerCase();
   const generic = isGenericDeviceName(label);
   if (!generic && label) return stripStateSuffix(label);
+  if (kind === "power") return "Ein / Aus";
   if (kind === "dimmer") return "Helligkeit";
-  if (suffix.toLowerCase() === "bri") return "Helligkeit";
-  if (suffix.toLowerCase() === "ct" || suffix.toLowerCase() === "colortemp") {
+  if (kind === "temperature") return "Temperatur";
+  if (kind === "humidity") return "Luftfeuchtigkeit";
+  if (kind === "battery") return "Batterie";
+  if (kind === "signal") return "Signal";
+  if (kind === "action") return toTitle(suffix);
+  if (normalizedSuffix === "bri") return "Helligkeit";
+  if (normalizedSuffix === "ct" || normalizedSuffix === "colortemp") {
     return "Farbtemperatur";
   }
-  if (suffix.toLowerCase() === "state") return "Schalter";
+  if (normalizedSuffix === "state") return "Schalter";
+  if (normalizedSuffix === "actual" && id.toLowerCase().includes(".fenster.")) return "Fenster";
+  if (normalizedSuffix === "actual") return "Status";
   return toTitle(suffix);
 }
 
@@ -296,7 +305,7 @@ function mapRole(role: string | undefined): DeviceFunctionKind {
   if (r.startsWith("value.energy")) return "energy";
   if (r.startsWith("value.battery") || r === "battery") return "battery";
   if (r.startsWith("value.rssi") || r.startsWith("value.signal")) return "signal";
-  if (r === "button" || r.startsWith("button.")) return "boolean";
+  if (r === "button" || r.startsWith("button.")) return "action";
   if (r.startsWith("sensor.motion") || r.startsWith("sensor.presence")) return "boolean";
   if (r.startsWith("sensor.window") || r.startsWith("sensor.door")) return "boolean";
   if (r.startsWith("indicator") || r.startsWith("sensor")) return "boolean";
@@ -416,6 +425,9 @@ function stateToCapability(
   }
   if (kind === "boolean") {
     return { ...base, kind: "boolean", value: Boolean(raw.value), readonly } as unknown as CustomCapability;
+  }
+  if (kind === "action") {
+    return { ...base, kind: "action", value: false, readonly } as unknown as CustomCapability;
   }
   if ((kind === "number" || kind === "battery" || kind === "signal") && typeof raw.value === "number") {
     return {
