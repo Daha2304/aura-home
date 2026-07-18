@@ -1,4 +1,4 @@
-import { memo, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { useDevicesStore } from "@/store/slices/devicesStore";
 import { controlFactory } from "@/services/controls/ControlFactory";
 import { controlRegistry } from "@/services/controls/ControlRegistry";
@@ -9,10 +9,9 @@ import type { ControlSpec } from "@/models/controlSpec";
 import type { Device } from "@/models/device";
 import type { CapabilityCategory } from "@/models/capabilityDescriptor";
 import { EmptyStateCard } from "@/components/ds/cards/EmptyStateCard";
-import { Cpu, Pencil } from "lucide-react";
+import { Cpu } from "lucide-react";
 import { ControlGroupSection } from "./ControlGroupSection";
 import { ControlFeedback } from "./ControlFeedback";
-import { IconButton } from "@/components/ds/controls/IconButton";
 import { GlassButton } from "@/components/glass/GlassButton";
 import {
   Dialog,
@@ -39,11 +38,15 @@ const CATEGORY_ORDER: CapabilityCategory[] = [
 export interface UniversalControlRendererProps {
   deviceId: string;
   mode?: "all" | "writable" | "readonly";
+  grouped?: boolean;
+  emptyState?: boolean;
 }
 
 export const UniversalControlRenderer = memo(function UniversalControlRenderer({
   deviceId,
   mode = "all",
+  grouped = true,
+  emptyState = true,
 }: UniversalControlRendererProps) {
   const device = useDevicesStore((s) => s.byId(deviceId));
   const specs = useMemo(() => {
@@ -55,7 +58,7 @@ export const UniversalControlRenderer = memo(function UniversalControlRenderer({
     return all;
   }, [device, mode]);
 
-  const grouped = useMemo(() => {
+  const groupedSpecs = useMemo(() => {
     const map = new Map<CapabilityCategory, ControlSpec[]>();
     for (const s of specs) {
       const list = map.get(s.group) ?? [];
@@ -67,20 +70,30 @@ export const UniversalControlRenderer = memo(function UniversalControlRenderer({
 
   if (!device) return null;
   if (specs.length === 0) {
-    return (
+    return emptyState ? (
       <EmptyStateCard
         icon={Cpu}
         title="Keine Steuerung"
         description="Dieses Gerät meldet aktuell keine steuerbaren Funktionen."
       />
+    ) : null;
+  }
+
+  if (!grouped) {
+    return (
+      <div className="flex flex-col gap-4">
+        {specs.map((spec) => (
+          <ControlRow key={spec.id} spec={spec} />
+        ))}
+      </div>
     );
   }
 
   return (
     <>
-      {CATEGORY_ORDER.filter((c) => grouped.has(c)).map((cat) => (
+      {CATEGORY_ORDER.filter((c) => groupedSpecs.has(c)).map((cat) => (
         <ControlGroupSection key={cat} category={cat}>
-          {grouped.get(cat)!.map((spec) => (
+          {groupedSpecs.get(cat)!.map((spec) => (
             <ControlRow key={spec.id} spec={spec} />
           ))}
         </ControlGroupSection>
@@ -91,8 +104,6 @@ export const UniversalControlRenderer = memo(function UniversalControlRenderer({
 
 const ControlRow = memo(function ControlRow({ spec }: { spec: ControlSpec }) {
   const binding = controlRegistry.resolve(spec.controlType);
-  const device = useDevicesStore((s) => s.byId(spec.deviceId));
-  const [editorOpen, setEditorOpen] = useState(false);
   if (!binding) return null;
   const Component = binding.component;
 
@@ -113,31 +124,10 @@ const ControlRow = memo(function ControlRow({ spec }: { spec: ControlSpec }) {
 
   return (
     <div className="flex flex-col gap-1">
-      <div className="flex items-start gap-2">
-        <div className="min-w-0 flex-1">
-          <Component spec={spec} onCommit={handleCommit} />
-        </div>
-        <IconButton
-          aria-label="Anzeige anpassen"
-          size="sm"
-          variant="ghost"
-          onClick={() => setEditorOpen(true)}
-          className="mt-1 shrink-0"
-        >
-          <Pencil className="h-4 w-4" />
-        </IconButton>
-      </div>
+      <Component spec={spec} onCommit={handleCommit} />
       <div className="h-6 overflow-hidden">
         <ControlFeedback deviceId={spec.deviceId} commandKey={spec.commandKey} />
       </div>
-      {device && (
-        <ControlOverrideDialog
-          open={editorOpen}
-          device={device}
-          spec={spec}
-          onClose={() => setEditorOpen(false)}
-        />
-      )}
     </div>
   );
 });
@@ -153,43 +143,62 @@ type ControlOverrides = Record<
   }
 >;
 
-function ControlOverrideDialog({
+export function DeviceControlOverridesDialog({
   open,
   device,
-  spec,
   onClose,
 }: {
   open: boolean;
   device: Device;
-  spec: ControlSpec;
   onClose: () => void;
 }) {
-  const existing = readOverrides(device)[spec.commandKey] ?? {};
-  const fallbackLabel = spec.displayLabel ?? ("label" in spec.capability ? spec.capability.label : undefined) ?? spec.descriptor.name;
-  const [label, setLabel] = useState(existing.label ?? "");
-  const [trueLabel, setTrueLabel] = useState(existing.valueLabels?.true ?? "");
-  const [falseLabel, setFalseLabel] = useState(existing.valueLabels?.false ?? "");
-  const isBoolean = typeof spec.currentValue === "boolean" || spec.descriptor.dataType === "boolean";
+  const specs = useMemo(() => controlFactory.buildForDevice(device), [device]);
+  const [drafts, setDrafts] = useState<Record<string, { label: string; trueLabel: string; falseLabel: string }>>({});
+
+  useEffect(() => {
+    const overrides = readOverrides(device);
+    setDrafts(
+      Object.fromEntries(
+        specs.map((spec) => {
+          const existing = overrides[spec.commandKey] ?? {};
+          return [
+            spec.commandKey,
+            {
+              label: existing.label ?? "",
+              trueLabel: existing.valueLabels?.true ?? "",
+              falseLabel: existing.valueLabels?.false ?? "",
+            },
+          ];
+        }),
+      ),
+    );
+  }, [device, specs, open]);
+
+  const updateDraft = (key: string, patch: Partial<{ label: string; trueLabel: string; falseLabel: string }>) => {
+    setDrafts((current) => ({
+      ...current,
+      [key]: { label: "", trueLabel: "", falseLabel: "", ...(current[key] ?? {}), ...patch },
+    }));
+  };
 
   const save = () => {
-    const overrides = readOverrides(device);
-    const nextOverride = {
-      label: label.trim() || undefined,
-      valueLabels: {
-        true: trueLabel.trim() || undefined,
-        false: falseLabel.trim() || undefined,
-      },
-    };
-    const hasValueLabels = Boolean(nextOverride.valueLabels.true || nextOverride.valueLabels.false);
-    const nextOverrides = { ...overrides };
+    const nextOverrides = { ...readOverrides(device) };
 
-    if (nextOverride.label || hasValueLabels) {
-      nextOverrides[spec.commandKey] = {
-        ...(nextOverride.label ? { label: nextOverride.label } : {}),
-        ...(hasValueLabels ? { valueLabels: nextOverride.valueLabels } : {}),
-      };
-    } else {
-      delete nextOverrides[spec.commandKey];
+    for (const spec of specs) {
+      const draft = drafts[spec.commandKey] ?? { label: "", trueLabel: "", falseLabel: "" };
+      const label = draft.label.trim();
+      const trueLabel = draft.trueLabel.trim();
+      const falseLabel = draft.falseLabel.trim();
+      const hasValueLabels = Boolean(trueLabel || falseLabel);
+
+      if (label || hasValueLabels) {
+        nextOverrides[spec.commandKey] = {
+          ...(label ? { label } : {}),
+          ...(hasValueLabels ? { valueLabels: { true: trueLabel || undefined, false: falseLabel || undefined } } : {}),
+        };
+      } else {
+        delete nextOverrides[spec.commandKey];
+      }
     }
 
     useDevicesStore.getState().upsertDevice({
@@ -204,7 +213,9 @@ function ControlOverrideDialog({
 
   const reset = () => {
     const nextOverrides = { ...readOverrides(device) };
-    delete nextOverrides[spec.commandKey];
+    for (const spec of specs) {
+      delete nextOverrides[spec.commandKey];
+    }
     useDevicesStore.getState().upsertDevice({
       ...device,
       customProperties: {
@@ -212,49 +223,59 @@ function ControlOverrideDialog({
         controlOverrides: nextOverrides,
       },
     });
-    setLabel("");
-    setTrueLabel("");
-    setFalseLabel("");
     onClose();
   };
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Anzeige anpassen</DialogTitle>
+          <DialogTitle>Aktionen anpassen</DialogTitle>
         </DialogHeader>
-        <div className="grid gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor={`${spec.id}-label`}>Name</Label>
-            <Input
-              id={`${spec.id}-label`}
-              value={label}
-              placeholder={fallbackLabel}
-              onChange={(event) => setLabel(event.target.value)}
-            />
-          </div>
-          {isBoolean && (
-            <div className="grid grid-cols-2 gap-3">
-              <div className="grid gap-2">
-                <Label htmlFor={`${spec.id}-true`}>Wenn wahr</Label>
-                <Input
-                  id={`${spec.id}-true`}
-                  value={trueLabel}
-                  placeholder="Ja"
-                  onChange={(event) => setTrueLabel(event.target.value)}
-                />
+        <div className="max-h-[60vh] space-y-5 overflow-y-auto pr-1">
+          {specs.map((spec) => {
+            const fallbackLabel = spec.displayLabel ?? ("label" in spec.capability ? spec.capability.label : undefined) ?? spec.descriptor.name;
+            const isBoolean = typeof spec.currentValue === "boolean" || spec.descriptor.dataType === "boolean";
+            const draft = drafts[spec.commandKey] ?? { label: "", trueLabel: "", falseLabel: "" };
+
+            return (
+              <div key={spec.id} className="grid gap-3 border-b border-border/50 pb-4 last:border-0 last:pb-0">
+                <div className="grid gap-2">
+                  <Label htmlFor={`${spec.id}-label`}>{fallbackLabel}</Label>
+                  <Input
+                    id={`${spec.id}-label`}
+                    value={draft.label}
+                    placeholder={fallbackLabel}
+                    onChange={(event) => updateDraft(spec.commandKey, { label: event.target.value })}
+                  />
+                </div>
+                {isBoolean && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="grid gap-2">
+                      <Label htmlFor={`${spec.id}-true`}>Wenn wahr</Label>
+                      <Input
+                        id={`${spec.id}-true`}
+                        value={draft.trueLabel}
+                        placeholder="Ja"
+                        onChange={(event) => updateDraft(spec.commandKey, { trueLabel: event.target.value })}
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor={`${spec.id}-false`}>Wenn falsch</Label>
+                      <Input
+                        id={`${spec.id}-false`}
+                        value={draft.falseLabel}
+                        placeholder="Nein"
+                        onChange={(event) => updateDraft(spec.commandKey, { falseLabel: event.target.value })}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor={`${spec.id}-false`}>Wenn falsch</Label>
-                <Input
-                  id={`${spec.id}-false`}
-                  value={falseLabel}
-                  placeholder="Nein"
-                  onChange={(event) => setFalseLabel(event.target.value)}
-                />
-              </div>
-            </div>
+            );
+          })}
+          {specs.length === 0 && (
+            <div className="text-sm text-muted-foreground">Dieses Gerät hat aktuell keine Aktionen.</div>
           )}
         </div>
         <DialogFooter>
