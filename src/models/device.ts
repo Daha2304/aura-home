@@ -26,6 +26,7 @@ export type DeviceFunctionKind =
   | "position"
   | "tilt"
   | "speed"
+  | "volume"
   | "power_watts"
   | "voltage"
   | "current"

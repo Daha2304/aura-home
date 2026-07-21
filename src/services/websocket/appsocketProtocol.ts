@@ -79,6 +79,34 @@ const KNOWN_DEVICE_TYPES: ReadonlySet<DeviceTypeId> = new Set([
   "custom",
 ]);
 
+const DENON_INPUT_OPTIONS = [
+  "PHONO",
+  "CD",
+  "TUNER",
+  "DVD",
+  "BD",
+  "TV",
+  "SAT/CBL",
+  "MPLAY",
+  "GAME",
+  "NET",
+  "SPOTIFY",
+  "LASTFM",
+  "IRADIO",
+  "SERVER",
+  "FAVORITES",
+  "AUX1",
+  "AUX2",
+  "AUX3",
+  "AUX4",
+  "AUX5",
+  "AUX6",
+  "AUX7",
+  "BT",
+  "USB",
+  "USB/IPOD",
+];
+
 function isKnownDeviceType(type: string | undefined): type is DeviceTypeId {
   return !!type && KNOWN_DEVICE_TYPES.has(type as DeviceTypeId);
 }
@@ -273,6 +301,8 @@ function deriveStateLabel(id: string, label: string | undefined, kind: DeviceFun
   if (!generic && label) return stripStateSuffix(label);
   if (kind === "power") return "Ein / Aus";
   if (kind === "dimmer") return "Helligkeit";
+  if (kind === "volume") return "Lautstärke";
+  if (normalizedSuffix === "input") return "Eingang";
   if (normalizedSuffix === "mode") return "Modus";
   if (kind === "temperature" && normalizedSuffix === "actual") return "Aktuelle Temperatur";
   if (kind === "temperature" && normalizedSuffix === "set") return "Zieltemperatur";
@@ -299,6 +329,8 @@ function mapRole(role: string | undefined): DeviceFunctionKind {
   if (r.startsWith("level.color")) return "rgb";
   if (r.startsWith("level.blind") || r.startsWith("level.shutter")) return "position";
   if (r.startsWith("level.tilt")) return "tilt";
+  if (r.startsWith("level.volume")) return "volume";
+  if (r === "media.quickselect" || r === "media.input" || r.includes("selectinput")) return "enum";
   if (r.startsWith("level.mode") || r.startsWith("state.mode") || r === "mode") return "enum";
   if (r.startsWith("level.temperature") || r.startsWith("value.temperature")) return "temperature";
   if (r.startsWith("value.humidity")) return "humidity";
@@ -336,6 +368,11 @@ function stateOptions(raw: RawState): string[] | undefined {
   }
   if (source && typeof source === "object") {
     return Object.keys(source as Record<string, unknown>).filter((value) => value.length > 0);
+  }
+  const role = readRawStateRole(raw)?.toLowerCase() ?? "";
+  const id = readRawStateId(raw)?.toLowerCase() ?? "";
+  if (role === "media.quickselect" || id.endsWith(".input") || id.includes("selectinput")) {
+    return DENON_INPUT_OPTIONS;
   }
   return undefined;
 }
@@ -409,6 +446,17 @@ function stateToCapability(
       value: asNumber(raw.value) ?? asNumber(raw.min) ?? asNumber(raw.common?.min) ?? 0,
       min: asNumber(raw.min) ?? asNumber(raw.common?.min),
       max: asNumber(raw.max) ?? asNumber(raw.common?.max),
+    } as unknown as CustomCapability;
+  }
+  if (kind === "volume") {
+    return {
+      ...base,
+      kind: "volume",
+      value: asNumber(raw.value) ?? asNumber(raw.min) ?? asNumber(raw.common?.min) ?? 0,
+      unit: asString(raw.unit) ?? asString(raw.common?.unit) ?? "%",
+      min: asNumber(raw.min) ?? asNumber(raw.common?.min),
+      max: asNumber(raw.max) ?? asNumber(raw.common?.max),
+      readonly,
     } as unknown as CustomCapability;
   }
   if (kind === "position" && typeof raw.value === "number") {
