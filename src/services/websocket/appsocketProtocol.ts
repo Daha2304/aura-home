@@ -389,7 +389,7 @@ function stateOptions(raw: RawState): string[] | undefined {
   }
   const role = readRawStateRole(raw)?.toLowerCase() ?? "";
   const id = readRawStateId(raw)?.toLowerCase() ?? "";
-  if (role === "media.quickselect" || id.endsWith(".input") || id.includes("selectinput")) {
+  if (id.endsWith(".input") || id.includes("selectinput")) {
     return DENON_INPUT_OPTIONS;
   }
   return undefined;
