@@ -17,6 +17,7 @@ export interface ControlSpec {
   readOnly: boolean;
   capability: Capability;
   displayLabel?: string;
+  order?: number;
   valueLabels?: {
     true?: string;
     false?: string;

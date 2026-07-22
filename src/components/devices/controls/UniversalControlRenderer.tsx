@@ -9,7 +9,7 @@ import type { ControlSpec } from "@/models/controlSpec";
 import type { Device } from "@/models/device";
 import type { CapabilityCategory } from "@/models/capabilityDescriptor";
 import { EmptyStateCard } from "@/components/ds/cards/EmptyStateCard";
-import { Cpu } from "lucide-react";
+import { ArrowDown, ArrowUp, Cpu } from "lucide-react";
 import { ControlGroupSection } from "./ControlGroupSection";
 import { ControlFeedback } from "./ControlFeedback";
 import { GlassButton } from "@/components/glass/GlassButton";
@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { IconButton } from "@/components/ds/controls/IconButton";
 
 const CATEGORY_ORDER: CapabilityCategory[] = [
   "general",
@@ -136,6 +137,7 @@ type ControlOverrides = Record<
   string,
   {
     label?: string;
+    order?: number;
     valueLabels?: {
       true?: string;
       false?: string;
@@ -153,18 +155,31 @@ export function DeviceControlOverridesDialog({
   onClose: () => void;
 }) {
   const specs = useMemo(() => controlFactory.buildForDevice(device), [device]);
-  const [drafts, setDrafts] = useState<Record<string, { label: string; trueLabel: string; falseLabel: string }>>({});
+  const [drafts, setDrafts] = useState<
+    Record<string, { label: string; order: number; trueLabel: string; falseLabel: string }>
+  >({});
+  const orderedSpecs = useMemo(
+    () =>
+      [...specs].sort((first, second) => {
+        const firstOrder = drafts[first.commandKey]?.order ?? Number.MAX_SAFE_INTEGER;
+        const secondOrder = drafts[second.commandKey]?.order ?? Number.MAX_SAFE_INTEGER;
+        if (firstOrder !== secondOrder) return firstOrder - secondOrder;
+        return specs.indexOf(first) - specs.indexOf(second);
+      }),
+    [drafts, specs],
+  );
 
   useEffect(() => {
     const overrides = readOverrides(device);
     setDrafts(
       Object.fromEntries(
-        specs.map((spec) => {
+        specs.map((spec, index) => {
           const existing = overrides[spec.commandKey] ?? {};
           return [
             spec.commandKey,
             {
               label: existing.label ?? "",
+              order: existing.order ?? index,
               trueLabel: existing.valueLabels?.true ?? "",
               falseLabel: existing.valueLabels?.false ?? "",
             },
@@ -174,27 +189,82 @@ export function DeviceControlOverridesDialog({
     );
   }, [device, specs, open]);
 
-  const updateDraft = (key: string, patch: Partial<{ label: string; trueLabel: string; falseLabel: string }>) => {
+  const updateDraft = (
+    key: string,
+    patch: Partial<{ label: string; order: number; trueLabel: string; falseLabel: string }>,
+  ) => {
     setDrafts((current) => ({
       ...current,
-      [key]: { label: "", trueLabel: "", falseLabel: "", ...(current[key] ?? {}), ...patch },
+      [key]: {
+        label: "",
+        order: 0,
+        trueLabel: "",
+        falseLabel: "",
+        ...(current[key] ?? {}),
+        ...patch,
+      },
     }));
+  };
+
+  const moveDraft = (key: string, direction: -1 | 1) => {
+    setDrafts((current) => {
+      const order = [...specs].sort((first, second) => {
+        const firstOrder = current[first.commandKey]?.order ?? Number.MAX_SAFE_INTEGER;
+        const secondOrder = current[second.commandKey]?.order ?? Number.MAX_SAFE_INTEGER;
+        if (firstOrder !== secondOrder) return firstOrder - secondOrder;
+        return specs.indexOf(first) - specs.indexOf(second);
+      });
+      const index = order.findIndex((spec) => spec.commandKey === key);
+      const targetIndex = index + direction;
+      if (index < 0 || targetIndex < 0 || targetIndex >= order.length) return current;
+
+      const nextOrder = order.slice();
+      const [item] = nextOrder.splice(index, 1);
+      nextOrder.splice(targetIndex, 0, item);
+
+      return {
+        ...current,
+        ...Object.fromEntries(
+          nextOrder.map((spec, nextIndex) => [
+            spec.commandKey,
+            {
+              label: "",
+              trueLabel: "",
+              falseLabel: "",
+              ...(current[spec.commandKey] ?? {}),
+              order: nextIndex,
+            },
+          ]),
+        ),
+      };
+    });
   };
 
   const save = () => {
     const nextOverrides = { ...readOverrides(device) };
 
-    for (const spec of specs) {
-      const draft = drafts[spec.commandKey] ?? { label: "", trueLabel: "", falseLabel: "" };
+    for (const [index, spec] of orderedSpecs.entries()) {
+      const draft = drafts[spec.commandKey] ?? {
+        label: "",
+        order: index,
+        trueLabel: "",
+        falseLabel: "",
+      };
+      const existingOverride = nextOverrides[spec.commandKey];
       const label = draft.label.trim();
       const trueLabel = draft.trueLabel.trim();
       const falseLabel = draft.falseLabel.trim();
       const hasValueLabels = Boolean(trueLabel || falseLabel);
+      const order = index;
+      const hasExistingOrder = typeof existingOverride?.order === "number";
 
-      if (label || hasValueLabels) {
+      if (label || hasValueLabels || hasExistingOrder || order !== specs.indexOf(spec)) {
         nextOverrides[spec.commandKey] = {
+          order,
           ...(label ? { label } : {}),
-          ...(hasValueLabels ? { valueLabels: { true: trueLabel || undefined, false: falseLabel || undefined } } : {}),
+          ...(hasValueLabels
+            ? { valueLabels: { true: trueLabel || undefined, false: falseLabel || undefined } }
+            : {}),
         };
       } else {
         delete nextOverrides[spec.commandKey];
@@ -233,20 +303,57 @@ export function DeviceControlOverridesDialog({
           <DialogTitle>Aktionen anpassen</DialogTitle>
         </DialogHeader>
         <div className="max-h-[60vh] space-y-5 overflow-y-auto pr-1">
-          {specs.map((spec) => {
-            const fallbackLabel = spec.displayLabel ?? ("label" in spec.capability ? spec.capability.label : undefined) ?? spec.descriptor.name;
-            const isBoolean = typeof spec.currentValue === "boolean" || spec.descriptor.dataType === "boolean";
-            const draft = drafts[spec.commandKey] ?? { label: "", trueLabel: "", falseLabel: "" };
+          {orderedSpecs.map((spec, index) => {
+            const fallbackLabel =
+              spec.displayLabel ??
+              ("label" in spec.capability ? spec.capability.label : undefined) ??
+              spec.descriptor.name;
+            const isBoolean =
+              typeof spec.currentValue === "boolean" || spec.descriptor.dataType === "boolean";
+            const draft = drafts[spec.commandKey] ?? {
+              label: "",
+              order: index,
+              trueLabel: "",
+              falseLabel: "",
+            };
 
             return (
-              <div key={spec.id} className="grid gap-3 border-b border-border/50 pb-4 last:border-0 last:pb-0">
+              <div
+                key={spec.id}
+                className="grid gap-3 border-b border-border/50 pb-4 last:border-0 last:pb-0"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs font-medium text-muted-foreground">{index + 1}</span>
+                  <div className="flex items-center gap-2">
+                    <IconButton
+                      aria-label="Nach oben verschieben"
+                      size="sm"
+                      variant="ghost"
+                      disabled={index === 0}
+                      onClick={() => moveDraft(spec.commandKey, -1)}
+                    >
+                      <ArrowUp className="h-4 w-4" />
+                    </IconButton>
+                    <IconButton
+                      aria-label="Nach unten verschieben"
+                      size="sm"
+                      variant="ghost"
+                      disabled={index === orderedSpecs.length - 1}
+                      onClick={() => moveDraft(spec.commandKey, 1)}
+                    >
+                      <ArrowDown className="h-4 w-4" />
+                    </IconButton>
+                  </div>
+                </div>
                 <div className="grid gap-2">
                   <Label htmlFor={`${spec.id}-label`}>{fallbackLabel}</Label>
                   <Input
                     id={`${spec.id}-label`}
                     value={draft.label}
                     placeholder={fallbackLabel}
-                    onChange={(event) => updateDraft(spec.commandKey, { label: event.target.value })}
+                    onChange={(event) =>
+                      updateDraft(spec.commandKey, { label: event.target.value })
+                    }
                   />
                 </div>
                 {isBoolean && (
@@ -257,7 +364,9 @@ export function DeviceControlOverridesDialog({
                         id={`${spec.id}-true`}
                         value={draft.trueLabel}
                         placeholder="Ja"
-                        onChange={(event) => updateDraft(spec.commandKey, { trueLabel: event.target.value })}
+                        onChange={(event) =>
+                          updateDraft(spec.commandKey, { trueLabel: event.target.value })
+                        }
                       />
                     </div>
                     <div className="grid gap-2">
@@ -266,7 +375,9 @@ export function DeviceControlOverridesDialog({
                         id={`${spec.id}-false`}
                         value={draft.falseLabel}
                         placeholder="Nein"
-                        onChange={(event) => updateDraft(spec.commandKey, { falseLabel: event.target.value })}
+                        onChange={(event) =>
+                          updateDraft(spec.commandKey, { falseLabel: event.target.value })
+                        }
                       />
                     </div>
                   </div>
@@ -275,12 +386,18 @@ export function DeviceControlOverridesDialog({
             );
           })}
           {specs.length === 0 && (
-            <div className="text-sm text-muted-foreground">Dieses Gerät hat aktuell keine Aktionen.</div>
+            <div className="text-sm text-muted-foreground">
+              Dieses Gerät hat aktuell keine Aktionen.
+            </div>
           )}
         </div>
         <DialogFooter>
-          <GlassButton variant="ghost" onClick={reset}>Zurücksetzen</GlassButton>
-          <GlassButton variant="primary" onClick={save}>Speichern</GlassButton>
+          <GlassButton variant="ghost" onClick={reset}>
+            Zurücksetzen
+          </GlassButton>
+          <GlassButton variant="primary" onClick={save}>
+            Speichern
+          </GlassButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>

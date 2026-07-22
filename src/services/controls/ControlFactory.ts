@@ -20,7 +20,11 @@ class ControlFactoryImpl {
 
   buildForDevice(device: Device): ControlSpec[] {
     const cached = this.cache.get(device);
-    if (cached && cached.capsRef === device.capabilities && cached.functionsRef === device.functions) {
+    if (
+      cached &&
+      cached.capsRef === device.capabilities &&
+      cached.functionsRef === device.functions
+    ) {
       return cached.specs;
     }
 
@@ -49,6 +53,7 @@ class ControlFactoryImpl {
         readOnly,
         capability: cap,
         displayLabel: override?.label,
+        order: override?.order,
         valueLabels: override?.valueLabels,
       });
     }
@@ -95,11 +100,12 @@ class ControlFactoryImpl {
         readOnly,
         capability: synthetic,
         displayLabel: override?.label,
+        order: override?.order,
         valueLabels: override?.valueLabels,
       });
     }
 
-    specs.sort((a, b) => b.priority - a.priority);
+    specs.sort(compareControlSpecs);
     this.cache.set(device, { capsRef: device.capabilities, functionsRef: device.functions, specs });
     return specs;
   }
@@ -107,6 +113,7 @@ class ControlFactoryImpl {
 
 interface ControlOverride {
   label?: string;
+  order?: number;
   valueLabels?: {
     true?: string;
     false?: string;
@@ -119,6 +126,19 @@ function readControlOverride(device: Device, stateId: string): ControlOverride |
   const override = (overrides as Record<string, unknown>)[stateId];
   if (!override || typeof override !== "object") return undefined;
   return override as ControlOverride;
+}
+
+function compareControlSpecs(a: ControlSpec, b: ControlSpec): number {
+  const aOrder = typeof a.order === "number" && Number.isFinite(a.order) ? a.order : undefined;
+  const bOrder = typeof b.order === "number" && Number.isFinite(b.order) ? b.order : undefined;
+
+  if (aOrder !== undefined || bOrder !== undefined) {
+    if (aOrder === undefined) return 1;
+    if (bOrder === undefined) return -1;
+    if (aOrder !== bOrder) return aOrder - bOrder;
+  }
+
+  return b.priority - a.priority;
 }
 
 function normalizeFunctionKind(fn: DeviceFunction): DeviceFunctionKind {
@@ -168,16 +188,17 @@ function pickControlType(descriptor: CapabilityDescriptor, readOnly = false): st
   if (readOnly) {
     const readout = descriptor.altControlTypes?.find((type) => type.startsWith("readout."));
     if (readout && controlRegistry.resolve(readout)) return readout;
-    if (descriptor.controlType.startsWith("readout.") && controlRegistry.resolve(descriptor.controlType)) {
+    if (
+      descriptor.controlType.startsWith("readout.") &&
+      controlRegistry.resolve(descriptor.controlType)
+    ) {
       return descriptor.controlType;
     }
   }
 
   const primary = controlRegistry.resolve(descriptor.controlType);
   if (primary) return descriptor.controlType;
-  const fallback = controlRegistry.resolveWithFallback(
-    descriptor.altControlTypes ?? [],
-  );
+  const fallback = controlRegistry.resolveWithFallback(descriptor.altControlTypes ?? []);
   return fallback?.controlType;
 }
 
