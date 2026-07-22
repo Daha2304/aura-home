@@ -420,6 +420,7 @@ function stateToCapabilityAndFunction(
   const kind = normalizeStateKind(mappedKind === "enum" && !options?.length ? "number" : mappedKind, valueType, value);
   const label = deriveStateLabel(id, asString(raw.name) ?? asString(raw.common?.name), kind);
   const readable = raw.readable !== false && raw.common?.read !== false;
+  const controlVisible = visibleControl && !isDeviceStatusState(id, role);
 
   const cap = stateToCapability(id, kind, raw, label, !writable);
   const fn: DeviceFunction = {
@@ -433,9 +434,20 @@ function stateToCapabilityAndFunction(
     step,
     options,
     readonly: !writable,
-    meta: { role, valueType, visibleControl, readable, rawMin: min, rawMax: max },
+    meta: { role, valueType, visibleControl: controlVisible, readable, rawMin: min, rawMax: max },
   };
   return { cap, fn };
+}
+
+function isDeviceStatusState(id: string, role: string | undefined): boolean {
+  const normalizedRole = role?.toLowerCase() ?? "";
+  const suffix = id.split(".").at(-1)?.toLowerCase() ?? "";
+
+  return (
+    normalizedRole === "indicator.connected" ||
+    normalizedRole === "media.state" ||
+    (suffix === "state" && normalizedRole.startsWith("indicator"))
+  );
 }
 
 function normalizeStateKind(kind: DeviceFunctionKind, valueType: string | undefined, value: unknown): DeviceFunctionKind {
@@ -667,7 +679,7 @@ export function appsocketNormalizeDevice(raw: unknown): Device | null {
     if (!pair) continue;
     functions.push(pair.fn);
 
-    if (!seenCapabilityIds.has(pair.cap.id)) {
+    if (pair.fn.meta?.visibleControl !== false && !seenCapabilityIds.has(pair.cap.id)) {
       capabilities.push(pair.cap);
       seenCapabilityIds.add(pair.cap.id);
     }
@@ -679,7 +691,7 @@ export function appsocketNormalizeDevice(raw: unknown): Device | null {
     const pair = stateToCapabilityAndFunction(rawCapability, true);
     if (!pair) continue;
     functions.push(pair.fn);
-    if (!seenCapabilityIds.has(pair.cap.id)) {
+    if (pair.fn.meta?.visibleControl !== false && !seenCapabilityIds.has(pair.cap.id)) {
       capabilities.push(pair.cap);
       seenCapabilityIds.add(pair.cap.id);
     }
