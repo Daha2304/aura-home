@@ -367,7 +367,25 @@ function stateOptions(raw: RawState): string[] | undefined {
     return source.map(String).filter((value) => value.length > 0);
   }
   if (source && typeof source === "object") {
-    return Object.keys(source as Record<string, unknown>).filter((value) => value.length > 0);
+    const entries = Object.entries(source as Record<string, unknown>).filter(
+      ([key]) => key.length > 0,
+    );
+    const keys = entries.map(([key]) => key);
+    const labels = entries.map(([, label]) => String(label)).filter((value) => value.length > 0);
+    const valueType = readRawStateType(raw);
+    const currentValue = readableRawStateValue(raw);
+    const current = currentValue === undefined || currentValue === null ? "" : String(currentValue);
+    const hasNumericKeys = keys.length > 0 && keys.every((key) => /^-?\d+(?:\.\d+)?$/.test(key));
+
+    if (
+      valueType === "string" &&
+      labels.length > 0 &&
+      (hasNumericKeys || labels.includes(current))
+    ) {
+      return labels;
+    }
+
+    return keys;
   }
   const role = readRawStateRole(raw)?.toLowerCase() ?? "";
   const id = readRawStateId(raw)?.toLowerCase() ?? "";
