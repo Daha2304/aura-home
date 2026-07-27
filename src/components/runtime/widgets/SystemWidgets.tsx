@@ -191,6 +191,87 @@ export function SyncStatusWidget() {
   );
 }
 
+export function SystemStatusSummaryWidget() {
+  const active = useSettingsStore((s) => s.activeServer());
+  const status = useConnectionStore((s) => s.status);
+  const latency = useConnectionStore((s) => s.latencyMs);
+  const last = useDiscoveryStore((s) => s.lastSyncAt);
+  const ok = status === "connected" || status === "authenticated";
+  const lastSync = last
+    ? new Date(last).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })
+    : "–";
+
+  return (
+    <div className="grid h-full w-full grid-rows-[auto_1fr] p-4">
+      <TileTitle icon={<Server className="h-3 w-3" />}>Systemstatus</TileTitle>
+      <div className="grid grid-cols-2 content-center gap-x-5 gap-y-4">
+        <StatusMetric
+          icon={<Server className="h-4 w-4" />}
+          label="Server"
+          value={active?.name ?? "Kein Server"}
+          detail={ok ? "Verbunden" : status}
+          tone={ok ? "success" : "neutral"}
+        />
+        <StatusMetric
+          icon={ok ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />}
+          label="Verbindung"
+          value={ok ? "Online" : "Offline"}
+          detail={latency !== undefined ? `${latency} ms` : "–"}
+          tone={ok ? "success" : "danger"}
+        />
+        <StatusMetric
+          icon={<RefreshCw className="h-4 w-4" />}
+          label="Sync"
+          value="Aktuell"
+          detail={`zuletzt ${lastSync}`}
+          tone="neutral"
+        />
+        <StatusMetric
+          icon={<Info className="h-4 w-4" />}
+          label="Version"
+          value="1.0.0"
+          detail="Aura Home"
+          tone="neutral"
+        />
+      </div>
+    </div>
+  );
+}
+
+function StatusMetric({
+  icon,
+  label,
+  value,
+  detail,
+  tone,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  detail: string;
+  tone: "success" | "danger" | "neutral";
+}) {
+  const toneClass =
+    tone === "success"
+      ? "text-success"
+      : tone === "danger"
+        ? "text-destructive"
+        : "text-foreground";
+
+  return (
+    <div className="min-w-0">
+      <div className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+        {icon}
+        <span>{label}</span>
+      </div>
+      <div className={`mt-1 truncate text-lg font-semibold tracking-tight ${toneClass}`}>
+        {value}
+      </div>
+      <div className="truncate text-xs text-muted-foreground">{detail}</div>
+    </div>
+  );
+}
+
 export function SystemInfoWidget() {
   const servers = useSettingsStore((s) => s.servers.length);
   return (

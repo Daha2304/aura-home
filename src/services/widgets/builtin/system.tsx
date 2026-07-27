@@ -1,5 +1,9 @@
 import { widgetRegistry } from "@/services/widgets/WidgetRegistry";
-import { defineWidget, type WidgetDescriptor, type WidgetRenderer } from "@/models/widgetDescriptor";
+import {
+  defineWidget,
+  type WidgetDescriptor,
+  type WidgetRenderer,
+} from "@/models/widgetDescriptor";
 import type { WidgetSizeSpec } from "@/models/widgetDescriptor";
 import * as W from "@/components/runtime/widgets/SystemWidgets";
 
@@ -76,6 +80,16 @@ const specs: Spec[] = [
     max: { w: 6, h: 3 },
     description: "Aktiver Server und Zustand.",
     render: () => <W.ServerStatusWidget />,
+  },
+  {
+    id: "system.status-summary",
+    name: "Systemstatus",
+    icon: "server",
+    size: { w: 8, h: 2 },
+    min: { w: 4, h: 2 },
+    max: { w: 16, h: 3 },
+    description: "Server, Verbindung, Sync und Version in einer Kachel.",
+    render: () => <W.SystemStatusSummaryWidget />,
   },
   {
     id: "system.connection-status",

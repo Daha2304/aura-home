@@ -7,13 +7,24 @@ import { useLayoutsStore } from "@/store/slices/layoutsStore";
 import { useDashboardsStore } from "@/store/slices/dashboardsStore";
 import { ALL_BREAKPOINTS } from "@/models/layout";
 
+const STATUS_SUMMARY_TYPE = "system.status-summary";
+const LEGACY_STATUS_TYPES = new Set([
+  "system.server-status",
+  "system.connection-status",
+  "system.sync-status",
+  "system.app-version",
+]);
+
 /**
  * Legt Standard-System-Widgets auf einem leeren Dashboard an. Idempotent.
  * Voraussetzung: registerSystemWidgets() wurde bereits aufgerufen.
  */
 export function ensureRuntimeDefaults(dashboard: Dashboard): void {
   const existing = useWidgetInstancesStore.getState().byDashboard(dashboard.id);
-  if (existing.length > 0) return;
+  if (existing.length > 0) {
+    ensureCompactSystemStatus(dashboard, existing);
+    return;
+  }
 
   const layouts = useLayoutsStore.getState().ensure(dashboard.id);
 
@@ -22,10 +33,7 @@ export function ensureRuntimeDefaults(dashboard: Dashboard): void {
     { type: "system.hero-greeting", x: 0, y: 0, w: 8, h: 3 },
     { type: "system.clock", x: 0, y: 3, w: 4, h: 2 },
     { type: "system.date", x: 4, y: 3, w: 4, h: 2 },
-    { type: "system.server-status", x: 0, y: 5, w: 4, h: 2 },
-    { type: "system.connection-status", x: 4, y: 5, w: 4, h: 2 },
-    { type: "system.sync-status", x: 0, y: 7, w: 4, h: 2 },
-    { type: "system.app-version", x: 4, y: 7, w: 4, h: 2 },
+    { type: STATUS_SUMMARY_TYPE, x: 0, y: 5, w: 8, h: 2 },
   ];
 
   const createdIds: string[] = [];
@@ -65,6 +73,55 @@ export function ensureRuntimeDefaults(dashboard: Dashboard): void {
         widgetInstanceIds: [...cur.widgetInstanceIds, ...createdIds],
       });
     }
+  }
+}
+
+function ensureCompactSystemStatus(
+  dashboard: Dashboard,
+  widgets = useWidgetInstancesStore.getState().byDashboard(dashboard.id),
+): void {
+  const summary = widgets.find((widget) => widget.widgetType === STATUS_SUMMARY_TYPE);
+  const legacy = widgets.filter((widget) => LEGACY_STATUS_TYPES.has(widget.widgetType));
+  const anchor =
+    summary ?? legacy.find((widget) => widget.widgetType === "system.server-status") ?? legacy[0];
+
+  if (!anchor || (summary && legacy.length === 0)) return;
+
+  const removeIds = legacy.filter((widget) => widget.id !== anchor.id).map((widget) => widget.id);
+  const widgetStore = useWidgetInstancesStore.getState();
+  const layoutsStore = useLayoutsStore.getState();
+
+  if (anchor.widgetType !== STATUS_SUMMARY_TYPE) {
+    widgetStore.patch(anchor.id, {
+      widgetType: STATUS_SUMMARY_TYPE,
+      title: "Systemstatus",
+    });
+  }
+
+  for (const id of removeIds) {
+    widgetStore.remove(id);
+    layoutsStore.removePlacement(dashboard.id, id);
+  }
+
+  const layouts = layoutsStore.ensure(dashboard.id);
+  for (const breakpoint of ALL_BREAKPOINTS) {
+    const grid = layouts[breakpoint];
+    const current = grid.placements[anchor.id];
+    const gridY = current?.gridY ?? 5;
+    layoutsStore.setPlacement(dashboard.id, breakpoint, anchor.id, {
+      gridX: 0,
+      gridY,
+      w: grid.columns,
+      h: 2,
+    });
+  }
+
+  const currentDashboard = useDashboardsStore.getState().getById(dashboard.id);
+  if (currentDashboard) {
+    useDashboardsStore.getState().upsert({
+      ...currentDashboard,
+      widgetInstanceIds: currentDashboard.widgetInstanceIds.filter((id) => !removeIds.includes(id)),
+    });
   }
 }
 
