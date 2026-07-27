@@ -8,6 +8,8 @@ import { useDashboardsStore } from "@/store/slices/dashboardsStore";
 import { ALL_BREAKPOINTS } from "@/models/layout";
 
 const STATUS_SUMMARY_TYPE = "system.status-summary";
+const OPENINGS_ALERT_TYPE = "system.openings-alert";
+const LOW_BATTERY_TYPE = "system.low-battery";
 const LEGACY_STATUS_TYPES = new Set([
   "system.server-status",
   "system.connection-status",
@@ -23,6 +25,7 @@ export function ensureRuntimeDefaults(dashboard: Dashboard): void {
   const existing = useWidgetInstancesStore.getState().byDashboard(dashboard.id);
   if (existing.length > 0) {
     ensureCompactSystemStatus(dashboard, existing);
+    ensureDashboardHealthAlerts(dashboard);
     return;
   }
 
@@ -33,7 +36,9 @@ export function ensureRuntimeDefaults(dashboard: Dashboard): void {
     { type: "system.hero-greeting", x: 0, y: 0, w: 8, h: 3 },
     { type: "system.clock", x: 0, y: 3, w: 4, h: 2 },
     { type: "system.date", x: 4, y: 3, w: 4, h: 2 },
-    { type: STATUS_SUMMARY_TYPE, x: 0, y: 5, w: 8, h: 2 },
+    { type: OPENINGS_ALERT_TYPE, x: 0, y: 5, w: 4, h: 2 },
+    { type: LOW_BATTERY_TYPE, x: 4, y: 5, w: 4, h: 2 },
+    { type: STATUS_SUMMARY_TYPE, x: 0, y: 7, w: 8, h: 2 },
   ];
 
   const createdIds: string[] = [];
@@ -85,7 +90,7 @@ function ensureCompactSystemStatus(
   const anchor =
     summary ?? legacy.find((widget) => widget.widgetType === "system.server-status") ?? legacy[0];
 
-  if (!anchor || (summary && legacy.length === 0)) return;
+  if (!anchor) return;
 
   const removeIds = legacy.filter((widget) => widget.id !== anchor.id).map((widget) => widget.id);
   const widgetStore = useWidgetInstancesStore.getState();
@@ -106,11 +111,9 @@ function ensureCompactSystemStatus(
   const layouts = layoutsStore.ensure(dashboard.id);
   for (const breakpoint of ALL_BREAKPOINTS) {
     const grid = layouts[breakpoint];
-    const current = grid.placements[anchor.id];
-    const gridY = current?.gridY ?? 5;
     layoutsStore.setPlacement(dashboard.id, breakpoint, anchor.id, {
       gridX: 0,
-      gridY,
+      gridY: 7,
       w: grid.columns,
       h: 2,
     });
@@ -122,6 +125,66 @@ function ensureCompactSystemStatus(
       ...currentDashboard,
       widgetInstanceIds: currentDashboard.widgetInstanceIds.filter((id) => !removeIds.includes(id)),
     });
+  }
+}
+
+function ensureDashboardHealthAlerts(dashboard: Dashboard): void {
+  const widgetStore = useWidgetInstancesStore.getState();
+  const existing = widgetStore.byDashboard(dashboard.id);
+  const createdIds: string[] = [];
+
+  let openings = existing.find((widget) => widget.widgetType === OPENINGS_ALERT_TYPE);
+  let lowBattery = existing.find((widget) => widget.widgetType === LOW_BATTERY_TYPE);
+
+  if (!openings && widgetRegistry.has(OPENINGS_ALERT_TYPE)) {
+    openings =
+      widgetManager.create({ dashboardId: dashboard.id, widgetType: OPENINGS_ALERT_TYPE }) ??
+      undefined;
+    if (openings) createdIds.push(openings.id);
+  }
+
+  if (!lowBattery && widgetRegistry.has(LOW_BATTERY_TYPE)) {
+    lowBattery =
+      widgetManager.create({ dashboardId: dashboard.id, widgetType: LOW_BATTERY_TYPE }) ??
+      undefined;
+    if (lowBattery) createdIds.push(lowBattery.id);
+  }
+
+  const layoutsStore = useLayoutsStore.getState();
+  const layouts = layoutsStore.ensure(dashboard.id);
+
+  for (const breakpoint of ALL_BREAKPOINTS) {
+    const grid = layouts[breakpoint];
+    const leftWidth = Math.max(1, Math.floor(grid.columns / 2));
+    const rightWidth = Math.max(1, grid.columns - leftWidth);
+
+    if (openings) {
+      layoutsStore.setPlacement(dashboard.id, breakpoint, openings.id, {
+        gridX: 0,
+        gridY: 5,
+        w: leftWidth,
+        h: 2,
+      });
+    }
+
+    if (lowBattery) {
+      layoutsStore.setPlacement(dashboard.id, breakpoint, lowBattery.id, {
+        gridX: leftWidth,
+        gridY: 5,
+        w: rightWidth,
+        h: 2,
+      });
+    }
+  }
+
+  if (createdIds.length > 0) {
+    const currentDashboard = useDashboardsStore.getState().getById(dashboard.id);
+    if (currentDashboard) {
+      useDashboardsStore.getState().upsert({
+        ...currentDashboard,
+        widgetInstanceIds: [...currentDashboard.widgetInstanceIds, ...createdIds],
+      });
+    }
   }
 }
 

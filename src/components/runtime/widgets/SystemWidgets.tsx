@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import {
+  BatteryWarning,
   Clock,
   Calendar,
   Cloud,
@@ -17,12 +18,15 @@ import {
   Zap,
   Sparkles,
   CheckCircle2,
+  DoorOpen,
   MapPin,
   Sun,
 } from "lucide-react";
 import { useSettingsStore } from "@/store/slices/settingsStore";
 import { useConnectionStore } from "@/store/slices/connectionStore";
 import { useDiscoveryStore } from "@/store/slices/discoveryStore";
+import { useDevicesStore } from "@/store/slices/devicesStore";
+import { useRoomsStore } from "@/store/slices/roomsStore";
 import { greetingForTime, systemHeroMessage } from "@/services/runtime/greetings";
 import {
   fetchDwdWeather,
@@ -31,6 +35,7 @@ import {
 } from "@/services/weather/dwdWeather";
 import { Input } from "@/components/ui/input";
 import { GlassButton } from "@/components/glass/GlassButton";
+import type { Device } from "@/models/device";
 
 /* ============ Kleine Bausteine ============ */
 
@@ -236,6 +241,161 @@ export function SystemStatusSummaryWidget() {
       </div>
     </div>
   );
+}
+
+export function OpeningsAlertWidget() {
+  const devices = useDevicesStore((s) => s.devices);
+  const rooms = useRoomsStore((s) => s.byId);
+  const open = devices.filter(isOpenOpeningDevice).slice(0, 4);
+
+  return (
+    <div className="grid h-full w-full grid-rows-[auto_1fr] p-4">
+      <TileTitle icon={<DoorOpen className="h-3 w-3" />}>Fenster & Türen</TileTitle>
+      {open.length === 0 ? (
+        <WidgetOkState title="Alles geschlossen" detail="Keine offenen Kontakte" />
+      ) : (
+        <div className="flex flex-col justify-center gap-2 overflow-hidden">
+          <div className="text-lg font-semibold tracking-tight text-warning">
+            {open.length} offen
+          </div>
+          <div className="space-y-1 overflow-hidden">
+            {open.map((device) => (
+              <CompactDeviceLine
+                key={device.id}
+                name={device.name}
+                detail={device.roomId ? rooms[device.roomId]?.name : undefined}
+                value="Offen"
+                tone="warning"
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function LowBatteryWidget() {
+  const devices = useDevicesStore((s) => s.devices);
+  const rooms = useRoomsStore((s) => s.byId);
+  const low = devices
+    .map((device) => ({ device, battery: readBatteryLevel(device) }))
+    .filter(
+      (entry): entry is { device: Device; battery: number } => typeof entry.battery === "number",
+    )
+    .filter((entry) => entry.battery <= 20)
+    .sort((a, b) => a.battery - b.battery)
+    .slice(0, 4);
+
+  return (
+    <div className="grid h-full w-full grid-rows-[auto_1fr] p-4">
+      <TileTitle icon={<BatteryWarning className="h-3 w-3" />}>Batterien</TileTitle>
+      {low.length === 0 ? (
+        <WidgetOkState title="Batterien ok" detail="Keine niedrigen Werte" />
+      ) : (
+        <div className="flex flex-col justify-center gap-2 overflow-hidden">
+          <div className="text-lg font-semibold tracking-tight text-warning">
+            {low.length} niedrig
+          </div>
+          <div className="space-y-1 overflow-hidden">
+            {low.map(({ device, battery }) => (
+              <CompactDeviceLine
+                key={device.id}
+                name={device.name}
+                detail={device.roomId ? rooms[device.roomId]?.name : undefined}
+                value={`${Math.round(battery)} %`}
+                tone="warning"
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function WidgetOkState({ title, detail }: { title: string; detail: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center text-center">
+      <CheckCircle2 className="mb-2 h-7 w-7 text-success" />
+      <div className="text-lg font-semibold tracking-tight">{title}</div>
+      <div className="text-xs text-muted-foreground">{detail}</div>
+    </div>
+  );
+}
+
+function CompactDeviceLine({
+  name,
+  detail,
+  value,
+  tone,
+}: {
+  name: string;
+  detail?: string;
+  value: string;
+  tone: "warning" | "neutral";
+}) {
+  return (
+    <div className="flex min-w-0 items-center justify-between gap-2 text-xs">
+      <div className="min-w-0">
+        <div className="truncate font-medium">{name}</div>
+        {detail ? <div className="truncate text-[11px] text-muted-foreground">{detail}</div> : null}
+      </div>
+      <div className={tone === "warning" ? "shrink-0 font-medium text-warning" : "shrink-0"}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function isOpenOpeningDevice(device: Device): boolean {
+  if (!isOpeningDevice(device)) return false;
+
+  const values = [
+    ...device.capabilities.map((capability) =>
+      "value" in capability ? capability.value : undefined,
+    ),
+    ...(device.functions ?? []).map((fn) => fn.value),
+  ];
+
+  return values.some(
+    (value) => value === true || value === "true" || value === "open" || value === "opened",
+  );
+}
+
+function isOpeningDevice(device: Device): boolean {
+  const type = device.type.toLowerCase();
+  if (["door", "window", "doorcontact", "windowcontact"].includes(type)) return true;
+
+  return [...device.capabilities, ...(device.functions ?? [])].some((entry) => {
+    const id = entry.id.toLowerCase();
+    const label = ("label" in entry && entry.label ? entry.label : "").toLowerCase();
+    const role =
+      typeof ("meta" in entry ? entry.meta?.role : undefined) === "string"
+        ? String("meta" in entry ? entry.meta?.role : "").toLowerCase()
+        : "";
+
+    return (
+      role.includes("window") ||
+      role.includes("door") ||
+      id.includes("window") ||
+      id.includes("fenster") ||
+      id.includes("door") ||
+      id.includes("tuer") ||
+      id.includes("tür") ||
+      label.includes("fenster") ||
+      label.includes("tür") ||
+      label.includes("door")
+    );
+  });
+}
+
+function readBatteryLevel(device: Device): number | undefined {
+  if (typeof device.battery === "number") return device.battery;
+  const battery = device.functions?.find(
+    (fn) => fn.kind === "battery" && typeof fn.value === "number",
+  );
+  return typeof battery?.value === "number" ? battery.value : undefined;
 }
 
 function StatusMetric({
