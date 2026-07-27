@@ -1,7 +1,7 @@
 /* Smart Home Service Worker — generic, versioned, business-logic-free. */
 /* eslint-disable no-restricted-globals */
 
-const SW_VERSION = "v3";
+const SW_VERSION = "v4";
 const CACHE_PREFIX = "smarthome";
 const CACHES = {
   shell: `${CACHE_PREFIX}-shell-${SW_VERSION}`,
@@ -15,10 +15,8 @@ const IMAGE_CACHE_MAX = 80;
 self.addEventListener("install", (event) => {
   event.waitUntil(
     (async () => {
-      const names = await caches.keys();
-      await Promise.allSettled(
-        names.filter((n) => n.startsWith(`${CACHE_PREFIX}-`)).map((n) => caches.delete(n)),
-      );
+      const cache = await caches.open(CACHES.shell);
+      await cache.addAll([OFFLINE_URL]);
       await self.skipWaiting();
     })(),
   );
@@ -32,10 +30,10 @@ self.addEventListener("activate", (event) => {
       await Promise.allSettled(
         names
           .filter((n) => n.startsWith(`${CACHE_PREFIX}-`))
+          .filter((n) => !keep.has(n))
           .map((n) => caches.delete(n)),
       );
       await self.clients.claim();
-      await self.registration.unregister();
     })(),
   );
 });
@@ -72,7 +70,11 @@ self.addEventListener("sync", (event) => {
 });
 
 function isSameOrigin(url) {
-  try { return new URL(url).origin === self.location.origin; } catch { return false; }
+  try {
+    return new URL(url).origin === self.location.origin;
+  } catch {
+    return false;
+  }
 }
 
 async function limitCache(cacheName, max) {
@@ -116,7 +118,10 @@ async function staleWhileRevalidate(request, cacheName, max) {
   const network = fetch(request)
     .then((res) => {
       if (res && res.ok) {
-        cache.put(request, res.clone()).then(() => limitCache(cacheName, max)).catch(() => {});
+        cache
+          .put(request, res.clone())
+          .then(() => limitCache(cacheName, max))
+          .catch(() => {});
       }
       return res;
     })

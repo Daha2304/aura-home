@@ -46,9 +46,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
     <div className="flex min-h-dvh items-center justify-center px-4">
       <div className="glass-card max-w-sm p-8 text-center">
         <h1 className="text-lg font-semibold">Fehler beim Laden</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Bitte versuche es erneut.
-        </p>
+        <p className="mt-2 text-sm text-muted-foreground">Bitte versuche es erneut.</p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
             onClick={() => {
@@ -77,20 +75,21 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       {
         name: "viewport",
-        content:
-          "width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1",
+        content: "width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1",
       },
-      { title: "Smart Home" },
+      { title: "Aura Home" },
       {
         name: "description",
         content:
           "Steuere dein Zuhause – schnell, privat, elegant. Räume, Geräte, Szenen und Automationen an einem Ort.",
       },
       { name: "theme-color", content: "#0F172A" },
+      { name: "mobile-web-app-capable", content: "yes" },
+      { name: "application-name", content: "Aura Home" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
-      { name: "apple-mobile-web-app-title", content: "Smart Home" },
-      { property: "og:title", content: "Smart Home" },
+      { name: "apple-mobile-web-app-title", content: "Aura Home" },
+      { property: "og:title", content: "Aura Home" },
       {
         property: "og:description",
         content: "Deine Smart Home Zentrale – iOS-inspiriert, blitzschnell, offlinefähig.",
