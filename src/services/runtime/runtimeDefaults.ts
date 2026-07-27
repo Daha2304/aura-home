@@ -8,6 +8,8 @@ import { useDashboardsStore } from "@/store/slices/dashboardsStore";
 import { ALL_BREAKPOINTS } from "@/models/layout";
 
 const STATUS_SUMMARY_TYPE = "system.status-summary";
+const CLOCK_TYPE = "system.clock";
+const DATE_TYPE = "system.date";
 const OPENINGS_ALERT_TYPE = "system.openings-alert";
 const LOW_BATTERY_TYPE = "system.low-battery";
 const LEGACY_STATUS_TYPES = new Set([
@@ -24,6 +26,7 @@ const LEGACY_STATUS_TYPES = new Set([
 export function ensureRuntimeDefaults(dashboard: Dashboard): void {
   const existing = useWidgetInstancesStore.getState().byDashboard(dashboard.id);
   if (existing.length > 0) {
+    ensureCompactTimeWidgets(dashboard, existing);
     ensureCompactSystemStatus(dashboard, existing);
     ensureDashboardHealthAlerts(dashboard);
     return;
@@ -34,11 +37,11 @@ export function ensureRuntimeDefaults(dashboard: Dashboard): void {
   // Vorgeschlagene Startaufteilung (auf 8-Spalten-Grid gedacht).
   const plan: Array<{ type: string; x: number; y: number; w: number; h: number }> = [
     { type: "system.hero-greeting", x: 0, y: 0, w: 8, h: 3 },
-    { type: "system.clock", x: 0, y: 3, w: 4, h: 2 },
-    { type: "system.date", x: 4, y: 3, w: 4, h: 2 },
-    { type: OPENINGS_ALERT_TYPE, x: 0, y: 5, w: 4, h: 2 },
-    { type: LOW_BATTERY_TYPE, x: 4, y: 5, w: 4, h: 2 },
-    { type: STATUS_SUMMARY_TYPE, x: 0, y: 7, w: 8, h: 2 },
+    { type: CLOCK_TYPE, x: 0, y: 3, w: 4, h: 1 },
+    { type: DATE_TYPE, x: 4, y: 3, w: 4, h: 1 },
+    { type: OPENINGS_ALERT_TYPE, x: 0, y: 4, w: 4, h: 2 },
+    { type: LOW_BATTERY_TYPE, x: 4, y: 4, w: 4, h: 2 },
+    { type: STATUS_SUMMARY_TYPE, x: 0, y: 6, w: 8, h: 2 },
   ];
 
   const createdIds: string[] = [];
@@ -81,6 +84,42 @@ export function ensureRuntimeDefaults(dashboard: Dashboard): void {
   }
 }
 
+function ensureCompactTimeWidgets(
+  dashboard: Dashboard,
+  widgets = useWidgetInstancesStore.getState().byDashboard(dashboard.id),
+): void {
+  const clock = widgets.find((widget) => widget.widgetType === CLOCK_TYPE);
+  const date = widgets.find((widget) => widget.widgetType === DATE_TYPE);
+  if (!clock && !date) return;
+
+  const layoutsStore = useLayoutsStore.getState();
+  const layouts = layoutsStore.ensure(dashboard.id);
+
+  for (const breakpoint of ALL_BREAKPOINTS) {
+    const grid = layouts[breakpoint];
+    const leftWidth = Math.max(1, Math.floor(grid.columns / 2));
+    const rightWidth = Math.max(1, grid.columns - leftWidth);
+
+    if (clock) {
+      layoutsStore.setPlacement(dashboard.id, breakpoint, clock.id, {
+        gridX: 0,
+        gridY: 3,
+        w: leftWidth,
+        h: 1,
+      });
+    }
+
+    if (date) {
+      layoutsStore.setPlacement(dashboard.id, breakpoint, date.id, {
+        gridX: leftWidth,
+        gridY: 3,
+        w: rightWidth,
+        h: 1,
+      });
+    }
+  }
+}
+
 function ensureCompactSystemStatus(
   dashboard: Dashboard,
   widgets = useWidgetInstancesStore.getState().byDashboard(dashboard.id),
@@ -113,7 +152,7 @@ function ensureCompactSystemStatus(
     const grid = layouts[breakpoint];
     layoutsStore.setPlacement(dashboard.id, breakpoint, anchor.id, {
       gridX: 0,
-      gridY: 7,
+      gridY: 6,
       w: grid.columns,
       h: 2,
     });
@@ -161,7 +200,7 @@ function ensureDashboardHealthAlerts(dashboard: Dashboard): void {
     if (openings) {
       layoutsStore.setPlacement(dashboard.id, breakpoint, openings.id, {
         gridX: 0,
-        gridY: 5,
+        gridY: 4,
         w: leftWidth,
         h: 2,
       });
@@ -170,7 +209,7 @@ function ensureDashboardHealthAlerts(dashboard: Dashboard): void {
     if (lowBattery) {
       layoutsStore.setPlacement(dashboard.id, breakpoint, lowBattery.id, {
         gridX: leftWidth,
-        gridY: 5,
+        gridY: 4,
         w: rightWidth,
         h: 2,
       });

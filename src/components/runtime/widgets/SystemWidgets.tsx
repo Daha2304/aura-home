@@ -65,7 +65,7 @@ export function ClockWidget() {
   return (
     <div className="grid h-full w-full grid-rows-[auto_1fr] p-4">
       <TileTitle icon={<Clock className="h-3 w-3" />}>Uhrzeit</TileTitle>
-      <div className="flex items-center justify-center text-center text-5xl font-semibold tabular-nums tracking-tight">
+      <div className="flex items-center justify-center text-center text-3xl font-semibold tabular-nums tracking-tight">
         {t}
       </div>
     </div>
@@ -80,8 +80,8 @@ export function DateWidget() {
     <div className="grid h-full w-full grid-rows-[auto_1fr] p-4">
       <TileTitle icon={<Calendar className="h-3 w-3" />}>Datum</TileTitle>
       <div className="flex flex-col items-center justify-center text-center">
-        <div className="text-xl font-semibold tracking-tight">{day}</div>
-        <div className="text-sm text-muted-foreground">{date}</div>
+        <div className="text-lg font-semibold tracking-tight">{day}</div>
+        <div className="text-xs text-muted-foreground">{date}</div>
       </div>
     </div>
   );
