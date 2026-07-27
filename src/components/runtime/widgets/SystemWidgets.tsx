@@ -207,9 +207,9 @@ export function SystemStatusSummaryWidget() {
     : "–";
 
   return (
-    <div className="grid h-full w-full grid-rows-[auto_minmax(0,1fr)] p-4">
+    <div className="grid h-full w-full grid-rows-[auto_minmax(0,1fr)] px-6 py-4">
       <TileTitle icon={<Server className="h-3 w-3" />}>Systemstatus</TileTitle>
-      <div className="grid min-h-0 grid-cols-2 grid-rows-2 items-center gap-x-5 gap-y-2 py-1">
+      <div className="mx-auto grid min-h-0 w-full max-w-xl grid-cols-2 grid-rows-2 items-center gap-x-8 gap-y-2 py-1">
         <StatusMetric
           icon={<Server className="h-4 w-4" />}
           label="Server"
