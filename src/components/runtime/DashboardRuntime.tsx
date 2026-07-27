@@ -1,6 +1,5 @@
 import { useEffect } from "react";
 import type { Dashboard } from "@/models/dashboard";
-import { RuntimeHeader } from "./RuntimeHeader";
 import { RuntimeCanvas } from "./RuntimeCanvas";
 import { OverlayLayer } from "./overlays/OverlayLayer";
 import { useRuntimeTheme } from "@/hooks/runtime/useRuntimeTheme";
@@ -38,11 +37,9 @@ export function DashboardRuntime({ dashboard }: Props) {
   return (
     <div className="relative w-full">
       <div className="mx-auto w-full max-w-6xl px-3 py-4 sm:px-5">
-        <RuntimeHeader dashboard={dashboard} />
         <RuntimeCanvas dashboard={dashboard} />
       </div>
       <OverlayLayer />
     </div>
   );
 }
-
