@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { SlidersHorizontal } from "lucide-react";
 import { useDevicesStore } from "@/store/slices/devicesStore";
 import { useRoomsStore } from "@/store/slices/roomsStore";
 import { useDiscoveryStore } from "@/store/slices/discoveryStore";
@@ -46,7 +47,8 @@ export function DeviceCatalog({ roomId }: Props) {
   const criteria = useDeviceCatalogStore((s) => s.criteria);
   const setCriteria = useDeviceCatalogStore((s) => s.setCriteria);
   const [query, setQuery] = useState("");
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filterPanelOpen, setFilterPanelOpen] = useState(false);
+  const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
   const [quickDeviceId, setQuickDeviceId] = useState<string | null>(null);
 
   // Basis-Set (Raum-Filter für Raumseiten)
@@ -85,43 +87,54 @@ export function DeviceCatalog({ roomId }: Props) {
     [baseDevices],
   );
   const tags = useMemo(
-    () =>
-      Array.from(
-        new Set(baseDevices.flatMap((d) => d.tags ?? [])),
-      ).sort(),
+    () => Array.from(new Set(baseDevices.flatMap((d) => d.tags ?? []))).sort(),
     [baseDevices],
   );
 
-  const filterCount =
-    Object.keys(criteria).filter((k) => criteria[k as keyof DeviceFilterCriteria] !== undefined)
-      .length;
+  const filterCount = Object.keys(criteria).filter(
+    (k) => criteria[k as keyof DeviceFilterCriteria] !== undefined,
+  ).length;
 
-  const empty: React.ReactNode = renderEmpty(
-    baseDevices,
-    sorted,
-    discoveryState,
-    connectionStatus,
-  );
+  const empty: React.ReactNode = renderEmpty(baseDevices, sorted, discoveryState, connectionStatus);
 
-  const quickDevice: Device | null =
-    quickDeviceId ? allDevices.find((d) => d.id === quickDeviceId) ?? null : null;
+  const quickDevice: Device | null = quickDeviceId
+    ? (allDevices.find((d) => d.id === quickDeviceId) ?? null)
+    : null;
 
   return (
     <SharedLayout id="device-catalog">
       <div className="flex flex-col gap-3">
-        <DeviceCatalogSearch value={query} onChange={setQuery} />
-        <DeviceCatalogToolbar
-          view={view}
-          onViewChange={setView}
-          group={group}
-          onGroupChange={setGroup}
-          sortKey={sortKey}
-          sortDirection={sortDirection}
-          onSortChange={(k) => setSort(k)}
-          onSortDirectionToggle={toggleSortDirection}
-          onOpenFilters={() => setFiltersOpen(true)}
-          filterCount={filterCount}
-        />
+        <div className="flex items-center gap-2">
+          <DeviceCatalogSearch value={query} onChange={setQuery} className="min-w-0 flex-1" />
+          <button
+            type="button"
+            onClick={() => setFilterPanelOpen((open) => !open)}
+            aria-expanded={filterPanelOpen}
+            className="glass-panel hairline inline-flex min-h-12 shrink-0 items-center gap-1.5 rounded-full px-3 text-sm font-medium hover:bg-foreground/5"
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            Filter
+            {filterCount > 0 && (
+              <span className="rounded-full bg-primary px-1.5 py-px text-[10px] font-semibold text-primary-foreground">
+                {filterCount}
+              </span>
+            )}
+          </button>
+        </div>
+        {filterPanelOpen && (
+          <DeviceCatalogToolbar
+            view={view}
+            onViewChange={setView}
+            group={group}
+            onGroupChange={setGroup}
+            sortKey={sortKey}
+            sortDirection={sortDirection}
+            onSortChange={(k) => setSort(k)}
+            onSortDirectionToggle={toggleSortDirection}
+            onOpenAdvancedFilters={() => setAdvancedFiltersOpen(true)}
+            filterCount={filterCount}
+          />
+        )}
 
         {empty ??
           (group === "none" ? (
@@ -131,7 +144,8 @@ export function DeviceCatalog({ roomId }: Props) {
               onOpenActions={(id) => setQuickDeviceId(id)}
               onFavoriteToggle={(id) => {
                 const dev = allDevices.find((d) => d.id === id);
-                if (dev) useDevicesStore.getState().upsertDevice({ ...dev, favorite: !dev.favorite });
+                if (dev)
+                  useDevicesStore.getState().upsertDevice({ ...dev, favorite: !dev.favorite });
               }}
             />
           ) : (
@@ -144,7 +158,10 @@ export function DeviceCatalog({ roomId }: Props) {
                     onOpenActions={(id) => setQuickDeviceId(id)}
                     onFavoriteToggle={(id) => {
                       const dev = allDevices.find((d) => d.id === id);
-                      if (dev) useDevicesStore.getState().upsertDevice({ ...dev, favorite: !dev.favorite });
+                      if (dev)
+                        useDevicesStore
+                          .getState()
+                          .upsertDevice({ ...dev, favorite: !dev.favorite });
                     }}
                   />
                 </SectionCard>
@@ -154,8 +171,8 @@ export function DeviceCatalog({ roomId }: Props) {
       </div>
 
       <DeviceCatalogFilters
-        open={filtersOpen}
-        onClose={() => setFiltersOpen(false)}
+        open={advancedFiltersOpen}
+        onClose={() => setAdvancedFiltersOpen(false)}
         criteria={criteria}
         onChange={setCriteria}
         manufacturers={manufacturers}

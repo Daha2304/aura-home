@@ -1,18 +1,26 @@
 import { Search, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { cn } from "@/lib/utils";
 
 interface Props {
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
   debounceMs?: number;
+  className?: string;
 }
 
 /**
  * Debounced Search-Input. Rein Präsentation — die Filterlogik liegt
  * ausschließlich im Intelligence Layer.
  */
-export function DeviceCatalogSearch({ value, onChange, placeholder, debounceMs = 150 }: Props) {
+export function DeviceCatalogSearch({
+  value,
+  onChange,
+  placeholder,
+  debounceMs = 150,
+  className,
+}: Props) {
   const [local, setLocal] = useState(value);
   useEffect(() => {
     setLocal(value);
@@ -25,7 +33,7 @@ export function DeviceCatalogSearch({ value, onChange, placeholder, debounceMs =
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [local]);
   return (
-    <div className="glass-panel hairline flex items-center gap-2 px-3 py-2">
+    <div className={cn("glass-panel hairline flex items-center gap-2 px-3 py-2", className)}>
       <Search className="h-4 w-4 text-muted-foreground" />
       <input
         type="search"

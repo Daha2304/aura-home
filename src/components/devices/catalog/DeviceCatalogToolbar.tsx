@@ -1,10 +1,14 @@
-import { ArrowUpDown, LayoutGrid, List, Rows, Grid3x3 } from "lucide-react";
+import { ArrowUpDown, SlidersHorizontal } from "lucide-react";
 import { SegmentedControl } from "@/components/ds/controls/SegmentedControl";
 import { IconButton } from "@/components/ds/controls/IconButton";
 import type { ViewMode } from "@/store/slices/deviceCatalogStore";
 import type { GroupKey } from "@/services/devices/catalog/groupStrategies";
 import { listGroupStrategies } from "@/services/devices/catalog/groupStrategies";
-import { listSortStrategies, type SortDirection, type SortKey } from "@/services/devices/catalog/sortStrategies";
+import {
+  listSortStrategies,
+  type SortDirection,
+  type SortKey,
+} from "@/services/devices/catalog/sortStrategies";
 
 interface Props {
   view: ViewMode;
@@ -15,7 +19,7 @@ interface Props {
   sortDirection: SortDirection;
   onSortChange: (k: SortKey) => void;
   onSortDirectionToggle: () => void;
-  onOpenFilters: () => void;
+  onOpenAdvancedFilters: () => void;
   filterCount: number;
 }
 
@@ -28,7 +32,7 @@ export function DeviceCatalogToolbar({
   sortDirection,
   onSortChange,
   onSortDirectionToggle,
-  onOpenFilters,
+  onOpenAdvancedFilters,
   filterCount,
 }: Props) {
   const viewOptions = [
@@ -38,8 +42,13 @@ export function DeviceCatalogToolbar({
     { value: "compact" as ViewMode, label: "Kompakt" },
   ];
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <SegmentedControl aria-label="Ansicht" value={view} onChange={onViewChange} options={viewOptions} />
+    <div className="glass-panel hairline flex flex-col gap-2 rounded-[28px] p-3">
+      <SegmentedControl
+        aria-label="Ansicht"
+        value={view}
+        onChange={onViewChange}
+        options={viewOptions}
+      />
       <select
         value={group}
         onChange={(e) => onGroupChange(e.target.value as GroupKey)}
@@ -67,16 +76,17 @@ export function DeviceCatalogToolbar({
       <IconButton
         aria-label={sortDirection === "asc" ? "Absteigend sortieren" : "Aufsteigend sortieren"}
         onClick={onSortDirectionToggle}
+        size="sm"
       >
         <ArrowUpDown className="h-4 w-4" />
       </IconButton>
       <button
         type="button"
-        onClick={onOpenFilters}
-        className="glass-panel hairline inline-flex min-h-9 items-center gap-1.5 rounded-full px-3 text-sm hover:bg-foreground/5"
+        onClick={onOpenAdvancedFilters}
+        className="glass-panel hairline inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full px-3 text-sm hover:bg-foreground/5"
       >
-        <Grid3x3 className="h-4 w-4" />
-        Filter
+        <SlidersHorizontal className="h-4 w-4" />
+        Weitere Filter
         {filterCount > 0 && (
           <span className="ml-1 rounded-full bg-primary px-1.5 py-px text-[10px] font-semibold text-primary-foreground">
             {filterCount}
@@ -86,6 +96,3 @@ export function DeviceCatalogToolbar({
     </div>
   );
 }
-
-// Kleine hilfreiche Icons re-export (nicht öffentlich):
-export const __icons = { LayoutGrid, List, Rows };
