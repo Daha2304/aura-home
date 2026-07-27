@@ -11,7 +11,6 @@ import { EmptyStateCard } from "@/components/ds/cards/EmptyStateCard";
 import { BottomSheet } from "@/components/ds/cards/BottomSheet";
 import { GlassButton } from "@/components/glass/GlassButton";
 import { IconButton } from "@/components/ds/controls/IconButton";
-import { FloatingButton } from "@/components/ds/controls/FloatingButton";
 import { StatusBadge } from "@/components/ds/controls/StatusBadge";
 import { PageTransition } from "@/components/ds/motion/PageTransition";
 import { useDiscoveryStore } from "@/store/slices/discoveryStore";
@@ -94,7 +93,10 @@ function RoomsIndex() {
         <div className="grid grid-cols-3 gap-2">
           <MiniStat label="Räume" value={rooms.length} />
           <MiniStat label="Favoriten" value={rooms.filter((r) => r.favorite).length} />
-          <MiniStat label="Etagen" value={new Set(rooms.map((r) => r.floor).filter((f) => f !== undefined)).size} />
+          <MiniStat
+            label="Etagen"
+            value={new Set(rooms.map((r) => r.floor).filter((f) => f !== undefined)).size}
+          />
         </div>
       </HeroCard>
 
@@ -136,15 +138,12 @@ function RoomsIndex() {
         )}
       </div>
 
-      <FloatingButton
-        aria-label="Raum erstellen"
-        onClick={() => setSheetOpen(true)}
-      >
-        <Plus className="h-6 w-6" />
-      </FloatingButton>
-
       <BottomSheet open={sheetOpen} onClose={() => setSheetOpen(false)} title="Neuer Raum">
-        <RoomForm onSubmit={handleCreate} onCancel={() => setSheetOpen(false)} submitLabel="Erstellen" />
+        <RoomForm
+          onSubmit={handleCreate}
+          onCancel={() => setSheetOpen(false)}
+          submitLabel="Erstellen"
+        />
       </BottomSheet>
     </PageTransition>
   );
