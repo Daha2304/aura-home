@@ -208,8 +208,10 @@ export function SystemStatusSummaryWidget() {
 
   return (
     <div className="grid h-full w-full grid-rows-[auto_minmax(0,1fr)] px-6 py-4">
-      <TileTitle icon={<Server className="h-3 w-3" />}>Systemstatus</TileTitle>
-      <div className="mx-auto grid min-h-0 w-full max-w-xl grid-cols-2 grid-rows-2 items-center gap-x-8 gap-y-2 py-1">
+      <div className="flex justify-center">
+        <TileTitle icon={<Server className="h-3 w-3" />}>Systemstatus</TileTitle>
+      </div>
+      <div className="grid min-h-0 grid-cols-2 grid-rows-2 place-items-center gap-x-6 gap-y-2 py-1">
         <StatusMetric
           icon={<Server className="h-4 w-4" />}
           label="Server"
@@ -419,8 +421,8 @@ function StatusMetric({
         : "text-foreground";
 
   return (
-    <div className="min-w-0 self-center overflow-hidden">
-      <div className="flex items-center gap-1.5 text-[9px] font-medium uppercase tracking-wider text-muted-foreground">
+    <div className="flex min-w-0 flex-col items-center self-center overflow-hidden text-center">
+      <div className="flex items-center justify-center gap-1.5 text-[9px] font-medium uppercase tracking-wider text-muted-foreground">
         {icon}
         <span>{label}</span>
       </div>

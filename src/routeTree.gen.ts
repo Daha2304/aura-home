@@ -40,6 +40,7 @@ import { Route as AppAnalyticsRouteImport } from './routes/_app.analytics'
 import { Route as AppUsersIndexRouteImport } from './routes/_app.users.index'
 import { Route as AppSettingsIndexRouteImport } from './routes/_app.settings.index'
 import { Route as AppDashboardsIndexRouteImport } from './routes/_app.dashboards.index'
+import { Route as ApiDwdWeatherStationOverviewExtendedRouteImport } from './routes/api.dwd-weather.stationOverviewExtended'
 import { Route as AppUsersUserIdRouteImport } from './routes/_app.users.$userId'
 import { Route as AppSettingsUsersRouteImport } from './routes/_app.settings.users'
 import { Route as AppSettingsUpdateRouteImport } from './routes/_app.settings.update'
@@ -231,6 +232,12 @@ const AppDashboardsIndexRoute = AppDashboardsIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppDashboardsRoute,
 } as any)
+const ApiDwdWeatherStationOverviewExtendedRoute =
+  ApiDwdWeatherStationOverviewExtendedRouteImport.update({
+    id: '/api/dwd-weather/stationOverviewExtended',
+    path: '/api/dwd-weather/stationOverviewExtended',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AppUsersUserIdRoute = AppUsersUserIdRouteImport.update({
   id: '/$userId',
   path: '/$userId',
@@ -474,6 +481,7 @@ export interface FileRoutesByFullPath {
   '/settings/update': typeof AppSettingsUpdateRoute
   '/settings/users': typeof AppSettingsUsersRoute
   '/users/$userId': typeof AppUsersUserIdRouteWithChildren
+  '/api/dwd-weather/stationOverviewExtended': typeof ApiDwdWeatherStationOverviewExtendedRoute
   '/dashboards/': typeof AppDashboardsIndexRoute
   '/settings/': typeof AppSettingsIndexRoute
   '/users/': typeof AppUsersIndexRoute
@@ -536,6 +544,7 @@ export interface FileRoutesByTo {
   '/settings/storage': typeof AppSettingsStorageRoute
   '/settings/update': typeof AppSettingsUpdateRoute
   '/settings/users': typeof AppSettingsUsersRoute
+  '/api/dwd-weather/stationOverviewExtended': typeof ApiDwdWeatherStationOverviewExtendedRoute
   '/dashboards': typeof AppDashboardsIndexRoute
   '/settings': typeof AppSettingsIndexRoute
   '/users': typeof AppUsersIndexRoute
@@ -606,6 +615,7 @@ export interface FileRoutesById {
   '/_app/settings/update': typeof AppSettingsUpdateRoute
   '/_app/settings/users': typeof AppSettingsUsersRoute
   '/_app/users/$userId': typeof AppUsersUserIdRouteWithChildren
+  '/api/dwd-weather/stationOverviewExtended': typeof ApiDwdWeatherStationOverviewExtendedRoute
   '/_app/dashboards/': typeof AppDashboardsIndexRoute
   '/_app/settings/': typeof AppSettingsIndexRoute
   '/_app/users/': typeof AppUsersIndexRoute
@@ -676,6 +686,7 @@ export interface FileRouteTypes {
     | '/settings/update'
     | '/settings/users'
     | '/users/$userId'
+    | '/api/dwd-weather/stationOverviewExtended'
     | '/dashboards/'
     | '/settings/'
     | '/users/'
@@ -738,6 +749,7 @@ export interface FileRouteTypes {
     | '/settings/storage'
     | '/settings/update'
     | '/settings/users'
+    | '/api/dwd-weather/stationOverviewExtended'
     | '/dashboards'
     | '/settings'
     | '/users'
@@ -807,6 +819,7 @@ export interface FileRouteTypes {
     | '/_app/settings/update'
     | '/_app/settings/users'
     | '/_app/users/$userId'
+    | '/api/dwd-weather/stationOverviewExtended'
     | '/_app/dashboards/'
     | '/_app/settings/'
     | '/_app/users/'
@@ -823,6 +836,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   OnboardingRoute: typeof OnboardingRouteWithChildren
+  ApiDwdWeatherStationOverviewExtendedRoute: typeof ApiDwdWeatherStationOverviewExtendedRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1043,6 +1057,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/dashboards/'
       preLoaderRoute: typeof AppDashboardsIndexRouteImport
       parentRoute: typeof AppDashboardsRoute
+    }
+    '/api/dwd-weather/stationOverviewExtended': {
+      id: '/api/dwd-weather/stationOverviewExtended'
+      path: '/api/dwd-weather/stationOverviewExtended'
+      fullPath: '/api/dwd-weather/stationOverviewExtended'
+      preLoaderRoute: typeof ApiDwdWeatherStationOverviewExtendedRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_app/users/$userId': {
       id: '/_app/users/$userId'
@@ -1602,6 +1623,8 @@ const OnboardingRouteWithChildren = OnboardingRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   OnboardingRoute: OnboardingRouteWithChildren,
+  ApiDwdWeatherStationOverviewExtendedRoute:
+    ApiDwdWeatherStationOverviewExtendedRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
