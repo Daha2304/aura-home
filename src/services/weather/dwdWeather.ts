@@ -44,6 +44,7 @@ const POSTAL_CODE_STATIONS: Record<string, { stationId: string; stationName: str
 };
 
 const DWD_ENDPOINTS = [
+  "/api/dwd-weather/stationOverviewExtended",
   "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended",
   "https://app-prod-ws.warnwetter.de/v30/stationOverviewExtended",
 ];

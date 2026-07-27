@@ -58,9 +58,11 @@ export function ClockWidget() {
   const now = new Date();
   const t = now.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
   return (
-    <div className="flex h-full w-full flex-col justify-between p-4">
+    <div className="grid h-full w-full grid-rows-[auto_1fr] p-4">
       <TileTitle icon={<Clock className="h-3 w-3" />}>Uhrzeit</TileTitle>
-      <div className="text-4xl font-semibold tabular-nums tracking-tight">{t}</div>
+      <div className="flex items-center justify-center text-center text-5xl font-semibold tabular-nums tracking-tight">
+        {t}
+      </div>
     </div>
   );
 }
@@ -70,9 +72,9 @@ export function DateWidget() {
   const day = d.toLocaleDateString("de-DE", { weekday: "long" });
   const date = d.toLocaleDateString("de-DE", { day: "numeric", month: "long" });
   return (
-    <div className="flex h-full w-full flex-col justify-between p-4">
+    <div className="grid h-full w-full grid-rows-[auto_1fr] p-4">
       <TileTitle icon={<Calendar className="h-3 w-3" />}>Datum</TileTitle>
-      <div>
+      <div className="flex flex-col items-center justify-center text-center">
         <div className="text-xl font-semibold tracking-tight">{day}</div>
         <div className="text-sm text-muted-foreground">{date}</div>
       </div>

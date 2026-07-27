@@ -12,4 +12,15 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  vite: {
+    server: {
+      proxy: {
+        "/api/dwd-weather": {
+          target: "https://app-prod-ws.warnwetter.de/v30",
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/api\/dwd-weather/, ""),
+        },
+      },
+    },
+  },
 });
