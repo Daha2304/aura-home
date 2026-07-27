@@ -27,14 +27,16 @@ export const DeviceCardList = memo(function DeviceCardList({
       animate="animate"
       exit="exit"
     >
-      <Link to="/devices/$deviceId" params={{ deviceId: device.id }} className="block">
-        <GlassCard interactive className="flex items-center gap-3 p-2.5">
+      <GlassCard className="flex items-center gap-3 p-2.5">
+        <Link
+          to="/devices/$deviceId"
+          params={{ deviceId: device.id }}
+          className="flex min-w-0 flex-1 items-center gap-3 rounded-[24px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
           <DeviceIconTile device={device} size="sm" />
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <div className="min-w-0 flex-1 break-words text-sm font-semibold leading-tight">
-                {device.name}
-              </div>
+            <div className="min-w-0 break-words text-sm font-semibold leading-tight">
+              {device.name}
             </div>
             <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
               <span className="capitalize">{device.type}</span>
@@ -47,22 +49,19 @@ export const DeviceCardList = memo(function DeviceCardList({
               <DeviceStatusChips device={device} />
             </div>
           </div>
-          <DeviceListQuickValue device={device} />
-          {onFavoriteToggle && (
-            <IconButton
-              aria-label="Favorit"
-              onClick={(e) => {
-                e.preventDefault();
-                onFavoriteToggle(device.id);
-              }}
-            >
-              <Heart
-                className={cn("h-4 w-4", device.favorite && "fill-current text-destructive")}
-              />
-            </IconButton>
-          )}
-        </GlassCard>
-      </Link>
+        </Link>
+        <DeviceListQuickValue device={device} />
+        {onFavoriteToggle && (
+          <IconButton
+            aria-label="Favorit"
+            onClick={() => {
+              onFavoriteToggle(device.id);
+            }}
+          >
+            <Heart className={cn("h-4 w-4", device.favorite && "fill-current text-destructive")} />
+          </IconButton>
+        )}
+      </GlassCard>
     </motion.div>
   );
 });
