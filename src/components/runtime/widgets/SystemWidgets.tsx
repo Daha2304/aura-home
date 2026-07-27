@@ -207,9 +207,9 @@ export function SystemStatusSummaryWidget() {
     : "–";
 
   return (
-    <div className="grid h-full w-full grid-rows-[auto_1fr] p-4">
+    <div className="grid h-full w-full grid-rows-[auto_minmax(0,1fr)] p-4">
       <TileTitle icon={<Server className="h-3 w-3" />}>Systemstatus</TileTitle>
-      <div className="grid grid-cols-2 content-center gap-x-5 gap-y-4">
+      <div className="grid min-h-0 grid-cols-2 grid-rows-2 items-center gap-x-5 gap-y-2 py-1">
         <StatusMetric
           icon={<Server className="h-4 w-4" />}
           label="Server"
@@ -419,15 +419,15 @@ function StatusMetric({
         : "text-foreground";
 
   return (
-    <div className="min-w-0">
-      <div className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+    <div className="min-w-0 self-center overflow-hidden">
+      <div className="flex items-center gap-1.5 text-[9px] font-medium uppercase tracking-wider text-muted-foreground">
         {icon}
         <span>{label}</span>
       </div>
-      <div className={`mt-1 truncate text-lg font-semibold tracking-tight ${toneClass}`}>
+      <div className={`mt-0.5 truncate text-base font-semibold leading-tight tracking-tight ${toneClass}`}>
         {value}
       </div>
-      <div className="truncate text-xs text-muted-foreground">{detail}</div>
+      <div className="truncate text-[11px] leading-tight text-muted-foreground">{detail}</div>
     </div>
   );
 }
