@@ -3,7 +3,10 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { createId } from "@/utils/ids";
 import type { ServerConfig } from "@/models/server";
 import { createServerConfig } from "@/models/server";
-import { ensureDefaultAuraBackendServer } from "@/config/auraBackendDefault";
+import {
+  ensureDefaultAuraBackendServer,
+  normalizeAuraBackendServerForCurrentOrigin,
+} from "@/config/auraBackendDefault";
 
 interface NotificationSettings {
   enabled: boolean;
@@ -108,8 +111,10 @@ export const useSettingsStore = create<SettingsState>()(
       setDebugWebSocket: (debugWebSocket) => set({ debugWebSocket }),
       setNotifications: (n) => set({ notifications: { ...get().notifications, ...n } }),
       ensureDefaultServer: () => {
-        const next = ensureDefaultAuraBackendServer(get().servers, get().activeServerId);
-        if (next.servers !== get().servers || next.activeServerId !== get().activeServerId) {
+        const currentServers = get().servers;
+        const normalizedServers = currentServers.map(normalizeAuraBackendServerForCurrentOrigin);
+        const next = ensureDefaultAuraBackendServer(normalizedServers, get().activeServerId);
+        if (next.servers !== currentServers || next.activeServerId !== get().activeServerId) {
           set(next);
         }
       },
