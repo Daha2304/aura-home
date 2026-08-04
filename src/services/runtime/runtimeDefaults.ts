@@ -12,6 +12,9 @@ const CLOCK_TYPE = "system.clock";
 const DATE_TYPE = "system.date";
 const OPENINGS_ALERT_TYPE = "system.openings-alert";
 const LOW_BATTERY_TYPE = "system.low-battery";
+const HEATING_CONTROL_TYPE = "system.heating-control";
+const TEMPERATURE_OVERVIEW_TYPE = "system.temperature-overview";
+const CLIMATE_CONTROL_TYPE = "system.climate-control";
 const LEGACY_STATUS_TYPES = new Set([
   "system.server-status",
   "system.connection-status",
@@ -29,6 +32,7 @@ export function ensureRuntimeDefaults(dashboard: Dashboard): void {
     ensureCompactTimeWidgets(dashboard, existing);
     ensureCompactSystemStatus(dashboard, existing);
     ensureDashboardHealthAlerts(dashboard);
+    ensureDashboardClimateWidgets(dashboard);
     return;
   }
 
@@ -41,7 +45,10 @@ export function ensureRuntimeDefaults(dashboard: Dashboard): void {
     { type: DATE_TYPE, x: 4, y: 3, w: 4, h: 1 },
     { type: OPENINGS_ALERT_TYPE, x: 0, y: 4, w: 4, h: 2 },
     { type: LOW_BATTERY_TYPE, x: 4, y: 4, w: 4, h: 2 },
-    { type: STATUS_SUMMARY_TYPE, x: 0, y: 6, w: 8, h: 2 },
+    { type: HEATING_CONTROL_TYPE, x: 0, y: 6, w: 4, h: 2 },
+    { type: TEMPERATURE_OVERVIEW_TYPE, x: 4, y: 6, w: 4, h: 2 },
+    { type: CLIMATE_CONTROL_TYPE, x: 0, y: 8, w: 8, h: 2 },
+    { type: STATUS_SUMMARY_TYPE, x: 0, y: 10, w: 8, h: 2 },
   ];
 
   const createdIds: string[] = [];
@@ -152,7 +159,7 @@ function ensureCompactSystemStatus(
     const grid = layouts[breakpoint];
     layoutsStore.setPlacement(dashboard.id, breakpoint, anchor.id, {
       gridX: 0,
-      gridY: 6,
+      gridY: 10,
       w: grid.columns,
       h: 2,
     });
@@ -164,6 +171,83 @@ function ensureCompactSystemStatus(
       ...currentDashboard,
       widgetInstanceIds: currentDashboard.widgetInstanceIds.filter((id) => !removeIds.includes(id)),
     });
+  }
+}
+
+function ensureDashboardClimateWidgets(dashboard: Dashboard): void {
+  const widgetStore = useWidgetInstancesStore.getState();
+  const existing = widgetStore.byDashboard(dashboard.id);
+  const createdIds: string[] = [];
+
+  let heating = existing.find((widget) => widget.widgetType === HEATING_CONTROL_TYPE);
+  let temperatures = existing.find((widget) => widget.widgetType === TEMPERATURE_OVERVIEW_TYPE);
+  let climate = existing.find((widget) => widget.widgetType === CLIMATE_CONTROL_TYPE);
+
+  if (!heating && widgetRegistry.has(HEATING_CONTROL_TYPE)) {
+    heating =
+      widgetManager.create({ dashboardId: dashboard.id, widgetType: HEATING_CONTROL_TYPE }) ??
+      undefined;
+    if (heating) createdIds.push(heating.id);
+  }
+
+  if (!temperatures && widgetRegistry.has(TEMPERATURE_OVERVIEW_TYPE)) {
+    temperatures =
+      widgetManager.create({ dashboardId: dashboard.id, widgetType: TEMPERATURE_OVERVIEW_TYPE }) ??
+      undefined;
+    if (temperatures) createdIds.push(temperatures.id);
+  }
+
+  if (!climate && widgetRegistry.has(CLIMATE_CONTROL_TYPE)) {
+    climate =
+      widgetManager.create({ dashboardId: dashboard.id, widgetType: CLIMATE_CONTROL_TYPE }) ??
+      undefined;
+    if (climate) createdIds.push(climate.id);
+  }
+
+  const layoutsStore = useLayoutsStore.getState();
+  const layouts = layoutsStore.ensure(dashboard.id);
+
+  for (const breakpoint of ALL_BREAKPOINTS) {
+    const grid = layouts[breakpoint];
+    const leftWidth = Math.max(1, Math.floor(grid.columns / 2));
+    const rightWidth = Math.max(1, grid.columns - leftWidth);
+
+    if (heating) {
+      layoutsStore.setPlacement(dashboard.id, breakpoint, heating.id, {
+        gridX: 0,
+        gridY: 6,
+        w: leftWidth,
+        h: 2,
+      });
+    }
+
+    if (temperatures) {
+      layoutsStore.setPlacement(dashboard.id, breakpoint, temperatures.id, {
+        gridX: leftWidth,
+        gridY: 6,
+        w: rightWidth,
+        h: 2,
+      });
+    }
+
+    if (climate) {
+      layoutsStore.setPlacement(dashboard.id, breakpoint, climate.id, {
+        gridX: 0,
+        gridY: 8,
+        w: grid.columns,
+        h: 2,
+      });
+    }
+  }
+
+  if (createdIds.length > 0) {
+    const currentDashboard = useDashboardsStore.getState().getById(dashboard.id);
+    if (currentDashboard) {
+      useDashboardsStore.getState().upsert({
+        ...currentDashboard,
+        widgetInstanceIds: [...currentDashboard.widgetInstanceIds, ...createdIds],
+      });
+    }
   }
 }
 

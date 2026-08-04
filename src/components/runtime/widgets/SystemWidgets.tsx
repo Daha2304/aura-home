@@ -21,6 +21,9 @@ import {
   DoorOpen,
   MapPin,
   Sun,
+  Flame,
+  Thermometer,
+  Wind,
 } from "lucide-react";
 import { useSettingsStore } from "@/store/slices/settingsStore";
 import { useConnectionStore } from "@/store/slices/connectionStore";
@@ -35,7 +38,10 @@ import {
 } from "@/services/weather/dwdWeather";
 import { Input } from "@/components/ui/input";
 import { GlassButton } from "@/components/glass/GlassButton";
+import { Switch } from "@/components/ui/switch";
 import type { Device } from "@/models/device";
+import type { DeviceFunction } from "@/models/device";
+import { commandQueue } from "@/services/commands/CommandQueue";
 
 /* ============ Kleine Bausteine ============ */
 
@@ -52,6 +58,14 @@ function TileTitle({ icon, children }: { icon: React.ReactNode; children: React.
     <div className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
       {icon}
       {children}
+    </div>
+  );
+}
+
+function CenteredTileTitle({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div className="flex justify-center">
+      <TileTitle icon={icon}>{children}</TileTitle>
     </div>
   );
 }
@@ -252,15 +266,15 @@ export function OpeningsAlertWidget() {
 
   return (
     <div className="grid h-full w-full grid-rows-[auto_1fr] p-4">
-      <TileTitle icon={<DoorOpen className="h-3 w-3" />}>Fenster & Türen</TileTitle>
+      <CenteredTileTitle icon={<DoorOpen className="h-3 w-3" />}>Fenster & Türen</CenteredTileTitle>
       {open.length === 0 ? (
         <WidgetOkState title="Alles geschlossen" detail="Keine offenen Kontakte" />
       ) : (
-        <div className="flex flex-col justify-center gap-2 overflow-hidden">
+        <div className="flex flex-col items-center justify-center gap-2 overflow-hidden text-center">
           <div className="text-lg font-semibold tracking-tight text-warning">
             {open.length} offen
           </div>
-          <div className="space-y-1 overflow-hidden">
+          <div className="w-full space-y-1 overflow-hidden">
             {open.map((device) => (
               <CompactDeviceLine
                 key={device.id}
@@ -291,15 +305,15 @@ export function LowBatteryWidget() {
 
   return (
     <div className="grid h-full w-full grid-rows-[auto_1fr] p-4">
-      <TileTitle icon={<BatteryWarning className="h-3 w-3" />}>Batterien</TileTitle>
+      <CenteredTileTitle icon={<BatteryWarning className="h-3 w-3" />}>Batterien</CenteredTileTitle>
       {low.length === 0 ? (
         <WidgetOkState title="Batterien ok" detail="Keine niedrigen Werte" />
       ) : (
-        <div className="flex flex-col justify-center gap-2 overflow-hidden">
+        <div className="flex flex-col items-center justify-center gap-2 overflow-hidden text-center">
           <div className="text-lg font-semibold tracking-tight text-warning">
             {low.length} niedrig
           </div>
-          <div className="space-y-1 overflow-hidden">
+          <div className="w-full space-y-1 overflow-hidden">
             {low.map(({ device, battery }) => (
               <CompactDeviceLine
                 key={device.id}
@@ -316,12 +330,121 @@ export function LowBatteryWidget() {
   );
 }
 
+export function HeatingControlWidget() {
+  const devices = useDevicesStore((s) => s.devices);
+  const rooms = useRoomsStore((s) => s.byId);
+  const heatingDevices = devices
+    .filter(isHeatingDevice)
+    .map((device) => ({ device, power: findPowerFunction(device), temperatures: readDeviceTemperatures(device) }))
+    .slice(0, 4);
+
+  return (
+    <div className="grid h-full w-full grid-rows-[auto_1fr] p-4">
+      <CenteredTileTitle icon={<Flame className="h-3 w-3" />}>Heizung</CenteredTileTitle>
+      {heatingDevices.length === 0 ? (
+        <WidgetEmptyState title="Keine Heizung" detail="Noch kein Heizungs-Alias gefunden" />
+      ) : (
+        <div className="flex flex-col justify-center gap-2 overflow-hidden">
+          {heatingDevices.map(({ device, power, temperatures }) => (
+            <ClimateControlLine
+              key={device.id}
+              device={device}
+              roomName={device.roomId ? rooms[device.roomId]?.name : undefined}
+              power={power}
+              value={formatTemperatureList(temperatures)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function TemperatureOverviewWidget() {
+  const devices = useDevicesStore((s) => s.devices);
+  const rooms = useRoomsStore((s) => s.byId);
+  const temperatures = devices.flatMap((device) =>
+    readDeviceTemperatures(device)
+      .filter((entry) => entry.readonly !== false)
+      .filter((entry) => !isTargetTemperature(entry.label, entry.id))
+      .map((entry) => ({
+        device,
+        roomName: device.roomId ? rooms[device.roomId]?.name : undefined,
+        ...entry,
+      })),
+  );
+
+  const shown = temperatures
+    .sort((a, b) => (a.roomName ?? "").localeCompare(b.roomName ?? "") || a.device.name.localeCompare(b.device.name))
+    .slice(0, 6);
+
+  return (
+    <div className="grid h-full w-full grid-rows-[auto_1fr] p-4">
+      <CenteredTileTitle icon={<Thermometer className="h-3 w-3" />}>Temperaturen</CenteredTileTitle>
+      {shown.length === 0 ? (
+        <WidgetEmptyState title="Keine Werte" detail="Noch keine Temperaturwerte gefunden" />
+      ) : (
+        <div className="grid min-h-0 content-center gap-1 overflow-hidden">
+          {shown.map((entry) => (
+            <CompactDeviceLine
+              key={`${entry.device.id}-${entry.id}`}
+              name={entry.device.name}
+              detail={entry.roomName}
+              value={formatNumberValue(entry.value, entry.unit ?? "°C")}
+              tone="neutral"
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function ClimateControlWidget() {
+  const devices = useDevicesStore((s) => s.devices);
+  const rooms = useRoomsStore((s) => s.byId);
+  const climateDevices = devices
+    .filter(isClimateDevice)
+    .map((device) => ({ device, power: findPowerFunction(device), temperatures: readDeviceTemperatures(device) }))
+    .slice(0, 4);
+
+  return (
+    <div className="grid h-full w-full grid-rows-[auto_1fr] p-4">
+      <CenteredTileTitle icon={<Wind className="h-3 w-3" />}>Klima</CenteredTileTitle>
+      {climateDevices.length === 0 ? (
+        <WidgetEmptyState title="Keine Klimageräte" detail="Noch kein Klima-Alias gefunden" />
+      ) : (
+        <div className="flex flex-col justify-center gap-2 overflow-hidden">
+          {climateDevices.map(({ device, power, temperatures }) => (
+            <ClimateControlLine
+              key={device.id}
+              device={device}
+              roomName={device.roomId ? rooms[device.roomId]?.name : undefined}
+              power={power}
+              value={formatTemperatureList(temperatures)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function WidgetOkState({ title, detail }: { title: string; detail: string }) {
   return (
     <div className="flex flex-col items-center justify-center text-center">
       <CheckCircle2 className="mb-2 h-7 w-7 text-success" />
       <div className="text-lg font-semibold tracking-tight">{title}</div>
       <div className="text-xs text-muted-foreground">{detail}</div>
+    </div>
+  );
+}
+
+function WidgetEmptyState({ title, detail }: { title: string; detail: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center text-center">
+      <div className="text-lg font-semibold tracking-tight">{title}</div>
+      <div className="max-w-[14rem] text-xs text-muted-foreground">{detail}</div>
     </div>
   );
 }
@@ -338,8 +461,8 @@ function CompactDeviceLine({
   tone: "warning" | "neutral";
 }) {
   return (
-    <div className="flex min-w-0 items-center justify-between gap-2 text-xs">
-      <div className="min-w-0">
+    <div className="mx-auto flex w-full min-w-0 max-w-[18rem] items-center justify-between gap-2 text-xs">
+      <div className="min-w-0 text-left">
         <div className="truncate font-medium">{name}</div>
         {detail ? <div className="truncate text-[11px] text-muted-foreground">{detail}</div> : null}
       </div>
@@ -348,6 +471,118 @@ function CompactDeviceLine({
       </div>
     </div>
   );
+}
+
+function ClimateControlLine({
+  device,
+  roomName,
+  power,
+  value,
+}: {
+  device: Device;
+  roomName?: string;
+  power?: DeviceFunction;
+  value?: string;
+}) {
+  const checked = Boolean(power?.value);
+
+  return (
+    <div className="mx-auto flex w-full max-w-[18rem] items-center justify-between gap-3 rounded-2xl border border-border/45 bg-surface/25 px-3 py-2">
+      <div className="min-w-0">
+        <div className="truncate text-sm font-semibold tracking-tight">{device.name}</div>
+        <div className="truncate text-[11px] text-muted-foreground">
+          {[roomName, value].filter(Boolean).join(" · ") || "Bereit"}
+        </div>
+      </div>
+      {power ? (
+        <Switch
+          checked={checked}
+          aria-label={`${device.name} schalten`}
+          onCheckedChange={(next) => {
+            commandQueue.enqueue(device.id, power.id, next, {
+              optimistic: true,
+            });
+          }}
+        />
+      ) : (
+        <div className="h-5 w-9 shrink-0" aria-hidden="true" />
+      )}
+    </div>
+  );
+}
+
+interface TemperatureEntry {
+  id: string;
+  label?: string;
+  value: number;
+  unit?: string;
+  readonly?: boolean;
+}
+
+function isHeatingDevice(device: Device): boolean {
+  const type = device.type.toLowerCase();
+  return type === "thermostat" || type === "heating" || textMatches(device, ["heizung", "heating", "thermostat"]);
+}
+
+function isClimateDevice(device: Device): boolean {
+  const type = device.type.toLowerCase();
+  return type === "ac" || textMatches(device, ["klima", "climate", "aircondition", "air condition"]);
+}
+
+function textMatches(device: Device, needles: string[]): boolean {
+  const haystack = [
+    device.id,
+    device.name,
+    device.type,
+    ...(device.functions ?? []).flatMap((fn) => [fn.id, fn.label, String(fn.meta?.role ?? "")]),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  return needles.some((needle) => haystack.includes(needle));
+}
+
+function findPowerFunction(device: Device): DeviceFunction | undefined {
+  return (device.functions ?? []).find((fn) => {
+    if (fn.readonly === true || typeof fn.value !== "boolean") return false;
+    const text = `${fn.kind} ${fn.id} ${fn.label ?? ""} ${String(fn.meta?.role ?? "")}`.toLowerCase();
+    return fn.kind === "power" || text.includes("switch.power") || text.includes("power");
+  });
+}
+
+function readDeviceTemperatures(device: Device): TemperatureEntry[] {
+  return (device.functions ?? [])
+    .filter((fn) => fn.kind === "temperature" && typeof fn.value === "number" && Number.isFinite(fn.value))
+    .map((fn) => ({
+      id: fn.id,
+      label: fn.label,
+      value: fn.value as number,
+      unit: normalizeTemperatureUnit(fn.unit),
+      readonly: fn.readonly,
+    }));
+}
+
+function isTargetTemperature(label?: string, id?: string): boolean {
+  const text = `${label ?? ""} ${id ?? ""}`.toLowerCase();
+  return text.includes("ziel") || text.includes(".set") || text.endsWith(" set");
+}
+
+function normalizeTemperatureUnit(unit?: string): string {
+  if (!unit) return "°C";
+  return unit === "C" ? "°C" : unit;
+}
+
+function formatTemperatureList(entries: TemperatureEntry[]): string | undefined {
+  const current = entries.find((entry) => !isTargetTemperature(entry.label, entry.id)) ?? entries[0];
+  return current ? formatNumberValue(current.value, current.unit ?? "°C") : undefined;
+}
+
+function formatNumberValue(value: number, unit?: string): string {
+  const formatted = Number.isInteger(value)
+    ? String(value)
+    : value.toLocaleString("de-DE", { maximumFractionDigits: 1 });
+  return unit ? `${formatted} ${unit}` : formatted;
 }
 
 function isOpenOpeningDevice(device: Device): boolean {
