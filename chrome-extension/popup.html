@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Aura Home</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <div class="toolbar" aria-label="Aura Home Steuerung">
+        <div class="brand">
+          <span class="dot"></span>
+          <span>Aura Home</span>
+        </div>
+        <div class="actions">
+          <button id="reload" type="button" title="Neu laden" aria-label="Neu laden">↻</button>
+          <button id="open" type="button" title="In Tab öffnen" aria-label="In Tab öffnen">↗</button>
+          <button id="settings" type="button" title="Einstellungen" aria-label="Einstellungen">⚙</button>
+        </div>
+      </div>
+      <iframe id="auraFrame" title="Aura Home"></iframe>
+      <section id="fallback" class="fallback" hidden>
+        <h1>Aura Home konnte nicht geladen werden</h1>
+        <p>Prüfe, ob der Aura-Server erreichbar ist und das Zertifikat in Chrome akzeptiert wurde.</p>
+        <button id="fallbackOpen" type="button">Aura Home öffnen</button>
+      </section>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>

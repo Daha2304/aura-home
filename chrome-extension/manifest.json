@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Aura Home",
+  "description": "Aura Home als kompaktes Chrome-Popup.",
+  "version": "1.0.0",
+  "action": {
+    "default_title": "Aura Home",
+    "default_popup": "popup.html"
+  },
+  "options_page": "options.html",
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://192.168.55.168/*",
+    "http://192.168.55.168/*"
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; frame-src https://192.168.55.168 http://192.168.55.168;"
+  }
+}
