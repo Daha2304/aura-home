@@ -507,7 +507,7 @@ function ClimateControlLine({
           aria-label={`${device.name} schalten`}
           onCheckedChange={(next) => {
             setOptimisticChecked(next);
-            commandQueue.enqueue(device.id, power.id, next, {
+            commandQueue.enqueue(device.id, power.id, commandValueForBooleanToggle(device, power, next), {
               optimistic: true,
             });
           }}
@@ -549,6 +549,27 @@ function readBooleanValue(value: unknown): boolean | undefined {
     if (["false", "0", "off", "aus", "no", "nein", "idle", "standby"].includes(normalized)) return false;
   }
   return undefined;
+}
+
+function commandValueForBooleanToggle(device: Device, fn: DeviceFunction, next: boolean): unknown {
+  const currentValue = fn.value;
+  if (typeof currentValue !== "string") return next;
+
+  const normalized = currentValue.trim().toLowerCase();
+  const text = `${device.id} ${device.name} ${device.type} ${fn.id} ${fn.label ?? ""} ${String(fn.meta?.role ?? "")}`.toLowerCase();
+  if (normalized === "heat") return next ? "heat" : "off";
+  if (normalized === "cool") return next ? "cool" : "off";
+  if (normalized === "off" && textMatches(device, ["heizung", "heating", "thermostat", "heat"])) {
+    return next ? "heat" : "off";
+  }
+  if (normalized === "off" && text.includes("cool")) return next ? "cool" : "off";
+  if (normalized === "on" || normalized === "off") return next ? "on" : "off";
+  if (normalized === "an" || normalized === "aus") return next ? "an" : "aus";
+  if (normalized === "ein" || normalized === "aus") return next ? "ein" : "aus";
+  if (normalized === "true" || normalized === "false") return next ? "true" : "false";
+  if (normalized === "1" || normalized === "0") return next ? "1" : "0";
+
+  return next;
 }
 
 function textMatches(device: Device, needles: string[]): boolean {
