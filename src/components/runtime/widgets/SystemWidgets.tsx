@@ -78,7 +78,7 @@ export function ClockWidget() {
   const t = now.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
   return (
     <div className="grid h-full w-full grid-rows-[auto_1fr] p-4">
-      <TileTitle icon={<Clock className="h-3 w-3" />}>Uhrzeit</TileTitle>
+      <CenteredTileTitle icon={<Clock className="h-3 w-3" />}>Uhrzeit</CenteredTileTitle>
       <div className="flex items-center justify-center text-center text-3xl font-semibold tabular-nums tracking-tight">
         {t}
       </div>
@@ -92,7 +92,7 @@ export function DateWidget() {
   const date = d.toLocaleDateString("de-DE", { day: "numeric", month: "long" });
   return (
     <div className="grid h-full w-full grid-rows-[auto_1fr] p-4">
-      <TileTitle icon={<Calendar className="h-3 w-3" />}>Datum</TileTitle>
+      <CenteredTileTitle icon={<Calendar className="h-3 w-3" />}>Datum</CenteredTileTitle>
       <div className="flex flex-col items-center justify-center text-center">
         <div className="text-lg font-semibold tracking-tight">{day}</div>
         <div className="text-xs text-muted-foreground">{date}</div>
