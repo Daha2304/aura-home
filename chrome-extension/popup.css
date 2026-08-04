@@ -14,10 +14,8 @@
 
 html,
 body {
-  width: 100vw;
-  height: 100vh;
-  min-width: 430px;
-  min-height: 860px;
+  width: 430px;
+  height: 860px;
   margin: 0;
   overflow: hidden;
   background: var(--bg);

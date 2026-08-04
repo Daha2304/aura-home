@@ -1,6 +1,6 @@
 # Aura Home Chrome Extension
 
-Diese Extension zeigt Aura Home als kompaktes Chrome-Fenster in Handybreite.
+Diese Extension zeigt Aura Home als kompaktes Chrome-Popup in Handybreite.
 
 ## Lokal in Chrome laden
 
@@ -18,5 +18,5 @@ Die Adresse kann ueber das Zahnrad im Popup angepasst werden.
 ## Hinweise
 
 - Das lokale Caddy-Zertifikat muss in Chrome/macOS vertraut sein.
-- Der Extension-Button oeffnet ein schmales Fenster. Dadurch kann Aura Home hoeher angezeigt werden als in einem normalen Chrome-Toolbar-Popup.
+- Das Popup schliesst automatisch, wenn ausserhalb geklickt wird. Chrome begrenzt die maximale Popup-Hoehe selbst.
 - Die Extension baut keine eigene Smart-Home-Logik, sondern laedt die echte Aura-Home-Webseite.
