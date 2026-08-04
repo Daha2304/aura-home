@@ -58,7 +58,16 @@ export function normalizeAuraBackendServerForCurrentOrigin(server: ServerConfig)
 }
 
 function isDefaultAuraBackendServer(server: ServerConfig): boolean {
-  return server.id === DEFAULT_ID || server.name === "Aura Backend";
+  const name = server.name.toLowerCase();
+  return (
+    server.id === DEFAULT_ID ||
+    name.includes("aura") ||
+    server.path === DEFAULT_PROXY_PATH ||
+    server.host === "192.168.55.4" ||
+    server.host === "192.168.55.168" ||
+    server.port === 8099 ||
+    server.port === 8100
+  );
 }
 
 function isHttpsPage(): boolean {
