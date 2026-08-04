@@ -484,7 +484,14 @@ function ClimateControlLine({
   power?: DeviceFunction;
   value?: string;
 }) {
-  const checked = Boolean(power?.value);
+  const actualChecked = readBooleanValue(power?.value) ?? false;
+  const [optimisticChecked, setOptimisticChecked] = useState<boolean | undefined>();
+  const checked = optimisticChecked ?? actualChecked;
+
+  useEffect(() => {
+    if (optimisticChecked === undefined) return;
+    if (actualChecked === optimisticChecked) setOptimisticChecked(undefined);
+  }, [actualChecked, optimisticChecked]);
 
   return (
     <div className="mx-auto flex w-full max-w-[18rem] items-center justify-between gap-3 rounded-2xl border border-border/45 bg-surface/25 px-3 py-2">
@@ -499,6 +506,7 @@ function ClimateControlLine({
           checked={checked}
           aria-label={`${device.name} schalten`}
           onCheckedChange={(next) => {
+            setOptimisticChecked(next);
             commandQueue.enqueue(device.id, power.id, next, {
               optimistic: true,
             });
@@ -529,6 +537,20 @@ function isClimateDevice(device: Device): boolean {
   return type === "ac" || textMatches(device, ["klima", "climate", "aircondition", "air condition"]);
 }
 
+function readBooleanValue(value: unknown): boolean | undefined {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") {
+    if (value === 1) return true;
+    if (value === 0) return false;
+  }
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (["true", "1", "on", "an", "ein", "yes", "ja", "heat", "cool"].includes(normalized)) return true;
+    if (["false", "0", "off", "aus", "no", "nein", "idle", "standby"].includes(normalized)) return false;
+  }
+  return undefined;
+}
+
 function textMatches(device: Device, needles: string[]): boolean {
   const haystack = [
     device.id,
@@ -545,7 +567,7 @@ function textMatches(device: Device, needles: string[]): boolean {
 
 function findPowerFunction(device: Device): DeviceFunction | undefined {
   return (device.functions ?? []).find((fn) => {
-    if (fn.readonly === true || typeof fn.value !== "boolean") return false;
+    if (fn.readonly === true || readBooleanValue(fn.value) === undefined) return false;
     const text = `${fn.kind} ${fn.id} ${fn.label ?? ""} ${String(fn.meta?.role ?? "")}`.toLowerCase();
     return fn.kind === "power" || text.includes("switch.power") || text.includes("power");
   });
