@@ -463,12 +463,8 @@ export function MarantzRemoteWidget() {
   const marantz = useMemo(() => findMarantzDevice(devices), [devices]);
   const power = marantz ? findPowerFunction(marantz) : undefined;
   const volume = marantz ? findVolumeFunction(marantz) : undefined;
-  const input = marantz
-    ? findOptionFunction(marantz, ["input", "selectinput", "quickselect"])
-    : undefined;
-  const audio = marantz
-    ? findOptionFunction(marantz, ["audio", "surround", "surroundmode", "sound", "mode"], input?.id)
-    : undefined;
+  const input = marantz ? findMarantzInputFunction(marantz) : undefined;
+  const audio = marantz ? findMarantzAudioFunction(marantz, input?.id) : undefined;
   const roomName = marantz?.roomId ? rooms[marantz.roomId]?.name : undefined;
 
   if (!marantz) {
@@ -493,10 +489,14 @@ export function MarantzRemoteWidget() {
           <div className="flex h-14 w-14 items-center justify-center rounded-full border border-white/15 bg-primary/15 text-primary transition-transform group-active:scale-95">
             <Volume2 className="h-7 w-7" />
           </div>
-          <div>
+          <div className="w-full">
             <div className="text-lg font-semibold tracking-tight">Fernbedienung</div>
             <div className="text-xs text-muted-foreground">
               {[roomName, formatMarantzVolume(volume)].filter(Boolean).join(" · ") || "Bereit"}
+            </div>
+            <div className="mx-auto mt-3 grid max-w-[18rem] grid-cols-2 gap-2">
+              <MarantzStatePill label="Input" value={formatFunctionValue(input)} />
+              <MarantzStatePill label="Mixer" value={formatFunctionValue(audio)} />
             </div>
           </div>
         </div>
@@ -513,6 +513,17 @@ export function MarantzRemoteWidget() {
         audio={audio}
       />
     </>
+  );
+}
+
+function MarantzStatePill({ label, value }: { label: string; value?: string }) {
+  return (
+    <div className="min-w-0 rounded-2xl border border-border/40 bg-surface/30 px-3 py-2 text-center">
+      <div className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+        {label}
+      </div>
+      <div className="truncate text-sm font-semibold">{value || "–"}</div>
+    </div>
   );
 }
 
@@ -967,24 +978,48 @@ function findVolumeFunction(device: Device): DeviceFunction | undefined {
   });
 }
 
+function findMarantzInputFunction(device: Device): DeviceFunction | undefined {
+  return findOptionFunction(device, (fn) => {
+    const text = functionText(fn);
+    const compact = compactText(text);
+    if (compact.includes("surroundmode") || compact.includes("audio")) return 0;
+    if (compact.includes("selectinput") || compact.includes("zoneMainselectInput".toLowerCase()))
+      return 100;
+    if (compact.includes("mediaquickselect")) return 80;
+    if (compact.endsWith("input") || compact.includes("marantzinput")) return 70;
+    if (/\binput\b/.test(text)) return 60;
+    return 0;
+  });
+}
+
+function findMarantzAudioFunction(device: Device, excludeId?: string): DeviceFunction | undefined {
+  return findOptionFunction(device, (fn) => {
+    if (fn.id === excludeId) return 0;
+    const text = functionText(fn);
+    const compact = compactText(text);
+    if (compact.includes("selectinput")) return 0;
+    if (compact.includes("surroundmode")) return 100;
+    if (compact.includes("audio") || compact.includes("mixer")) return 80;
+    if (compact.includes("soundmode")) return 70;
+    if (compact.endsWith("mode") && !compact.includes("input")) return 45;
+    return 0;
+  });
+}
+
 function findOptionFunction(
   device: Device,
-  needles: string[],
-  excludeId?: string,
+  score: (fn: DeviceFunction) => number,
 ): DeviceFunction | undefined {
   const candidates = (device.functions ?? []).filter((fn) => {
-    if (fn.id === excludeId || fn.readonly === true) return false;
+    if (fn.readonly === true) return false;
     const options = readFunctionOptions(fn);
-    if (options.length === 0) return false;
-    const text = functionText(fn).replace(/[\s_.-]/g, "");
-    return needles.some((needle) => text.includes(needle.replace(/[\s_.-]/g, "")));
+    return options.length > 0 || typeof fn.value === "string";
   });
 
-  return (
-    candidates.find((fn) => functionText(fn).includes("alias.0")) ??
-    candidates.find((fn) => fn.kind === "enum") ??
-    candidates[0]
-  );
+  return candidates
+    .map((fn) => ({ fn, score: score(fn) }))
+    .filter((entry) => entry.score > 0)
+    .sort((a, b) => b.score - a.score)[0]?.fn;
 }
 
 function pickMarantzActions(device: Device): DeviceFunction[] {
@@ -1013,6 +1048,10 @@ function functionText(fn: DeviceFunction): string {
     .filter(Boolean)
     .join(" ")
     .toLowerCase();
+}
+
+function compactText(value: string): string {
+  return value.replace(/[\s_.-]/g, "");
 }
 
 function cleanFunctionLabel(fn: DeviceFunction): string {
@@ -1060,6 +1099,11 @@ function formatMarantzVolume(fn?: DeviceFunction): string | undefined {
   const value = readNumberValue(fn?.value);
   if (value === undefined) return undefined;
   return `${Math.round(value)} %`;
+}
+
+function formatFunctionValue(fn?: DeviceFunction): string | undefined {
+  if (fn?.value === undefined || fn.value === null || fn.value === "") return undefined;
+  return String(fn.value);
 }
 
 function clampNumber(value: number, min: number, max: number): number {
