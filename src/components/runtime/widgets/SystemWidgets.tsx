@@ -48,6 +48,9 @@ import type { Device } from "@/models/device";
 import type { DeviceFunction } from "@/models/device";
 import { commandQueue } from "@/services/commands/CommandQueue";
 
+const MARANTZ_VOLUME_BACKGROUND =
+  "https://i.pinimg.com/originals/bd/e3/e1/bde3e16f060043de9e2ebc624fb64049.gif";
+
 /* ============ Kleine Bausteine ============ */
 
 function useTick(intervalMs = 1000) {
@@ -662,8 +665,6 @@ function MarantzVolumeDial({ device, fn }: { device: Device; fn: DeviceFunction 
     commit(next);
   };
 
-  const percent = max === min ? 0 : ((localValue - min) / (max - min)) * 100;
-
   return (
     <div className="rounded-[1.75rem] border border-border/45 bg-surface/35 p-4">
       <div className="mb-3 flex items-center justify-center gap-2 text-sm font-semibold">
@@ -699,21 +700,20 @@ function MarantzVolumeDial({ device, fn }: { device: Device; fn: DeviceFunction 
         onPointerCancel={() => {
           drag.current.active = false;
         }}
-        className="relative mx-auto flex aspect-square w-[min(68vw,14rem)] touch-none select-none items-center justify-center rounded-full outline-none"
+        className="relative mx-auto flex aspect-square w-[min(68vw,14rem)] touch-none select-none items-center justify-center overflow-hidden rounded-full border border-black/35 bg-background outline-none shadow-[0_22px_60px_rgba(0,0,0,.42)]"
         style={
           {
-            "--marantz-volume": `${percent}%`,
+            backgroundImage: `url(${MARANTZ_VOLUME_BACKGROUND})`,
+            backgroundSize: "290%",
+            backgroundPosition: "center",
           } as React.CSSProperties
         }
       >
-        <div className="absolute inset-0 rounded-full bg-[conic-gradient(from_210deg,#5fd5ff_0%,#9a6cff_var(--marantz-volume),rgba(255,255,255,.13)_var(--marantz-volume),rgba(255,255,255,.08)_100%)] shadow-[0_0_52px_rgba(83,171,255,.25)]" />
-        <div className="absolute inset-2 animate-[spin_14s_linear_infinite] rounded-full bg-[radial-gradient(circle_at_35%_32%,rgba(255,255,255,.9),rgba(95,213,255,.65)_18%,rgba(161,96,255,.42)_38%,rgba(9,17,34,.92)_70%)] opacity-80 blur-[1px]" />
-        <div className="absolute inset-7 rounded-full border border-white/15 bg-background/80 shadow-inner backdrop-blur-md" />
-        <div className="relative text-center">
-          <div className="text-5xl font-semibold tabular-nums tracking-tight">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(15,18,38,.06)_0%,rgba(3,6,16,.18)_58%,rgba(0,0,0,.55)_100%)]" />
+        <div className="relative text-center drop-shadow-[0_2px_14px_rgba(0,0,0,.75)]">
+          <div className="text-5xl font-semibold tabular-nums tracking-tight text-white">
             {Math.round(localValue)}
           </div>
-          <div className="text-xs uppercase tracking-widest text-muted-foreground">Volume</div>
         </div>
       </div>
     </div>
