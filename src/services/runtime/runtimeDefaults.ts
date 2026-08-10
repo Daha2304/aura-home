@@ -15,6 +15,7 @@ const LOW_BATTERY_TYPE = "system.low-battery";
 const HEATING_CONTROL_TYPE = "system.heating-control";
 const TEMPERATURE_OVERVIEW_TYPE = "system.temperature-overview";
 const CLIMATE_CONTROL_TYPE = "system.climate-control";
+const MARANTZ_REMOTE_TYPE = "system.marantz-remote";
 const LEGACY_STATUS_TYPES = new Set([
   "system.server-status",
   "system.connection-status",
@@ -48,7 +49,8 @@ export function ensureRuntimeDefaults(dashboard: Dashboard): void {
     { type: HEATING_CONTROL_TYPE, x: 0, y: 6, w: 4, h: 2 },
     { type: TEMPERATURE_OVERVIEW_TYPE, x: 4, y: 6, w: 4, h: 2 },
     { type: CLIMATE_CONTROL_TYPE, x: 0, y: 8, w: 8, h: 2 },
-    { type: STATUS_SUMMARY_TYPE, x: 0, y: 10, w: 8, h: 2 },
+    { type: MARANTZ_REMOTE_TYPE, x: 0, y: 10, w: 8, h: 2 },
+    { type: STATUS_SUMMARY_TYPE, x: 0, y: 12, w: 8, h: 2 },
   ];
 
   const createdIds: string[] = [];
@@ -159,7 +161,7 @@ function ensureCompactSystemStatus(
     const grid = layouts[breakpoint];
     layoutsStore.setPlacement(dashboard.id, breakpoint, anchor.id, {
       gridX: 0,
-      gridY: 10,
+      gridY: 12,
       w: grid.columns,
       h: 2,
     });
@@ -182,6 +184,7 @@ function ensureDashboardClimateWidgets(dashboard: Dashboard): void {
   let heating = existing.find((widget) => widget.widgetType === HEATING_CONTROL_TYPE);
   let temperatures = existing.find((widget) => widget.widgetType === TEMPERATURE_OVERVIEW_TYPE);
   let climate = existing.find((widget) => widget.widgetType === CLIMATE_CONTROL_TYPE);
+  let marantz = existing.find((widget) => widget.widgetType === MARANTZ_REMOTE_TYPE);
 
   if (!heating && widgetRegistry.has(HEATING_CONTROL_TYPE)) {
     heating =
@@ -202,6 +205,13 @@ function ensureDashboardClimateWidgets(dashboard: Dashboard): void {
       widgetManager.create({ dashboardId: dashboard.id, widgetType: CLIMATE_CONTROL_TYPE }) ??
       undefined;
     if (climate) createdIds.push(climate.id);
+  }
+
+  if (!marantz && widgetRegistry.has(MARANTZ_REMOTE_TYPE)) {
+    marantz =
+      widgetManager.create({ dashboardId: dashboard.id, widgetType: MARANTZ_REMOTE_TYPE }) ??
+      undefined;
+    if (marantz) createdIds.push(marantz.id);
   }
 
   const layoutsStore = useLayoutsStore.getState();
@@ -234,6 +244,15 @@ function ensureDashboardClimateWidgets(dashboard: Dashboard): void {
       layoutsStore.setPlacement(dashboard.id, breakpoint, climate.id, {
         gridX: 0,
         gridY: 8,
+        w: grid.columns,
+        h: 2,
+      });
+    }
+
+    if (marantz) {
+      layoutsStore.setPlacement(dashboard.id, breakpoint, marantz.id, {
+        gridX: 0,
+        gridY: 10,
         w: grid.columns,
         h: 2,
       });

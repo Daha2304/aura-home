@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BatteryWarning,
   Clock,
@@ -24,6 +24,10 @@ import {
   Flame,
   Thermometer,
   Wind,
+  Volume2,
+  Music2,
+  Power,
+  Send,
 } from "lucide-react";
 import { useSettingsStore } from "@/store/slices/settingsStore";
 import { useConnectionStore } from "@/store/slices/connectionStore";
@@ -39,6 +43,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { GlassButton } from "@/components/glass/GlassButton";
 import { Switch } from "@/components/ui/switch";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { Device } from "@/models/device";
 import type { DeviceFunction } from "@/models/device";
 import { commandQueue } from "@/services/commands/CommandQueue";
@@ -62,7 +67,13 @@ function TileTitle({ icon, children }: { icon: React.ReactNode; children: React.
   );
 }
 
-function CenteredTileTitle({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
+function CenteredTileTitle({
+  icon,
+  children,
+}: {
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
     <div className="flex justify-center">
       <TileTitle icon={icon}>{children}</TileTitle>
@@ -335,7 +346,11 @@ export function HeatingControlWidget() {
   const rooms = useRoomsStore((s) => s.byId);
   const heatingDevices = devices
     .filter(isHeatingDevice)
-    .map((device) => ({ device, power: findPowerFunction(device), temperatures: readDeviceTemperatures(device) }))
+    .map((device) => ({
+      device,
+      power: findPowerFunction(device),
+      temperatures: readDeviceTemperatures(device),
+    }))
     .slice(0, 4);
 
   return (
@@ -375,7 +390,11 @@ export function TemperatureOverviewWidget() {
   );
 
   const shown = temperatures
-    .sort((a, b) => (a.roomName ?? "").localeCompare(b.roomName ?? "") || a.device.name.localeCompare(b.device.name))
+    .sort(
+      (a, b) =>
+        (a.roomName ?? "").localeCompare(b.roomName ?? "") ||
+        a.device.name.localeCompare(b.device.name),
+    )
     .slice(0, 6);
 
   return (
@@ -405,7 +424,11 @@ export function ClimateControlWidget() {
   const rooms = useRoomsStore((s) => s.byId);
   const climateDevices = devices
     .filter(isClimateDevice)
-    .map((device) => ({ device, power: findPowerFunction(device), temperatures: readDeviceTemperatures(device) }))
+    .map((device) => ({
+      device,
+      power: findPowerFunction(device),
+      temperatures: readDeviceTemperatures(device),
+    }))
     .slice(0, 4);
 
   return (
@@ -427,6 +450,310 @@ export function ClimateControlWidget() {
         </div>
       )}
     </div>
+  );
+}
+
+export function MarantzRemoteWidget() {
+  const devices = useDevicesStore((s) => s.devices);
+  const rooms = useRoomsStore((s) => s.byId);
+  const [open, setOpen] = useState(false);
+  const marantz = useMemo(() => findMarantzDevice(devices), [devices]);
+  const power = marantz ? findPowerFunction(marantz) : undefined;
+  const volume = marantz ? findVolumeFunction(marantz) : undefined;
+  const input = marantz
+    ? findOptionFunction(marantz, ["input", "selectinput", "quickselect"])
+    : undefined;
+  const audio = marantz
+    ? findOptionFunction(marantz, ["audio", "surround", "surroundmode", "sound", "mode"], input?.id)
+    : undefined;
+  const roomName = marantz?.roomId ? rooms[marantz.roomId]?.name : undefined;
+
+  if (!marantz) {
+    return (
+      <div className="grid h-full w-full grid-rows-[auto_1fr] p-4">
+        <CenteredTileTitle icon={<Music2 className="h-3 w-3" />}>Marantz</CenteredTileTitle>
+        <WidgetEmptyState title="Nicht gefunden" detail="Noch kein Marantz-Alias vorhanden" />
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="group grid h-full w-full grid-rows-[auto_1fr] p-4 text-left outline-none"
+        aria-label="Marantz Fernbedienung öffnen"
+      >
+        <CenteredTileTitle icon={<Music2 className="h-3 w-3" />}>Marantz</CenteredTileTitle>
+        <div className="flex min-h-0 flex-col items-center justify-center gap-3 text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full border border-white/15 bg-primary/15 text-primary transition-transform group-active:scale-95">
+            <Volume2 className="h-7 w-7" />
+          </div>
+          <div>
+            <div className="text-lg font-semibold tracking-tight">Fernbedienung</div>
+            <div className="text-xs text-muted-foreground">
+              {[roomName, formatMarantzVolume(volume)].filter(Boolean).join(" · ") || "Bereit"}
+            </div>
+          </div>
+        </div>
+      </button>
+
+      <MarantzRemoteDialog
+        open={open}
+        onClose={() => setOpen(false)}
+        device={marantz}
+        roomName={roomName}
+        power={power}
+        volume={volume}
+        input={input}
+        audio={audio}
+      />
+    </>
+  );
+}
+
+function MarantzRemoteDialog({
+  open,
+  onClose,
+  device,
+  roomName,
+  power,
+  volume,
+  input,
+  audio,
+}: {
+  open: boolean;
+  onClose: () => void;
+  device: Device;
+  roomName?: string;
+  power?: DeviceFunction;
+  volume?: DeviceFunction;
+  input?: DeviceFunction;
+  audio?: DeviceFunction;
+}) {
+  const actions = useMemo(() => pickMarantzActions(device), [device]);
+
+  return (
+    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+      <DialogContent className="max-h-[calc(100dvh-2rem)] w-[min(92vw,28rem)] overflow-y-auto rounded-[2rem] border-border/50 bg-background/90 p-5 shadow-2xl backdrop-blur-xl">
+        <DialogHeader className="pr-10 text-left">
+          <DialogTitle className="text-2xl">Marantz</DialogTitle>
+          <div className="text-sm text-muted-foreground">{roomName ?? "Wohnzimmer"}</div>
+        </DialogHeader>
+
+        <div className="grid gap-5">
+          <div className="rounded-[1.75rem] border border-border/45 bg-surface/35 p-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <Power className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <div className="font-semibold">Power</div>
+                  <div className="text-xs text-muted-foreground">
+                    {readBooleanValue(power?.value) ? "An" : "Aus"}
+                  </div>
+                </div>
+              </div>
+              {power ? <PowerSwitch device={device} fn={power} /> : <div className="h-6 w-11" />}
+            </div>
+          </div>
+
+          {volume ? (
+            <MarantzVolumeDial device={device} fn={volume} />
+          ) : (
+            <div className="rounded-[1.75rem] border border-border/45 bg-surface/35 p-5 text-center text-sm text-muted-foreground">
+              Keine Lautstärke-Funktion gefunden
+            </div>
+          )}
+
+          <div className="grid gap-3">
+            {input ? <MarantzOptionSelect device={device} fn={input} label="Input" /> : null}
+            {audio ? <MarantzOptionSelect device={device} fn={audio} label="Audio" /> : null}
+          </div>
+
+          {actions.length > 0 ? (
+            <div className="grid grid-cols-2 gap-2">
+              {actions.map((fn) => (
+                <button
+                  key={fn.id}
+                  type="button"
+                  onClick={() =>
+                    commandQueue.enqueue(device.id, fn.id, actionCommandValue(fn), {
+                      optimistic: true,
+                    })
+                  }
+                  className="flex items-center justify-center gap-2 rounded-2xl border border-border/45 bg-surface/35 px-3 py-3 text-sm font-semibold transition-colors active:bg-primary/20"
+                >
+                  <Send className="h-4 w-4 text-primary" />
+                  <span className="truncate">{cleanFunctionLabel(fn)}</span>
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function PowerSwitch({ device, fn }: { device: Device; fn: DeviceFunction }) {
+  const actualChecked = readBooleanValue(fn.value) ?? false;
+  const [optimisticChecked, setOptimisticChecked] = useState<boolean | undefined>();
+  const checked = optimisticChecked ?? actualChecked;
+
+  useEffect(() => {
+    if (optimisticChecked === undefined) return;
+    if (actualChecked === optimisticChecked) setOptimisticChecked(undefined);
+  }, [actualChecked, optimisticChecked]);
+
+  return (
+    <Switch
+      checked={checked}
+      aria-label={`${device.name} schalten`}
+      onCheckedChange={(next) => {
+        setOptimisticChecked(next);
+        commandQueue.enqueue(device.id, fn.id, commandValueForBooleanToggle(device, fn, next), {
+          optimistic: true,
+        });
+      }}
+    />
+  );
+}
+
+function MarantzVolumeDial({ device, fn }: { device: Device; fn: DeviceFunction }) {
+  const min = typeof fn.min === "number" ? fn.min : 0;
+  const max = typeof fn.max === "number" && fn.max > min ? fn.max : 98;
+  const step = typeof fn.step === "number" && fn.step > 0 ? fn.step : 1;
+  const actual = clampNumber(readNumberValue(fn.value) ?? min, min, max);
+  const [localValue, setLocalValue] = useState(actual);
+  const drag = useRef({ active: false, startValue: actual, lastAngle: 0, accumulatedAngle: 0 });
+  const sendTimer = useRef<ReturnType<typeof window.setTimeout> | undefined>();
+
+  useEffect(() => {
+    if (!drag.current.active) setLocalValue(actual);
+  }, [actual]);
+
+  useEffect(
+    () => () => {
+      if (sendTimer.current) window.clearTimeout(sendTimer.current);
+    },
+    [],
+  );
+
+  const commit = (next: number) => {
+    if (sendTimer.current) window.clearTimeout(sendTimer.current);
+    sendTimer.current = window.setTimeout(() => {
+      commandQueue.enqueue(device.id, fn.id, next, { optimistic: true });
+    }, 90);
+  };
+
+  const setFromPointer = (event: React.PointerEvent<HTMLDivElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const angle = pointerAngle(event.clientX, event.clientY, rect);
+    let delta = angle - drag.current.lastAngle;
+    if (delta > 180) delta -= 360;
+    if (delta < -180) delta += 360;
+    drag.current.accumulatedAngle += delta;
+    drag.current.lastAngle = angle;
+
+    const valueDelta = (drag.current.accumulatedAngle / 360) * (max - min);
+    const next = clampNumber(roundToStep(drag.current.startValue + valueDelta, step), min, max);
+    setLocalValue(next);
+    commit(next);
+  };
+
+  const percent = max === min ? 0 : ((localValue - min) / (max - min)) * 100;
+
+  return (
+    <div className="rounded-[1.75rem] border border-border/45 bg-surface/35 p-4">
+      <div className="mb-3 flex items-center justify-center gap-2 text-sm font-semibold">
+        <Volume2 className="h-4 w-4 text-primary" />
+        Lautstärke
+      </div>
+      <div
+        role="slider"
+        aria-label="Marantz Lautstärke"
+        aria-valuemin={min}
+        aria-valuemax={max}
+        aria-valuenow={Math.round(localValue)}
+        tabIndex={0}
+        onPointerDown={(event) => {
+          event.currentTarget.setPointerCapture(event.pointerId);
+          drag.current.active = true;
+          drag.current.startValue = localValue;
+          drag.current.lastAngle = pointerAngle(
+            event.clientX,
+            event.clientY,
+            event.currentTarget.getBoundingClientRect(),
+          );
+          drag.current.accumulatedAngle = 0;
+        }}
+        onPointerMove={(event) => {
+          if (!drag.current.active) return;
+          setFromPointer(event);
+        }}
+        onPointerUp={(event) => {
+          drag.current.active = false;
+          event.currentTarget.releasePointerCapture(event.pointerId);
+        }}
+        onPointerCancel={() => {
+          drag.current.active = false;
+        }}
+        className="relative mx-auto flex aspect-square w-[min(68vw,14rem)] touch-none select-none items-center justify-center rounded-full outline-none"
+        style={
+          {
+            "--marantz-volume": `${percent}%`,
+          } as React.CSSProperties
+        }
+      >
+        <div className="absolute inset-0 rounded-full bg-[conic-gradient(from_210deg,#5fd5ff_0%,#9a6cff_var(--marantz-volume),rgba(255,255,255,.13)_var(--marantz-volume),rgba(255,255,255,.08)_100%)] shadow-[0_0_52px_rgba(83,171,255,.25)]" />
+        <div className="absolute inset-2 animate-[spin_14s_linear_infinite] rounded-full bg-[radial-gradient(circle_at_35%_32%,rgba(255,255,255,.9),rgba(95,213,255,.65)_18%,rgba(161,96,255,.42)_38%,rgba(9,17,34,.92)_70%)] opacity-80 blur-[1px]" />
+        <div className="absolute inset-7 rounded-full border border-white/15 bg-background/80 shadow-inner backdrop-blur-md" />
+        <div className="relative text-center">
+          <div className="text-5xl font-semibold tabular-nums tracking-tight">
+            {Math.round(localValue)}
+          </div>
+          <div className="text-xs uppercase tracking-widest text-muted-foreground">Volume</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MarantzOptionSelect({
+  device,
+  fn,
+  label,
+}: {
+  device: Device;
+  fn: DeviceFunction;
+  label: string;
+}) {
+  const options = useMemo(() => readFunctionOptions(fn), [fn]);
+  const value = String(fn.value ?? "");
+  const shownOptions = options.includes(value) || value === "" ? options : [value, ...options];
+
+  return (
+    <label className="grid gap-2 rounded-[1.5rem] border border-border/45 bg-surface/35 p-4">
+      <span className="flex items-center gap-2 text-sm font-semibold">
+        <Music2 className="h-4 w-4 text-primary" />
+        {label}
+      </span>
+      <select
+        value={value}
+        disabled={shownOptions.length === 0 || fn.readonly === true}
+        onChange={(event) =>
+          commandQueue.enqueue(device.id, fn.id, event.target.value, { optimistic: true })
+        }
+        className="h-11 w-full rounded-2xl border border-border/55 bg-background/75 px-4 text-sm font-semibold outline-none focus:border-primary/70"
+      >
+        {shownOptions.map((option) => (
+          <option key={option} value={option} className="bg-background">
+            {option}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 
@@ -507,9 +834,14 @@ function ClimateControlLine({
           aria-label={`${device.name} schalten`}
           onCheckedChange={(next) => {
             setOptimisticChecked(next);
-            commandQueue.enqueue(device.id, power.id, commandValueForBooleanToggle(device, power, next), {
-              optimistic: true,
-            });
+            commandQueue.enqueue(
+              device.id,
+              power.id,
+              commandValueForBooleanToggle(device, power, next),
+              {
+                optimistic: true,
+              },
+            );
           }}
         />
       ) : (
@@ -529,12 +861,18 @@ interface TemperatureEntry {
 
 function isHeatingDevice(device: Device): boolean {
   const type = device.type.toLowerCase();
-  return type === "thermostat" || type === "heating" || textMatches(device, ["heizung", "heating", "thermostat"]);
+  return (
+    type === "thermostat" ||
+    type === "heating" ||
+    textMatches(device, ["heizung", "heating", "thermostat"])
+  );
 }
 
 function isClimateDevice(device: Device): boolean {
   const type = device.type.toLowerCase();
-  return type === "ac" || textMatches(device, ["klima", "climate", "aircondition", "air condition"]);
+  return (
+    type === "ac" || textMatches(device, ["klima", "climate", "aircondition", "air condition"])
+  );
 }
 
 function readBooleanValue(value: unknown): boolean | undefined {
@@ -545,8 +883,10 @@ function readBooleanValue(value: unknown): boolean | undefined {
   }
   if (typeof value === "string") {
     const normalized = value.trim().toLowerCase();
-    if (["true", "1", "on", "an", "ein", "yes", "ja", "heat", "cool"].includes(normalized)) return true;
-    if (["false", "0", "off", "aus", "no", "nein", "idle", "standby"].includes(normalized)) return false;
+    if (["true", "1", "on", "an", "ein", "yes", "ja", "heat", "cool"].includes(normalized))
+      return true;
+    if (["false", "0", "off", "aus", "no", "nein", "idle", "standby"].includes(normalized))
+      return false;
   }
   return undefined;
 }
@@ -556,7 +896,8 @@ function commandValueForBooleanToggle(device: Device, fn: DeviceFunction, next: 
   if (typeof currentValue !== "string") return next;
 
   const normalized = currentValue.trim().toLowerCase();
-  const text = `${device.id} ${device.name} ${device.type} ${fn.id} ${fn.label ?? ""} ${String(fn.meta?.role ?? "")}`.toLowerCase();
+  const text =
+    `${device.id} ${device.name} ${device.type} ${fn.id} ${fn.label ?? ""} ${String(fn.meta?.role ?? "")}`.toLowerCase();
   if (normalized === "heat") return next ? "heat" : "off";
   if (normalized === "cool") return next ? "cool" : "off";
   if (normalized === "off" && textMatches(device, ["heizung", "heating", "thermostat", "heat"])) {
@@ -589,14 +930,158 @@ function textMatches(device: Device, needles: string[]): boolean {
 function findPowerFunction(device: Device): DeviceFunction | undefined {
   return (device.functions ?? []).find((fn) => {
     if (fn.readonly === true || readBooleanValue(fn.value) === undefined) return false;
-    const text = `${fn.kind} ${fn.id} ${fn.label ?? ""} ${String(fn.meta?.role ?? "")}`.toLowerCase();
+    const text =
+      `${fn.kind} ${fn.id} ${fn.label ?? ""} ${String(fn.meta?.role ?? "")}`.toLowerCase();
     return fn.kind === "power" || text.includes("switch.power") || text.includes("power");
   });
 }
 
+function findMarantzDevice(devices: Device[]): Device | undefined {
+  return devices.find((device) => {
+    const text = [
+      device.id,
+      device.name,
+      device.type,
+      device.manufacturer,
+      device.model,
+      ...(device.functions ?? []).flatMap((fn) => [
+        fn.id,
+        fn.label,
+        String(fn.meta?.aliasId ?? ""),
+      ]),
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+
+    return text.includes("marantz") || text.includes("denon.");
+  });
+}
+
+function findVolumeFunction(device: Device): DeviceFunction | undefined {
+  return (device.functions ?? []).find((fn) => {
+    if (fn.readonly === true) return false;
+    if (readNumberValue(fn.value) === undefined) return false;
+    const text = functionText(fn);
+    return fn.kind === "volume" || text.includes("volume") || text.includes("lautst");
+  });
+}
+
+function findOptionFunction(
+  device: Device,
+  needles: string[],
+  excludeId?: string,
+): DeviceFunction | undefined {
+  const candidates = (device.functions ?? []).filter((fn) => {
+    if (fn.id === excludeId || fn.readonly === true) return false;
+    const options = readFunctionOptions(fn);
+    if (options.length === 0) return false;
+    const text = functionText(fn).replace(/[\s_.-]/g, "");
+    return needles.some((needle) => text.includes(needle.replace(/[\s_.-]/g, "")));
+  });
+
+  return (
+    candidates.find((fn) => functionText(fn).includes("alias.0")) ??
+    candidates.find((fn) => fn.kind === "enum") ??
+    candidates[0]
+  );
+}
+
+function pickMarantzActions(device: Device): DeviceFunction[] {
+  return (device.functions ?? [])
+    .filter((fn) => fn.readonly !== true)
+    .filter((fn) => {
+      const text = functionText(fn);
+      if (fn.kind !== "action" && !text.includes("button")) return false;
+      if (text.includes("input") || text.includes("surround") || text.includes("volume"))
+        return false;
+      return true;
+    })
+    .slice(0, 8);
+}
+
+function functionText(fn: DeviceFunction): string {
+  return [
+    fn.kind,
+    fn.id,
+    fn.label,
+    fn.unit,
+    String(fn.meta?.role ?? ""),
+    String(fn.meta?.aliasId ?? ""),
+    String(fn.meta?.objectId ?? ""),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+function cleanFunctionLabel(fn: DeviceFunction): string {
+  const label = String(fn.label || fn.id.split(".").pop() || "Aktion").trim();
+  return label.replace(/^wohnzimmer\s+marantz\s+/i, "").replace(/^marantz\s+/i, "");
+}
+
+function readNumberValue(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number(value.replace(",", "."));
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return undefined;
+}
+
+function readFunctionOptions(fn: DeviceFunction): string[] {
+  if (Array.isArray(fn.options)) {
+    return fn.options.map(String).filter(Boolean);
+  }
+
+  const states = fn.meta?.states;
+  if (Array.isArray(states)) return states.map(String).filter(Boolean);
+  if (states && typeof states === "object") {
+    const entries = Object.entries(states as Record<string, unknown>);
+    return entries.map(([key]) => String(key)).filter(Boolean);
+  }
+
+  const commonStates = fn.meta?.commonStates;
+  if (commonStates && typeof commonStates === "object") {
+    const entries = Object.entries(commonStates as Record<string, unknown>);
+    return entries.map(([key]) => String(key)).filter(Boolean);
+  }
+
+  return [];
+}
+
+function actionCommandValue(fn: DeviceFunction): unknown {
+  if (fn.meta?.commandValue !== undefined) return fn.meta.commandValue;
+  if (typeof fn.value === "string" && fn.value.length > 0) return fn.value;
+  return true;
+}
+
+function formatMarantzVolume(fn?: DeviceFunction): string | undefined {
+  const value = readNumberValue(fn?.value);
+  if (value === undefined) return undefined;
+  return `${Math.round(value)} %`;
+}
+
+function clampNumber(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+function roundToStep(value: number, step: number): number {
+  return Math.round(value / step) * step;
+}
+
+function pointerAngle(x: number, y: number, rect: DOMRect): number {
+  const centerX = rect.left + rect.width / 2;
+  const centerY = rect.top + rect.height / 2;
+  return ((Math.atan2(y - centerY, x - centerX) * 180) / Math.PI + 360) % 360;
+}
+
 function readDeviceTemperatures(device: Device): TemperatureEntry[] {
   return (device.functions ?? [])
-    .filter((fn) => fn.kind === "temperature" && typeof fn.value === "number" && Number.isFinite(fn.value))
+    .filter(
+      (fn) =>
+        fn.kind === "temperature" && typeof fn.value === "number" && Number.isFinite(fn.value),
+    )
     .map((fn) => ({
       id: fn.id,
       label: fn.label,
@@ -617,7 +1102,8 @@ function normalizeTemperatureUnit(unit?: string): string {
 }
 
 function formatTemperatureList(entries: TemperatureEntry[]): string | undefined {
-  const current = entries.find((entry) => !isTargetTemperature(entry.label, entry.id)) ?? entries[0];
+  const current =
+    entries.find((entry) => !isTargetTemperature(entry.label, entry.id)) ?? entries[0];
   return current ? formatNumberValue(current.value, current.unit ?? "°C") : undefined;
 }
 
@@ -704,7 +1190,9 @@ function StatusMetric({
         {icon}
         <span>{label}</span>
       </div>
-      <div className={`mt-0.5 truncate text-base font-semibold leading-tight tracking-tight ${toneClass}`}>
+      <div
+        className={`mt-0.5 truncate text-base font-semibold leading-tight tracking-tight ${toneClass}`}
+      >
         {value}
       </div>
       <div className="truncate text-[11px] leading-tight text-muted-foreground">{detail}</div>

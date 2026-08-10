@@ -142,6 +142,16 @@ const specs: Spec[] = [
     render: () => <W.ClimateControlWidget />,
   },
   {
+    id: "system.marantz-remote",
+    name: "Marantz Remote",
+    icon: "volume-2",
+    size: { w: 4, h: 2 },
+    min: { w: 3, h: 2 },
+    max: { w: 8, h: 3 },
+    description: "Öffnet eine Marantz-Fernbedienung mit Drehregler.",
+    render: () => <W.MarantzRemoteWidget />,
+  },
+  {
     id: "system.connection-status",
     name: "Verbindungsstatus",
     icon: "wifi",
