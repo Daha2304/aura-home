@@ -1,4 +1,5 @@
-const DEFAULT_URL = "https://192.168.55.168/";
+const DEFAULT_URL = "http://192.168.55.168:3000/";
+const LEGACY_URLS = new Set(["https://192.168.55.168/", "http://192.168.55.168/"]);
 
 const frame = document.getElementById("auraFrame");
 const fallback = document.getElementById("fallback");
@@ -13,6 +14,7 @@ let loaded = false;
 function normalizeUrl(value) {
   const trimmed = String(value || "").trim();
   if (!trimmed) return DEFAULT_URL;
+  if (LEGACY_URLS.has(trimmed)) return DEFAULT_URL;
   try {
     const url = new URL(trimmed);
     if (url.protocol !== "http:" && url.protocol !== "https:") return DEFAULT_URL;
@@ -42,6 +44,9 @@ function loadAura() {
 
 chrome.storage.sync.get({ auraUrl: DEFAULT_URL }, (items) => {
   auraUrl = normalizeUrl(items.auraUrl);
+  if (auraUrl !== items.auraUrl) {
+    chrome.storage.sync.set({ auraUrl });
+  }
   loadAura();
 });
 
