@@ -127,6 +127,12 @@ interface StateBinding {
 const stateIndex = new Map<string, StateBinding>();
 
 function indexDevice(device: Device): void {
+  for (const cap of device.capabilities ?? []) {
+    if (cap.id) {
+      stateIndex.set(cap.id, { deviceId: device.id, key: cap.id });
+    }
+  }
+
   for (const fn of device.functions ?? []) {
     if (fn.id && fn.meta?.readable !== false) {
       stateIndex.set(fn.id, { deviceId: device.id, key: fn.id });

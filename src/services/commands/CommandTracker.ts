@@ -21,6 +21,9 @@ function readValue(device: Device, key: string): unknown {
 }
 
 function writeValue(device: Device, key: string, value: unknown): Device {
+  let next: Device = device;
+  let matched = false;
+
   const capIndex = device.capabilities.findIndex((c) => c.id === key);
   if (capIndex >= 0) {
     const capabilities = device.capabilities.slice();
@@ -28,14 +31,20 @@ function writeValue(device: Device, key: string, value: unknown): Device {
       ...(capabilities[capIndex] as object),
       value,
     } as (typeof capabilities)[number];
-    return { ...device, capabilities };
+    next = { ...next, capabilities };
+    matched = true;
   }
+
   const fnIndex = device.functions?.findIndex((f) => f.id === key) ?? -1;
   if (device.functions && fnIndex >= 0) {
     const functions = device.functions.slice();
     functions[fnIndex] = { ...functions[fnIndex], value, updatedAt: Date.now() };
-    return { ...device, functions };
+    next = { ...next, functions };
+    matched = true;
   }
+
+  if (matched) return next;
+
   return {
     ...device,
     attributes: { ...(device.attributes ?? {}), [key]: value },

@@ -121,14 +121,19 @@ function readValue(device: Device, key: string): unknown {
 }
 
 function patchDeviceValue(device: Device, key: string, value: unknown): Device {
+  let next: Device = device;
+  let matched = false;
+
   const capIndex = device.capabilities.findIndex((c) => c.id === key);
   if (capIndex >= 0) {
     const capabilities = device.capabilities.slice();
     const cap = capabilities[capIndex] as { value?: unknown };
     capabilities[capIndex] = { ...(capabilities[capIndex] as object), value } as typeof cap &
       (typeof capabilities)[number];
-    return { ...device, capabilities };
+    next = { ...next, capabilities };
+    matched = true;
   }
+
   const fnIndex = device.functions?.findIndex((f) => f.id === key) ?? -1;
   if (device.functions && fnIndex >= 0) {
     const functions = device.functions.slice();
@@ -139,8 +144,12 @@ function patchDeviceValue(device: Device, key: string, value: unknown): Device {
       patch.battery = value;
     }
 
-    return { ...device, ...patch };
+    next = { ...next, ...patch };
+    matched = true;
   }
+
+  if (matched) return next;
+
   // Unbekannter Key → in attributes protokollieren, damit nichts verlorengeht.
   return {
     ...device,
