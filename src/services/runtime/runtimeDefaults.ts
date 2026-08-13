@@ -45,12 +45,12 @@ export function ensureRuntimeDefaults(dashboard: Dashboard): void {
     { type: "system.hero-greeting", x: 0, y: 0, w: 8, h: 3 },
     { type: CLOCK_TYPE, x: 0, y: 3, w: 4, h: 1 },
     { type: DATE_TYPE, x: 4, y: 3, w: 4, h: 1 },
-    { type: OPENINGS_ALERT_TYPE, x: 0, y: 4, w: 4, h: 2 },
-    { type: LOW_BATTERY_TYPE, x: 4, y: 4, w: 4, h: 2 },
-    { type: HEATING_CONTROL_TYPE, x: 0, y: 6, w: 4, h: 2 },
-    { type: TEMPERATURE_OVERVIEW_TYPE, x: 4, y: 6, w: 4, h: 2 },
-    { type: CLIMATE_CONTROL_TYPE, x: 0, y: 8, w: 8, h: 2 },
-    { type: MOTION_SENSORS_TYPE, x: 0, y: 10, w: 8, h: 2 },
+    { type: MOTION_SENSORS_TYPE, x: 0, y: 4, w: 8, h: 2 },
+    { type: OPENINGS_ALERT_TYPE, x: 0, y: 6, w: 4, h: 2 },
+    { type: LOW_BATTERY_TYPE, x: 4, y: 6, w: 4, h: 2 },
+    { type: HEATING_CONTROL_TYPE, x: 0, y: 8, w: 4, h: 2 },
+    { type: TEMPERATURE_OVERVIEW_TYPE, x: 4, y: 8, w: 4, h: 2 },
+    { type: CLIMATE_CONTROL_TYPE, x: 0, y: 10, w: 8, h: 2 },
     { type: MARANTZ_REMOTE_TYPE, x: 0, y: 12, w: 8, h: 2 },
     { type: STATUS_SUMMARY_TYPE, x: 0, y: 14, w: 8, h: 2 },
   ];
@@ -235,7 +235,7 @@ function ensureDashboardClimateWidgets(dashboard: Dashboard): void {
     if (heating) {
       layoutsStore.setPlacement(dashboard.id, breakpoint, heating.id, {
         gridX: 0,
-        gridY: 6,
+        gridY: 8,
         w: leftWidth,
         h: 2,
       });
@@ -244,7 +244,7 @@ function ensureDashboardClimateWidgets(dashboard: Dashboard): void {
     if (temperatures) {
       layoutsStore.setPlacement(dashboard.id, breakpoint, temperatures.id, {
         gridX: leftWidth,
-        gridY: 6,
+        gridY: 8,
         w: rightWidth,
         h: 2,
       });
@@ -253,7 +253,7 @@ function ensureDashboardClimateWidgets(dashboard: Dashboard): void {
     if (climate) {
       layoutsStore.setPlacement(dashboard.id, breakpoint, climate.id, {
         gridX: 0,
-        gridY: 8,
+        gridY: 10,
         w: grid.columns,
         h: 2,
       });
@@ -262,7 +262,7 @@ function ensureDashboardClimateWidgets(dashboard: Dashboard): void {
     if (motionSensors) {
       layoutsStore.setPlacement(dashboard.id, breakpoint, motionSensors.id, {
         gridX: 0,
-        gridY: 10,
+        gridY: 4,
         w: grid.columns,
         h: 2,
       });
@@ -322,7 +322,7 @@ function ensureDashboardHealthAlerts(dashboard: Dashboard): void {
     if (openings) {
       layoutsStore.setPlacement(dashboard.id, breakpoint, openings.id, {
         gridX: 0,
-        gridY: 4,
+        gridY: 6,
         w: leftWidth,
         h: 2,
       });
@@ -331,7 +331,7 @@ function ensureDashboardHealthAlerts(dashboard: Dashboard): void {
     if (lowBattery) {
       layoutsStore.setPlacement(dashboard.id, breakpoint, lowBattery.id, {
         gridX: leftWidth,
-        gridY: 4,
+        gridY: 6,
         w: rightWidth,
         h: 2,
       });
