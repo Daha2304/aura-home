@@ -142,6 +142,16 @@ const specs: Spec[] = [
     render: () => <W.ClimateControlWidget />,
   },
   {
+    id: "system.motion-sensors",
+    name: "Bewegungssensoren",
+    icon: "radar",
+    size: { w: 8, h: 2 },
+    min: { w: 4, h: 2 },
+    max: { w: 16, h: 4 },
+    description: "Zeigt LD2410C-Bewegungssensoren nach Raum.",
+    render: () => <W.MotionSensorsOverviewWidget />,
+  },
+  {
     id: "system.marantz-remote",
     name: "Marantz Remote",
     icon: "volume-2",

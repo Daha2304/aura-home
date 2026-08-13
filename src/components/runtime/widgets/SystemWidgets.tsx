@@ -456,6 +456,54 @@ export function ClimateControlWidget() {
   );
 }
 
+export function MotionSensorsOverviewWidget() {
+  const devices = useDevicesStore((s) => s.devices);
+  const rooms = useRoomsStore((s) => s.byId);
+  const sensors = devices
+    .filter(isLd2410Device)
+    .map((device) => ({
+      device,
+      roomName: device.roomId ? rooms[device.roomId]?.name : undefined,
+      values: readMotionSensorValues(device),
+    }))
+    .filter((entry) => entry.values.length > 0)
+    .sort(
+      (a, b) =>
+        motionRoomOrder(a.roomName ?? a.device.name) -
+          motionRoomOrder(b.roomName ?? b.device.name) ||
+        (a.roomName ?? "").localeCompare(b.roomName ?? "") ||
+        a.device.name.localeCompare(b.device.name),
+    )
+    .slice(0, 2);
+
+  return (
+    <div className="grid h-full w-full grid-rows-[auto_1fr] p-4">
+      <CenteredTileTitle icon={<Radar className="h-3 w-3" />}>Bewegungssensoren</CenteredTileTitle>
+      {sensors.length === 0 ? (
+        <WidgetEmptyState title="Keine Sensoren" detail="Noch kein LD2410C-Alias gefunden" />
+      ) : (
+        <div className="grid min-h-0 grid-cols-2 content-center gap-3 overflow-hidden">
+          {sensors.map(({ device, roomName, values }) => (
+            <div
+              key={device.id}
+              className="min-w-0 rounded-2xl border border-border/45 bg-surface/25 px-3 py-2"
+            >
+              <div className="mb-2 truncate text-center text-sm font-semibold tracking-tight">
+                {roomName ?? device.name}
+              </div>
+              <div className="space-y-1">
+                {values.map((entry) => (
+                  <MotionSensorLine key={entry.id} label={entry.label} value={entry.value} />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function MarantzRemoteWidget() {
   const devices = useDevicesStore((s) => s.devices);
   const rooms = useRoomsStore((s) => s.byId);
@@ -811,6 +859,28 @@ function CompactDeviceLine({
   );
 }
 
+function MotionSensorLine({ label, value }: { label: string; value: unknown }) {
+  const bool = readBooleanValue(value);
+  const shown = bool === undefined ? formatUnknownValue(value) : bool ? "Ja" : "Nein";
+
+  return (
+    <div className="flex min-w-0 items-center justify-between gap-2 text-xs">
+      <span className="truncate text-muted-foreground">{label}</span>
+      <span
+        className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+          bool === true
+            ? "bg-success/20 text-success"
+            : bool === false
+              ? "bg-surface/50 text-muted-foreground"
+              : "bg-warning/15 text-warning"
+        }`}
+      >
+        {shown}
+      </span>
+    </div>
+  );
+}
+
 function ClimateControlLine({
   device,
   roomName,
@@ -936,6 +1006,50 @@ function textMatches(device: Device, needles: string[]): boolean {
     .toLowerCase();
 
   return needles.some((needle) => haystack.includes(needle));
+}
+
+function isLd2410Device(device: Device): boolean {
+  return textMatches(device, ["ld2410"]);
+}
+
+function motionRoomOrder(name: string): number {
+  const normalized = name.toLowerCase();
+  if (normalized.includes("küche") || normalized.includes("kueche")) return 0;
+  if (normalized.includes("flur")) return 1;
+  return 10;
+}
+
+interface MotionSensorEntry {
+  id: string;
+  label: string;
+  value: unknown;
+}
+
+function readMotionSensorValues(device: Device): MotionSensorEntry[] {
+  const functions = device.functions ?? [];
+  const ordered = [
+    { key: "anwesenheit", label: "Anwesenheit" },
+    { key: "bewegung", label: "Bewegung" },
+    { key: "still", label: "Still" },
+  ];
+
+  return ordered
+    .map((entry) => {
+      const fn = functions.find((candidate) => motionFunctionMatches(candidate, entry.key));
+      return fn ? { id: fn.id, label: entry.label, value: fn.value } : undefined;
+    })
+    .filter((entry): entry is MotionSensorEntry => Boolean(entry));
+}
+
+function motionFunctionMatches(fn: DeviceFunction, key: string): boolean {
+  const text = functionText(fn);
+  const compact = compactText(text);
+  return compact.includes(key);
+}
+
+function formatUnknownValue(value: unknown): string {
+  if (value === undefined || value === null || value === "") return "–";
+  return String(value);
 }
 
 function findPowerFunction(device: Device): DeviceFunction | undefined {
