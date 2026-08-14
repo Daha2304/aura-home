@@ -22,4 +22,5 @@ export interface ControlSpec {
     true?: string;
     false?: string;
   };
+  optionLabels?: Record<string, string>;
 }

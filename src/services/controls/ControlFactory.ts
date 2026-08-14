@@ -55,6 +55,7 @@ class ControlFactoryImpl {
         displayLabel: override?.label,
         order: override?.order,
         valueLabels: override?.valueLabels,
+        optionLabels: readOptionLabels(cap),
       });
     }
 
@@ -102,6 +103,7 @@ class ControlFactoryImpl {
         displayLabel: override?.label,
         order: override?.order,
         valueLabels: override?.valueLabels,
+        optionLabels: readOptionLabels(fn),
       });
     }
 
@@ -109,6 +111,23 @@ class ControlFactoryImpl {
     this.cache.set(device, { capsRef: device.capabilities, functionsRef: device.functions, specs });
     return specs;
   }
+}
+
+function readOptionLabels(source: { meta?: Record<string, unknown> } | Capability): Record<string, string> | undefined {
+  const direct = "meta" in source ? source.meta?.optionLabels : undefined;
+  const fromCapability =
+    typeof source === "object" && source !== null && "optionLabels" in source
+      ? (source as { optionLabels?: unknown }).optionLabels
+      : undefined;
+  const candidate = direct ?? fromCapability;
+  if (!candidate || typeof candidate !== "object") return undefined;
+
+  const labels = Object.fromEntries(
+    Object.entries(candidate as Record<string, unknown>)
+      .map(([value, label]) => [value, String(label)])
+      .filter(([, label]) => label.length > 0),
+  );
+  return Object.keys(labels).length > 0 ? labels : undefined;
 }
 
 interface ControlOverride {

@@ -401,6 +401,18 @@ function stateOptions(raw: RawState): string[] | undefined {
   return undefined;
 }
 
+function stateOptionLabels(raw: RawState): Record<string, string> | undefined {
+  const source = raw.states ?? raw.common?.states;
+  if (!source || typeof source !== "object" || Array.isArray(source)) return undefined;
+
+  const labels = Object.fromEntries(
+    Object.entries(source as Record<string, unknown>)
+      .map(([value, label]) => [value, String(label)])
+      .filter(([value, label]) => value.length > 0 && label.length > 0),
+  );
+  return Object.keys(labels).length > 0 ? labels : undefined;
+}
+
 function readableRawStateValue(raw: RawState): unknown {
   if (raw.value !== undefined) return raw.value;
   return null;
@@ -422,13 +434,14 @@ function stateToCapabilityAndFunction(
   const writable =
     raw.writable === true || (raw.common?.write !== undefined ? raw.common.write !== false : true);
   const options = stateOptions(raw);
+  const optionLabels = stateOptionLabels(raw);
   const value = readableRawStateValue(raw);
   const kind = normalizeStateKind(mappedKind === "enum" && !options?.length ? "number" : mappedKind, valueType, value);
   const label = deriveStateLabel(id, asString(raw.name) ?? asString(raw.common?.name), kind);
   const readable = raw.readable !== false && raw.common?.read !== false;
   const controlVisible = visibleControl && !isDeviceStatusState(id, role);
 
-  const cap = stateToCapability(id, kind, raw, label, !writable);
+  const cap = stateToCapability(id, kind, raw, label, !writable, optionLabels);
   const fn: DeviceFunction = {
     id,
     kind,
@@ -440,7 +453,7 @@ function stateToCapabilityAndFunction(
     step,
     options,
     readonly: !writable,
-    meta: { role, valueType, visibleControl: controlVisible, readable, rawMin: min, rawMax: max },
+    meta: { role, valueType, visibleControl: controlVisible, readable, rawMin: min, rawMax: max, optionLabels },
   };
   return { cap, fn };
 }
@@ -470,6 +483,7 @@ function stateToCapability(
   raw: RawState,
   label: string | undefined,
   readonly: boolean,
+  optionLabels?: Record<string, string>,
 ): CustomCapability {
   const base = { id, label, readonly };
   if (kind === "power") {
@@ -522,6 +536,7 @@ function stateToCapability(
       kind: "mode",
       value: String(raw.value ?? ""),
       options: stateOptions(raw) ?? [],
+      optionLabels,
       readonly,
     } as unknown as CustomCapability;
   }
@@ -918,6 +933,21 @@ function stateChangedEventFor(stateId: string, value: unknown): WsIncomingEvent 
 }
 
 function encodeCommandValue(deviceId: string, stateId: string, value: unknown): unknown {
+  const device = useDevicesStore.getState().byId(deviceId);
+  const fn = device?.functions?.find((candidate) => candidate.id === stateId);
+  const cap = device?.capabilities?.find((candidate) => candidate.id === stateId) as
+    | ({ value?: unknown } & Record<string, unknown>)
+    | undefined;
+  const valueType = typeof fn?.meta?.valueType === "string" ? fn.meta.valueType : undefined;
+  if (
+    typeof value === "string" &&
+    value.trim() !== "" &&
+    (valueType === "number" || typeof fn?.value === "number" || typeof cap?.value === "number")
+  ) {
+    const numeric = Number(value);
+    if (Number.isFinite(numeric)) return numeric;
+  }
+
   const binding = findManualBinding(deviceId, stateId);
   const scale = getPercentScale(binding);
   if (!scale) return value;

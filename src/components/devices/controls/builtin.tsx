@@ -201,6 +201,7 @@ const DropdownEnum = memo(function DropdownEnum({ spec, onCommit, disabled }: Co
   const cap = spec.capability;
   const options = cap.kind === "mode" ? cap.options : [];
   const value = String(spec.currentValue ?? "");
+  const labelFor = (option: string) => spec.optionLabels?.[option] ?? option;
   return (
     <ControlRow spec={spec}>
       <select
@@ -212,7 +213,7 @@ const DropdownEnum = memo(function DropdownEnum({ spec, onCommit, disabled }: Co
       >
         {options.map((o) => (
           <option key={o} value={o} className="bg-background">
-            {o}
+            {labelFor(o)}
           </option>
         ))}
       </select>
@@ -224,6 +225,7 @@ const SegmentedEnum = memo(function SegmentedEnum({ spec, onCommit, disabled }: 
   const cap = spec.capability;
   const options = cap.kind === "mode" ? cap.options : [];
   const value = String(spec.currentValue ?? options[0] ?? "");
+  const labelFor = (option: string) => spec.optionLabels?.[option] ?? option;
   if (options.length === 0 || options.length > 5) {
     return <DropdownEnum spec={spec} onCommit={onCommit} disabled={disabled} />;
   }
@@ -233,7 +235,7 @@ const SegmentedEnum = memo(function SegmentedEnum({ spec, onCommit, disabled }: 
         aria-label={spec.descriptor.name}
         value={value}
         onChange={(v) => !disabled && !spec.readOnly && onCommit(v)}
-        options={options.map((o) => ({ value: o, label: o }))}
+        options={options.map((o) => ({ value: o, label: labelFor(o) }))}
       />
     </ControlRow>
   );
