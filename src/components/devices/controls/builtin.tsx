@@ -40,6 +40,53 @@ function controlLabel(spec: ControlProps["spec"]): string {
   return label || spec.descriptor.name;
 }
 
+function displayControlLabel(spec: ControlProps["spec"]): string {
+  const label = controlLabel(spec).trim();
+  if (label.length > 1 && label === label.toUpperCase()) {
+    return label.charAt(0) + label.slice(1).toLowerCase();
+  }
+  return label;
+}
+
+function enumLabelMap(spec: ControlProps["spec"]): Record<string, string> {
+  return spec.optionLabels ?? {};
+}
+
+function optionLabel(spec: ControlProps["spec"], option: string): string {
+  return enumLabelMap(spec)[option] ?? option;
+}
+
+function normalizeEnumOptions(spec: ControlProps["spec"], options: string[]): string[] {
+  const labels = enumLabelMap(spec);
+  const labelEntries = Object.entries(labels);
+  if (labelEntries.length === 0) return options.map(String).filter(Boolean);
+
+  const optionSet = new Set(options.map(String));
+  const normalized = labelEntries
+    .filter(([value, label]) => optionSet.has(value) || optionSet.has(label))
+    .map(([value]) => value);
+
+  if (normalized.length > 0) return normalized;
+  return options.map(String).filter(Boolean);
+}
+
+function selectedEnumValue(spec: ControlProps["spec"], options: string[]): string {
+  const current = String(spec.currentValue ?? "");
+  if (options.includes(current)) return current;
+
+  const normalizedCurrent = current.trim().toLowerCase();
+  const labels = enumLabelMap(spec);
+  const byLabel = Object.entries(labels).find(
+    ([, label]) => String(label).trim().toLowerCase() === normalizedCurrent,
+  );
+  if (byLabel && options.includes(byLabel[0])) return byLabel[0];
+
+  const byOptionText = options.find(
+    (option) => optionLabel(spec, option).trim().toLowerCase() === normalizedCurrent,
+  );
+  return byOptionText ?? options[0] ?? "";
+}
+
 /* ---------------- Row wrapper ---------------- */
 
 function ControlRow({
@@ -199,9 +246,10 @@ const ActionButton = memo(function ActionButton({ spec, onCommit, disabled }: Co
 
 const DropdownEnum = memo(function DropdownEnum({ spec, onCommit, disabled }: ControlProps) {
   const cap = spec.capability;
-  const options = cap.kind === "mode" ? cap.options : [];
-  const value = String(spec.currentValue ?? "");
-  const labelFor = (option: string) => spec.optionLabels?.[option] ?? option;
+  const rawOptions = cap.kind === "mode" ? cap.options : [];
+  const options = normalizeEnumOptions(spec, rawOptions);
+  const value = selectedEnumValue(spec, options);
+  const labelFor = (option: string) => optionLabel(spec, option);
   return (
     <ControlRow spec={spec}>
       <select
@@ -223,24 +271,31 @@ const DropdownEnum = memo(function DropdownEnum({ spec, onCommit, disabled }: Co
 
 const SegmentedEnum = memo(function SegmentedEnum({ spec, onCommit, disabled }: ControlProps) {
   const cap = spec.capability;
-  const options = cap.kind === "mode" ? cap.options : [];
-  const value = String(spec.currentValue ?? options[0] ?? "");
-  const labelFor = (option: string) => spec.optionLabels?.[option] ?? option;
+  const rawOptions = cap.kind === "mode" ? cap.options : [];
+  const options = normalizeEnumOptions(spec, rawOptions);
+  const value = selectedEnumValue(spec, options);
+  const labelFor = (option: string) => optionLabel(spec, option);
+  const Icon = spec.descriptor.icon;
   if (options.length === 0 || options.length > 5) {
     return <DropdownEnum spec={spec} onCommit={onCommit} disabled={disabled} />;
   }
   return (
-    <ControlRow spec={spec}>
-      <div className="flex justify-center">
+    <div className="flex flex-col items-center gap-2">
+      <div className="flex items-center justify-center gap-2 text-center">
+        {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
+        <span className="text-sm font-medium leading-tight">{displayControlLabel(spec)}</span>
+      </div>
+      <div className="flex w-full justify-center">
         <SegmentedControl
           aria-label={spec.descriptor.name}
           value={value}
           onChange={(v) => !disabled && !spec.readOnly && onCommit(v)}
           options={options.map((o) => ({ value: o, label: labelFor(o) }))}
           className="w-3/4 justify-center"
+          layoutId={`segmented-active-${spec.id}`}
         />
       </div>
-    </ControlRow>
+    </div>
   );
 });
 

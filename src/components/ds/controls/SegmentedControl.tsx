@@ -11,6 +11,7 @@ export interface SegmentedControlProps<V extends string> {
   onChange: (v: V) => void;
   options: SegmentedOption<V>[];
   className?: string;
+  layoutId?: string;
   "aria-label"?: string;
 }
 
@@ -19,6 +20,7 @@ export function SegmentedControl<V extends string>({
   onChange,
   options,
   className,
+  layoutId,
   ...rest
 }: SegmentedControlProps<V>) {
   return (
@@ -42,13 +44,13 @@ export function SegmentedControl<V extends string>({
             className={cn(
               "relative z-10 min-h-9 rounded-full px-3 text-sm font-medium transition-colors",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-              active ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+              active ? "text-white" : "text-muted-foreground hover:text-foreground",
             )}
           >
             {active && (
               <motion.span
-                layoutId="segmented-active"
-                className="absolute inset-0 -z-10 rounded-full bg-primary shadow-md"
+                layoutId={layoutId ?? "segmented-active"}
+                className="absolute inset-0 -z-10 rounded-full bg-primary shadow-[0_8px_24px_rgba(96,165,250,.35)]"
                 transition={{ type: "spring", stiffness: 380, damping: 32 }}
               />
             )}
