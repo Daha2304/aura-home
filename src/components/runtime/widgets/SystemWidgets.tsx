@@ -456,7 +456,6 @@ export function ClimateControlWidget() {
                 aria-label={`${device.name} öffnen`}
               >
                 <div className="min-w-0">
-                  <div className="truncate text-sm font-semibold tracking-tight">{device.name}</div>
                   <div className="truncate text-[11px] text-muted-foreground">
                     {[
                       device.roomId ? rooms[device.roomId]?.name : undefined,
@@ -624,9 +623,6 @@ export function MarantzRemoteWidget() {
       >
         <CenteredTileTitle icon={<Music2 className="h-3 w-3" />}>Marantz</CenteredTileTitle>
         <div className="flex min-h-0 flex-col items-center justify-center gap-3 text-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full border border-white/15 bg-primary/15 text-primary transition-transform group-active:scale-95">
-            <Volume2 className="h-7 w-7" />
-          </div>
           <div className="w-full">
             <div className="text-lg font-semibold tracking-tight">Fernbedienung</div>
             <div className="text-xs text-muted-foreground">
