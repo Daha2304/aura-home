@@ -47,6 +47,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import type { Device } from "@/models/device";
 import type { DeviceFunction } from "@/models/device";
 import { commandQueue } from "@/services/commands/CommandQueue";
+import { UniversalControlRenderer } from "@/components/devices/controls/UniversalControlRenderer";
 
 const MARANTZ_VOLUME_BACKGROUND =
   "https://i.pinimg.com/originals/bd/e3/e1/bde3e16f060043de9e2ebc624fb64049.gif";
@@ -425,34 +426,123 @@ export function TemperatureOverviewWidget() {
 export function ClimateControlWidget() {
   const devices = useDevicesStore((s) => s.devices);
   const rooms = useRoomsStore((s) => s.byId);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string | undefined>();
   const climateDevices = devices
     .filter(isClimateDevice)
     .map((device) => ({
       device,
       power: findPowerFunction(device),
       temperatures: readDeviceTemperatures(device),
+      mode: findClimateModeFunction(device),
+      fan: findClimateFanFunction(device),
     }))
     .slice(0, 4);
+  const selectedEntry = climateDevices.find((entry) => entry.device.id === selectedDeviceId);
 
   return (
-    <div className="grid h-full w-full grid-rows-[auto_1fr] p-4">
-      <CenteredTileTitle icon={<Wind className="h-3 w-3" />}>Klima</CenteredTileTitle>
-      {climateDevices.length === 0 ? (
-        <WidgetEmptyState title="Keine Klimageräte" detail="Noch kein Klima-Alias gefunden" />
-      ) : (
-        <div className="flex flex-col justify-center gap-2 overflow-hidden">
-          {climateDevices.map(({ device, power, temperatures }) => (
-            <ClimateControlLine
-              key={device.id}
-              device={device}
-              roomName={device.roomId ? rooms[device.roomId]?.name : undefined}
-              power={power}
-              value={formatTemperatureList(temperatures)}
+    <>
+      <div className="grid h-full w-full grid-rows-[auto_1fr] p-4">
+        <CenteredTileTitle icon={<Wind className="h-3 w-3" />}>Klima</CenteredTileTitle>
+        {climateDevices.length === 0 ? (
+          <WidgetEmptyState title="Keine Klimageräte" detail="Noch kein Klima-Alias gefunden" />
+        ) : (
+          <div className="flex flex-col justify-center gap-2 overflow-hidden">
+            {climateDevices.map(({ device, power, temperatures, mode, fan }) => (
+              <button
+                key={device.id}
+                type="button"
+                onClick={() => setSelectedDeviceId(device.id)}
+                className="mx-auto grid w-full max-w-[18rem] grid-cols-[1fr_auto] items-center gap-3 rounded-2xl border border-border/45 bg-surface/25 px-3 py-2 text-left transition-colors active:bg-primary/15"
+                aria-label={`${device.name} öffnen`}
+              >
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-semibold tracking-tight">{device.name}</div>
+                  <div className="truncate text-[11px] text-muted-foreground">
+                    {[
+                      device.roomId ? rooms[device.roomId]?.name : undefined,
+                      readBooleanValue(power?.value) ? "An" : "Aus",
+                      formatTemperatureList(temperatures),
+                    ]
+                      .filter(Boolean)
+                      .join(" · ") || "Bereit"}
+                  </div>
+                </div>
+                <div className="min-w-0 text-right text-xs">
+                  <div className="truncate font-semibold text-foreground">
+                    {formatFunctionValue(mode) || "Modus"}
+                  </div>
+                  <div className="truncate text-muted-foreground">
+                    {formatFunctionValue(fan) || "Lüfter"}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {selectedEntry ? (
+        <ClimateControlDialog
+          open={Boolean(selectedEntry)}
+          onClose={() => setSelectedDeviceId(undefined)}
+          device={selectedEntry.device}
+          roomName={selectedEntry.device.roomId ? rooms[selectedEntry.device.roomId]?.name : undefined}
+          power={selectedEntry.power}
+          temperatures={selectedEntry.temperatures}
+          mode={selectedEntry.mode}
+          fan={selectedEntry.fan}
+        />
+      ) : null}
+    </>
+  );
+}
+
+function ClimateControlDialog({
+  open,
+  onClose,
+  device,
+  roomName,
+  power,
+  temperatures,
+  mode,
+  fan,
+}: {
+  open: boolean;
+  onClose: () => void;
+  device: Device;
+  roomName?: string;
+  power?: DeviceFunction;
+  temperatures: TemperatureEntry[];
+  mode?: DeviceFunction;
+  fan?: DeviceFunction;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+      <DialogContent className="max-h-[calc(100dvh-2rem)] w-[min(92vw,28rem)] overflow-y-auto rounded-[2rem] border-border/50 bg-background/90 p-5 shadow-2xl backdrop-blur-xl">
+        <DialogHeader className="pr-10 text-left">
+          <DialogTitle className="text-2xl">{device.name}</DialogTitle>
+          <div className="text-sm text-muted-foreground">{roomName ?? "Klima"}</div>
+        </DialogHeader>
+
+        <div className="grid gap-4">
+          <div className="grid grid-cols-2 gap-2">
+            <MarantzStatePill label="Status" value={readBooleanValue(power?.value) ? "An" : "Aus"} />
+            <MarantzStatePill label="Temperatur" value={formatTemperatureList(temperatures)} />
+            <MarantzStatePill label="Modus" value={formatFunctionValue(mode)} />
+            <MarantzStatePill label="Lüfter" value={formatFunctionValue(fan)} />
+          </div>
+
+          <div className="rounded-[1.75rem] border border-border/45 bg-surface/35 p-4">
+            <UniversalControlRenderer
+              deviceId={device.id}
+              mode="writable"
+              grouped={false}
+              emptyState={false}
             />
-          ))}
+          </div>
         </div>
-      )}
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -1120,6 +1210,27 @@ function findMarantzAudioFunction(device: Device, excludeId?: string): DeviceFun
   });
 }
 
+function findClimateModeFunction(device: Device): DeviceFunction | undefined {
+  return findOptionFunction(device, (fn) => {
+    const text = functionText(fn);
+    const compact = compactText(text);
+    if (compact.includes("fan") || compact.includes("wind") || compact.includes("windspeed")) return 0;
+    if (compact.includes("airconditioner") || compact.endsWith("mode")) return 100;
+    if (text.includes("modus") || text.includes("mode")) return 70;
+    return 0;
+  });
+}
+
+function findClimateFanFunction(device: Device): DeviceFunction | undefined {
+  return findOptionFunction(device, (fn) => {
+    const text = functionText(fn);
+    const compact = compactText(text);
+    if (compact.includes("windspeed")) return 100;
+    if (compact.includes("fan") || compact.includes("lufter") || compact.includes("lüfter")) return 90;
+    return 0;
+  });
+}
+
 function findOptionFunction(
   device: Device,
   score: (fn: DeviceFunction) => number,
@@ -1217,7 +1328,30 @@ function formatMarantzVolume(fn?: DeviceFunction): string | undefined {
 
 function formatFunctionValue(fn?: DeviceFunction): string | undefined {
   if (fn?.value === undefined || fn.value === null || fn.value === "") return undefined;
-  return String(fn.value);
+  const value = String(fn.value);
+  return readFunctionOptionLabel(fn, value) ?? value;
+}
+
+function readFunctionOptionLabel(fn: DeviceFunction, value: string): string | undefined {
+  const optionLabels = fn.meta?.optionLabels;
+  if (optionLabels && typeof optionLabels === "object") {
+    const label = (optionLabels as Record<string, unknown>)[value];
+    if (label !== undefined && label !== null && String(label).length > 0) return String(label);
+  }
+
+  const states = fn.meta?.states;
+  if (states && typeof states === "object" && !Array.isArray(states)) {
+    const label = (states as Record<string, unknown>)[value];
+    if (label !== undefined && label !== null && String(label).length > 0) return String(label);
+  }
+
+  const commonStates = fn.meta?.commonStates;
+  if (commonStates && typeof commonStates === "object") {
+    const label = (commonStates as Record<string, unknown>)[value];
+    if (label !== undefined && label !== null && String(label).length > 0) return String(label);
+  }
+
+  return undefined;
 }
 
 function clampNumber(value: number, min: number, max: number): number {
