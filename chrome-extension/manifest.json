@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Aura Home",
   "description": "Aura Home als kompaktes Chrome-Popup.",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "action": {
     "default_title": "Aura Home",
     "default_popup": "popup.html",
