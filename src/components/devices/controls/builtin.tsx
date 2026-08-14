@@ -231,12 +231,15 @@ const SegmentedEnum = memo(function SegmentedEnum({ spec, onCommit, disabled }: 
   }
   return (
     <ControlRow spec={spec}>
-      <SegmentedControl
-        aria-label={spec.descriptor.name}
-        value={value}
-        onChange={(v) => !disabled && !spec.readOnly && onCommit(v)}
-        options={options.map((o) => ({ value: o, label: labelFor(o) }))}
-      />
+      <div className="flex justify-center">
+        <SegmentedControl
+          aria-label={spec.descriptor.name}
+          value={value}
+          onChange={(v) => !disabled && !spec.readOnly && onCommit(v)}
+          options={options.map((o) => ({ value: o, label: labelFor(o) }))}
+          className="w-3/4 justify-center"
+        />
+      </div>
     </ControlRow>
   );
 });
