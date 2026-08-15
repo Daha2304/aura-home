@@ -19,6 +19,7 @@ import { Route as OnboardingIntroRouteImport } from './routes/onboarding.intro'
 import { Route as OnboardingDoneRouteImport } from './routes/onboarding.done'
 import { Route as OnboardingConnectRouteImport } from './routes/onboarding.connect'
 import { Route as OnboardingConfigureRouteImport } from './routes/onboarding.configure'
+import { Route as ApiNetworkDevicesRouteImport } from './routes/api.network-devices'
 import { Route as AppUsersRouteImport } from './routes/_app.users'
 import { Route as AppTimelineRouteImport } from './routes/_app.timeline'
 import { Route as AppStatisticsRouteImport } from './routes/_app.statistics'
@@ -51,6 +52,7 @@ import { Route as AppSettingsPerformanceRouteImport } from './routes/_app.settin
 import { Route as AppSettingsOfflineRouteImport } from './routes/_app.settings.offline'
 import { Route as AppSettingsObjectsRouteImport } from './routes/_app.settings.objects'
 import { Route as AppSettingsNotificationsRouteImport } from './routes/_app.settings.notifications'
+import { Route as AppSettingsNetworkDevicesRouteImport } from './routes/_app.settings.network-devices'
 import { Route as AppSettingsLogsRouteImport } from './routes/_app.settings.logs'
 import { Route as AppSettingsLanguageRouteImport } from './routes/_app.settings.language'
 import { Route as AppSettingsDiagnosticsRouteImport } from './routes/_app.settings.diagnostics'
@@ -126,6 +128,11 @@ const OnboardingConfigureRoute = OnboardingConfigureRouteImport.update({
   id: '/configure',
   path: '/configure',
   getParentRoute: () => OnboardingRoute,
+} as any)
+const ApiNetworkDevicesRoute = ApiNetworkDevicesRouteImport.update({
+  id: '/api/network-devices',
+  path: '/api/network-devices',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppUsersRoute = AppUsersRouteImport.update({
   id: '/users',
@@ -289,6 +296,12 @@ const AppSettingsNotificationsRoute =
     path: '/notifications',
     getParentRoute: () => AppSettingsRoute,
   } as any)
+const AppSettingsNetworkDevicesRoute =
+  AppSettingsNetworkDevicesRouteImport.update({
+    id: '/network-devices',
+    path: '/network-devices',
+    getParentRoute: () => AppSettingsRoute,
+  } as any)
 const AppSettingsLogsRoute = AppSettingsLogsRouteImport.update({
   id: '/logs',
   path: '/logs',
@@ -446,6 +459,7 @@ export interface FileRoutesByFullPath {
   '/statistics': typeof AppStatisticsRoute
   '/timeline': typeof AppTimelineRoute
   '/users': typeof AppUsersRouteWithChildren
+  '/api/network-devices': typeof ApiNetworkDevicesRoute
   '/onboarding/configure': typeof OnboardingConfigureRoute
   '/onboarding/connect': typeof OnboardingConnectRoute
   '/onboarding/done': typeof OnboardingDoneRoute
@@ -471,6 +485,7 @@ export interface FileRoutesByFullPath {
   '/settings/diagnostics': typeof AppSettingsDiagnosticsRoute
   '/settings/language': typeof AppSettingsLanguageRoute
   '/settings/logs': typeof AppSettingsLogsRoute
+  '/settings/network-devices': typeof AppSettingsNetworkDevicesRoute
   '/settings/notifications': typeof AppSettingsNotificationsRoute
   '/settings/objects': typeof AppSettingsObjectsRoute
   '/settings/offline': typeof AppSettingsOfflineRoute
@@ -510,6 +525,7 @@ export interface FileRoutesByTo {
   '/search': typeof AppSearchRouteWithChildren
   '/statistics': typeof AppStatisticsRoute
   '/timeline': typeof AppTimelineRoute
+  '/api/network-devices': typeof ApiNetworkDevicesRoute
   '/onboarding/configure': typeof OnboardingConfigureRoute
   '/onboarding/connect': typeof OnboardingConnectRoute
   '/onboarding/done': typeof OnboardingDoneRoute
@@ -535,6 +551,7 @@ export interface FileRoutesByTo {
   '/settings/diagnostics': typeof AppSettingsDiagnosticsRoute
   '/settings/language': typeof AppSettingsLanguageRoute
   '/settings/logs': typeof AppSettingsLogsRoute
+  '/settings/network-devices': typeof AppSettingsNetworkDevicesRoute
   '/settings/notifications': typeof AppSettingsNotificationsRoute
   '/settings/objects': typeof AppSettingsObjectsRoute
   '/settings/offline': typeof AppSettingsOfflineRoute
@@ -579,6 +596,7 @@ export interface FileRoutesById {
   '/_app/statistics': typeof AppStatisticsRoute
   '/_app/timeline': typeof AppTimelineRoute
   '/_app/users': typeof AppUsersRouteWithChildren
+  '/api/network-devices': typeof ApiNetworkDevicesRoute
   '/onboarding/configure': typeof OnboardingConfigureRoute
   '/onboarding/connect': typeof OnboardingConnectRoute
   '/onboarding/done': typeof OnboardingDoneRoute
@@ -605,6 +623,7 @@ export interface FileRoutesById {
   '/_app/settings/diagnostics': typeof AppSettingsDiagnosticsRoute
   '/_app/settings/language': typeof AppSettingsLanguageRoute
   '/_app/settings/logs': typeof AppSettingsLogsRoute
+  '/_app/settings/network-devices': typeof AppSettingsNetworkDevicesRoute
   '/_app/settings/notifications': typeof AppSettingsNotificationsRoute
   '/_app/settings/objects': typeof AppSettingsObjectsRoute
   '/_app/settings/offline': typeof AppSettingsOfflineRoute
@@ -651,6 +670,7 @@ export interface FileRouteTypes {
     | '/statistics'
     | '/timeline'
     | '/users'
+    | '/api/network-devices'
     | '/onboarding/configure'
     | '/onboarding/connect'
     | '/onboarding/done'
@@ -676,6 +696,7 @@ export interface FileRouteTypes {
     | '/settings/diagnostics'
     | '/settings/language'
     | '/settings/logs'
+    | '/settings/network-devices'
     | '/settings/notifications'
     | '/settings/objects'
     | '/settings/offline'
@@ -715,6 +736,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/statistics'
     | '/timeline'
+    | '/api/network-devices'
     | '/onboarding/configure'
     | '/onboarding/connect'
     | '/onboarding/done'
@@ -740,6 +762,7 @@ export interface FileRouteTypes {
     | '/settings/diagnostics'
     | '/settings/language'
     | '/settings/logs'
+    | '/settings/network-devices'
     | '/settings/notifications'
     | '/settings/objects'
     | '/settings/offline'
@@ -783,6 +806,7 @@ export interface FileRouteTypes {
     | '/_app/statistics'
     | '/_app/timeline'
     | '/_app/users'
+    | '/api/network-devices'
     | '/onboarding/configure'
     | '/onboarding/connect'
     | '/onboarding/done'
@@ -809,6 +833,7 @@ export interface FileRouteTypes {
     | '/_app/settings/diagnostics'
     | '/_app/settings/language'
     | '/_app/settings/logs'
+    | '/_app/settings/network-devices'
     | '/_app/settings/notifications'
     | '/_app/settings/objects'
     | '/_app/settings/offline'
@@ -836,6 +861,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   OnboardingRoute: typeof OnboardingRouteWithChildren
+  ApiNetworkDevicesRoute: typeof ApiNetworkDevicesRoute
   ApiDwdWeatherStationOverviewExtendedRoute: typeof ApiDwdWeatherStationOverviewExtendedRoute
 }
 
@@ -910,6 +936,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/onboarding/configure'
       preLoaderRoute: typeof OnboardingConfigureRouteImport
       parentRoute: typeof OnboardingRoute
+    }
+    '/api/network-devices': {
+      id: '/api/network-devices'
+      path: '/api/network-devices'
+      fullPath: '/api/network-devices'
+      preLoaderRoute: typeof ApiNetworkDevicesRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_app/users': {
       id: '/_app/users'
@@ -1133,6 +1166,13 @@ declare module '@tanstack/react-router' {
       path: '/notifications'
       fullPath: '/settings/notifications'
       preLoaderRoute: typeof AppSettingsNotificationsRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/settings/network-devices': {
+      id: '/_app/settings/network-devices'
+      path: '/network-devices'
+      fullPath: '/settings/network-devices'
+      preLoaderRoute: typeof AppSettingsNetworkDevicesRouteImport
       parentRoute: typeof AppSettingsRoute
     }
     '/_app/settings/logs': {
@@ -1486,6 +1526,7 @@ interface AppSettingsRouteChildren {
   AppSettingsDiagnosticsRoute: typeof AppSettingsDiagnosticsRoute
   AppSettingsLanguageRoute: typeof AppSettingsLanguageRoute
   AppSettingsLogsRoute: typeof AppSettingsLogsRoute
+  AppSettingsNetworkDevicesRoute: typeof AppSettingsNetworkDevicesRoute
   AppSettingsNotificationsRoute: typeof AppSettingsNotificationsRoute
   AppSettingsObjectsRoute: typeof AppSettingsObjectsRoute
   AppSettingsOfflineRoute: typeof AppSettingsOfflineRoute
@@ -1506,6 +1547,7 @@ const AppSettingsRouteChildren: AppSettingsRouteChildren = {
   AppSettingsDiagnosticsRoute: AppSettingsDiagnosticsRoute,
   AppSettingsLanguageRoute: AppSettingsLanguageRoute,
   AppSettingsLogsRoute: AppSettingsLogsRoute,
+  AppSettingsNetworkDevicesRoute: AppSettingsNetworkDevicesRoute,
   AppSettingsNotificationsRoute: AppSettingsNotificationsRoute,
   AppSettingsObjectsRoute: AppSettingsObjectsRoute,
   AppSettingsOfflineRoute: AppSettingsOfflineRoute,
@@ -1623,6 +1665,7 @@ const OnboardingRouteWithChildren = OnboardingRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   OnboardingRoute: OnboardingRouteWithChildren,
+  ApiNetworkDevicesRoute: ApiNetworkDevicesRoute,
   ApiDwdWeatherStationOverviewExtendedRoute:
     ApiDwdWeatherStationOverviewExtendedRoute,
 }
