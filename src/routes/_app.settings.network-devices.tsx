@@ -32,6 +32,9 @@ interface NetworkDevice {
   online: boolean;
   source: string;
   lastSeen: string;
+  ports?: number[];
+  services?: string[];
+  confidence?: "sicher" | "geschätzt" | "unbekannt";
 }
 
 interface NetworkScanResult {
@@ -100,6 +103,8 @@ function NetworkDevicesPage() {
         displayType(device),
         device.vendor,
         device.hostname,
+        device.ports?.join(","),
+        device.services?.join(" "),
       ]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(q));
@@ -233,7 +238,18 @@ function DeviceRow({
             {device.online ? "online" : "offline"}
           </StatusBadge>
           <StatusBadge tone="neutral">{displayType(device)}</StatusBadge>
+          {device.confidence && (
+            <StatusBadge tone={device.confidence === "sicher" ? "success" : device.confidence === "geschätzt" ? "info" : "neutral"}>
+              {device.confidence}
+            </StatusBadge>
+          )}
           {device.vendor && <StatusBadge tone="neutral">{device.vendor}</StatusBadge>}
+          {device.ports && device.ports.length > 0 && (
+            <StatusBadge tone="info">Ports {device.ports.slice(0, 4).join(", ")}</StatusBadge>
+          )}
+          {device.services && device.services.length > 0 && (
+            <StatusBadge tone="neutral">{device.services.slice(0, 2).join(", ")}</StatusBadge>
+          )}
           {device.override?.hidden && <StatusBadge tone="warning">versteckt</StatusBadge>}
         </div>
       </div>
@@ -302,8 +318,11 @@ function EditDeviceRow({
 const DEVICE_TYPES = [
   "Unbekannt",
   "Router",
+  "Repeater",
   "Aura-Server",
   "Smart-Home-Server",
+  "Proxmox",
+  "DNS/Pi-hole",
   "Server",
   "Mac/PC",
   "Apple-Gerät",
@@ -311,6 +330,13 @@ const DEVICE_TYPES = [
   "Smartphone",
   "Tablet",
   "TV",
+  "AV-Receiver",
+  "Media-Player",
+  "NAS",
+  "ESPHome",
+  "Hyperion",
+  "Shelly",
+  "WLED",
   "Smart-Home-Gerät",
   "Drucker",
 ];
