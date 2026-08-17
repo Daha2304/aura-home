@@ -1682,10 +1682,50 @@ function WeatherBackdrop({ condition }: { condition: WeatherCondition }) {
       <div className="weather-sun" />
       <div className="weather-cloud weather-cloud-a" />
       <div className="weather-cloud weather-cloud-b" />
-      {condition === "rain" || condition === "storm" ? <div className="weather-rain" /> : null}
+      {condition === "rain" || condition === "storm" ? <WeatherRain /> : null}
       {condition === "snow" ? <div className="weather-snow" /> : null}
       {condition === "fog" ? <div className="weather-fog" /> : null}
       {condition === "storm" ? <div className="weather-flash" /> : null}
+    </div>
+  );
+}
+
+const WEATHER_RAIN_DROPS = Array.from({ length: 38 }, (_, index) => {
+  const depth = index % 4;
+  return {
+    x: (index * 37) % 108 - 4,
+    y: (index * 23) % 112 - 34,
+    length: [78, 116, 54, 148, 92, 64, 132][index % 7],
+    width: depth === 0 ? 2.2 : depth === 1 ? 1.6 : 1,
+    opacity: depth === 0 ? 0.58 : depth === 1 ? 0.42 : 0.28,
+    blur: depth === 0 ? 1.5 : depth === 1 ? 0.9 : 0.35,
+    duration: 0.72 + ((index * 13) % 38) / 100,
+    delay: -(((index * 29) % 240) / 100),
+  };
+});
+
+function WeatherRain() {
+  return (
+    <div className="weather-rain" aria-hidden="true">
+      <div className="weather-rain-haze" />
+      {WEATHER_RAIN_DROPS.map((drop, index) => (
+        <span
+          key={index}
+          className="weather-rain-drop"
+          style={
+            {
+              "--rain-x": `${drop.x}%`,
+              "--rain-y": `${drop.y}%`,
+              "--rain-length": `${drop.length}px`,
+              "--rain-width": `${drop.width}px`,
+              "--rain-opacity": drop.opacity,
+              "--rain-blur": `${drop.blur}px`,
+              "--rain-duration": `${drop.duration}s`,
+              "--rain-delay": `${drop.delay}s`,
+            } as React.CSSProperties
+          }
+        />
+      ))}
     </div>
   );
 }
