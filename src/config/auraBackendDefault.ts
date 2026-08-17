@@ -11,7 +11,8 @@ function readEnv(name: string): string | undefined {
 function readPort(): number {
   const raw = readEnv("VITE_AURA_BACKEND_PORT");
   const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN;
-  return Number.isInteger(parsed) && parsed > 0 && parsed <= 65535 ? parsed : 443;
+  if (Number.isInteger(parsed) && parsed > 0 && parsed <= 65535) return parsed;
+  return defaultPort();
 }
 
 function readEnabled(): boolean {
@@ -26,7 +27,7 @@ export function createDefaultAuraBackendServer(): ServerConfig | undefined {
     name: readEnv("VITE_AURA_BACKEND_NAME") ?? "Aura Backend",
     host: readEnv("VITE_AURA_BACKEND_HOST") ?? defaultHost(),
     port: readPort(),
-    ssl: readEnv("VITE_AURA_BACKEND_SSL") !== "false",
+    ssl: readSsl(),
     path: readEnv("VITE_AURA_BACKEND_PATH") ?? DEFAULT_PROXY_PATH,
     auth: {
       type: "token",
@@ -39,11 +40,12 @@ export function createDefaultAuraBackendServer(): ServerConfig | undefined {
 }
 
 export function normalizeAuraBackendServerForCurrentOrigin(server: ServerConfig): ServerConfig {
-  if (!isDefaultAuraBackendServer(server) || !isHttpsPage()) return server;
+  if (!isDefaultAuraBackendServer(server) || !isBrowserPage()) return server;
 
   const host = defaultHost();
   const port = defaultPort();
-  if (server.host === host && server.port === port && server.ssl && server.path === DEFAULT_PROXY_PATH) {
+  const ssl = defaultSsl();
+  if (server.host === host && server.port === port && server.ssl === ssl && server.path === DEFAULT_PROXY_PATH) {
     return server;
   }
 
@@ -51,7 +53,7 @@ export function normalizeAuraBackendServerForCurrentOrigin(server: ServerConfig)
     ...server,
     host,
     port,
-    ssl: true,
+    ssl,
     path: DEFAULT_PROXY_PATH,
     updatedAt: Date.now(),
   };
@@ -70,8 +72,18 @@ function isDefaultAuraBackendServer(server: ServerConfig): boolean {
   );
 }
 
-function isHttpsPage(): boolean {
-  return typeof window !== "undefined" && window.location.protocol === "https:";
+function readSsl(): boolean {
+  const raw = readEnv("VITE_AURA_BACKEND_SSL");
+  if (raw) return raw !== "false";
+  return defaultSsl();
+}
+
+function isBrowserPage(): boolean {
+  return typeof window !== "undefined" && Boolean(window.location.protocol);
+}
+
+function defaultSsl(): boolean {
+  return typeof window !== "undefined" ? window.location.protocol === "https:" : true;
 }
 
 function defaultHost(): string {
@@ -84,7 +96,7 @@ function defaultPort(): number {
     const parsed = Number.parseInt(window.location.port, 10);
     if (Number.isInteger(parsed) && parsed > 0 && parsed <= 65535) return parsed;
   }
-  return 443;
+  return defaultSsl() ? 443 : 80;
 }
 
 export function ensureDefaultAuraBackendServer(
