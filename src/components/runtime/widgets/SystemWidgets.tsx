@@ -1763,7 +1763,7 @@ function WeatherRain() {
 const WEATHER_SNOW_FLAKES = Array.from({ length: 34 }, (_, index) => ({
   x: (index * 31) % 104 - 2,
   y: (index * 19) % 118 - 34,
-  size: [3, 5, 7, 4, 6, 8][index % 6],
+  size: [10, 14, 18, 12, 16, 20][index % 6],
   opacity: [0.34, 0.54, 0.76, 0.42, 0.66][index % 5],
   blur: [0, 0.4, 0.9, 0.2][index % 4],
   drift: [-26, -14, 18, 30, 10][index % 5],
@@ -1800,6 +1800,7 @@ function WeatherSnow() {
 function WeatherStorm() {
   return (
     <>
+      <div className="weather-thunder" aria-hidden="true" />
       <div className="weather-flash" aria-hidden="true" />
       <div className="weather-lightning" aria-hidden="true">
         <span />
