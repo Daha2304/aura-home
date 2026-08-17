@@ -51,6 +51,22 @@ import { UniversalControlRenderer } from "@/components/devices/controls/Universa
 
 const MARANTZ_VOLUME_BACKGROUND =
   "https://i.pinimg.com/originals/bd/e3/e1/bde3e16f060043de9e2ebc624fb64049.gif";
+const WEATHER_PREVIEW_MODE = true;
+const WEATHER_PREVIEW_CONDITIONS: WeatherCondition[] = [
+  "sunny",
+  "cloudy",
+  "rain",
+  "snow",
+  "storm",
+];
+const WEATHER_PREVIEW_LABELS: Record<WeatherCondition, string> = {
+  sunny: "Sonnig",
+  cloudy: "Bewoelkt",
+  rain: "Regen",
+  snow: "Schneefall",
+  storm: "Gewitter",
+  fog: "Nebel",
+};
 
 /* ============ Kleine Bausteine ============ */
 
@@ -1546,6 +1562,7 @@ export function HeroGreetingWidget() {
   const [weather, setWeather] = useState<DwdWeatherSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [previewIndex, setPreviewIndex] = useState(0);
 
   useEffect(() => {
     if (!postalCode) return;
@@ -1571,6 +1588,14 @@ export function HeroGreetingWidget() {
       window.clearInterval(interval);
     };
   }, [postalCode]);
+
+  useEffect(() => {
+    if (!WEATHER_PREVIEW_MODE) return;
+    const interval = window.setInterval(() => {
+      setPreviewIndex((index) => (index + 1) % WEATHER_PREVIEW_CONDITIONS.length);
+    }, 3000);
+    return () => window.clearInterval(interval);
+  }, []);
 
   const savePostalCode = () => {
     const normalized = draftPostalCode.replace(/\D/g, "").slice(0, 5);
@@ -1612,7 +1637,12 @@ export function HeroGreetingWidget() {
     );
   }
 
-  const condition = weather?.condition ?? "cloudy";
+  const condition = WEATHER_PREVIEW_MODE
+    ? WEATHER_PREVIEW_CONDITIONS[previewIndex]
+    : (weather?.condition ?? "cloudy");
+  const conditionLabel = WEATHER_PREVIEW_MODE
+    ? WEATHER_PREVIEW_LABELS[condition]
+    : (weather?.conditionLabel ?? error);
   const WeatherIcon = weatherIcon(condition);
 
   return (
@@ -1648,7 +1678,7 @@ export function HeroGreetingWidget() {
               </div>
             </div>
             <div className="mt-2 text-sm text-white/72">
-              {loading && !weather ? "Wetter wird geladen" : (weather?.conditionLabel ?? error)}
+              {loading && !weather && !WEATHER_PREVIEW_MODE ? "Wetter wird geladen" : conditionLabel}
             </div>
           </div>
           <div className="grid shrink-0 grid-cols-2 gap-x-4 gap-y-1 text-right text-xs text-white/72">
@@ -1683,9 +1713,9 @@ function WeatherBackdrop({ condition }: { condition: WeatherCondition }) {
       <div className="weather-cloud weather-cloud-a" />
       <div className="weather-cloud weather-cloud-b" />
       {condition === "rain" || condition === "storm" ? <WeatherRain /> : null}
-      {condition === "snow" ? <div className="weather-snow" /> : null}
+      {condition === "snow" ? <WeatherSnow /> : null}
       {condition === "fog" ? <div className="weather-fog" /> : null}
-      {condition === "storm" ? <div className="weather-flash" /> : null}
+      {condition === "storm" ? <WeatherStorm /> : null}
     </div>
   );
 }
@@ -1727,6 +1757,55 @@ function WeatherRain() {
         />
       ))}
     </div>
+  );
+}
+
+const WEATHER_SNOW_FLAKES = Array.from({ length: 34 }, (_, index) => ({
+  x: (index * 31) % 104 - 2,
+  y: (index * 19) % 118 - 34,
+  size: [3, 5, 7, 4, 6, 8][index % 6],
+  opacity: [0.34, 0.54, 0.76, 0.42, 0.66][index % 5],
+  blur: [0, 0.4, 0.9, 0.2][index % 4],
+  drift: [-26, -14, 18, 30, 10][index % 5],
+  duration: 6.8 + ((index * 17) % 52) / 10,
+  delay: -(((index * 37) % 780) / 100),
+}));
+
+function WeatherSnow() {
+  return (
+    <div className="weather-snow" aria-hidden="true">
+      <div className="weather-snow-haze" />
+      {WEATHER_SNOW_FLAKES.map((flake, index) => (
+        <span
+          key={index}
+          className="weather-snow-flake"
+          style={
+            {
+              "--snow-x": `${flake.x}%`,
+              "--snow-y": `${flake.y}%`,
+              "--snow-size": `${flake.size}px`,
+              "--snow-opacity": flake.opacity,
+              "--snow-blur": `${flake.blur}px`,
+              "--snow-drift": `${flake.drift}px`,
+              "--snow-duration": `${flake.duration}s`,
+              "--snow-delay": `${flake.delay}s`,
+            } as React.CSSProperties
+          }
+        />
+      ))}
+    </div>
+  );
+}
+
+function WeatherStorm() {
+  return (
+    <>
+      <div className="weather-flash" aria-hidden="true" />
+      <div className="weather-lightning" aria-hidden="true">
+        <span />
+        <span />
+      </div>
+    </>
   );
 }
 
