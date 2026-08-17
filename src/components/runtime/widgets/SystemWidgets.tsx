@@ -1792,8 +1792,11 @@ function WeatherSnow() {
             } as React.CSSProperties
           }
         >
-          <i />
-          <b />
+          {Array.from({ length: 6 }, (_, armIndex) => (
+            <i key={armIndex} style={{ "--snow-arm-rotate": `${armIndex * 60}deg` } as React.CSSProperties}>
+              <b />
+            </i>
+          ))}
         </span>
       ))}
     </div>

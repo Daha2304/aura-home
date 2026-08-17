@@ -470,10 +470,6 @@
   top: var(--snow-y);
   width: var(--snow-size);
   height: var(--snow-size);
-  background:
-    linear-gradient(180deg, transparent 46%, rgba(246, 252, 255, 0.95) 46% 54%, transparent 54%),
-    linear-gradient(90deg, transparent 46%, rgba(246, 252, 255, 0.82) 46% 54%, transparent 54%);
-  box-shadow: 0 0 12px rgba(220, 244, 255, 0.42);
   filter: blur(var(--snow-blur));
   opacity: var(--snow-opacity);
   animation: aura-weather-snowflake var(--snow-duration) linear infinite;
@@ -481,39 +477,58 @@
   will-change: transform;
 }
 
-.weather-snow-flake::before,
-.weather-snow-flake::after,
-.weather-snow-flake i,
-.weather-snow-flake b {
+.weather-snow-flake i {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 9%;
+  height: 58%;
+  border-radius: 999px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.08),
+    rgba(244, 252, 255, 0.95) 24%,
+    rgba(190, 225, 244, 0.75) 72%,
+    transparent
+  );
+  box-shadow: 0 0 7px rgba(224, 247, 255, 0.48);
+  transform: translate(-50%, -98%) rotate(var(--snow-arm-rotate));
+  transform-origin: 50% 98%;
+}
+
+.weather-snow-flake i::before,
+.weather-snow-flake i::after,
+.weather-snow-flake b::before,
+.weather-snow-flake b::after {
   content: "";
   position: absolute;
-  inset: 0;
-  background: inherit;
+  left: 50%;
+  width: 64%;
+  height: 34%;
+  border-radius: 999px;
+  background: rgba(244, 252, 255, 0.72);
+  box-shadow: 0 0 5px rgba(224, 247, 255, 0.36);
+  transform-origin: 50% 100%;
 }
 
-.weather-snow-flake i,
-.weather-snow-flake b {
-  display: block;
-  background:
-    linear-gradient(30deg, transparent 0 40%, rgba(246, 252, 255, 0.58) 40% 45%, transparent 45% 55%, rgba(246, 252, 255, 0.58) 55% 60%, transparent 60%),
-    linear-gradient(-30deg, transparent 0 40%, rgba(246, 252, 255, 0.5) 40% 45%, transparent 45% 55%, rgba(246, 252, 255, 0.5) 55% 60%, transparent 60%);
-  transform: scale(0.72);
+.weather-snow-flake i::before {
+  top: 20%;
+  transform: translateX(-50%) rotate(45deg);
 }
 
-.weather-snow-flake::before {
-  transform: rotate(60deg);
+.weather-snow-flake i::after {
+  top: 20%;
+  transform: translateX(-50%) rotate(-45deg);
 }
 
-.weather-snow-flake::after {
-  transform: rotate(-60deg);
+.weather-snow-flake b::before {
+  top: 52%;
+  transform: translateX(-50%) rotate(38deg);
 }
 
-.weather-snow-flake i {
-  transform: rotate(30deg) scale(0.72);
-}
-
-.weather-snow-flake b {
-  transform: rotate(-30deg) scale(0.72);
+.weather-snow-flake b::after {
+  top: 52%;
+  transform: translateX(-50%) rotate(-38deg);
 }
 
 .weather-fog {
