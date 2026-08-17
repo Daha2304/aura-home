@@ -51,7 +51,7 @@ import { UniversalControlRenderer } from "@/components/devices/controls/Universa
 
 const MARANTZ_VOLUME_BACKGROUND =
   "https://i.pinimg.com/originals/bd/e3/e1/bde3e16f060043de9e2ebc624fb64049.gif";
-const WEATHER_PREVIEW_MODE = true;
+const WEATHER_PREVIEW_MODE = false;
 const WEATHER_PREVIEW_CONDITIONS: WeatherCondition[] = [
   "sunny",
   "cloudy",
