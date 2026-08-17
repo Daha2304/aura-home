@@ -1763,8 +1763,8 @@ function WeatherRain() {
 const WEATHER_SNOW_FLAKES = Array.from({ length: 34 }, (_, index) => ({
   x: (index * 31) % 104 - 2,
   y: (index * 19) % 118 - 34,
-  size: [10, 14, 18, 12, 16, 20][index % 6],
-  opacity: [0.34, 0.54, 0.76, 0.42, 0.66][index % 5],
+  size: [18, 24, 32, 20, 28, 36][index % 6],
+  opacity: [0.3, 0.5, 0.72, 0.4, 0.62][index % 5],
   blur: [0, 0.4, 0.9, 0.2][index % 4],
   drift: [-26, -14, 18, 30, 10][index % 5],
   duration: 6.8 + ((index * 17) % 52) / 10,
@@ -1791,7 +1791,10 @@ function WeatherSnow() {
               "--snow-delay": `${flake.delay}s`,
             } as React.CSSProperties
           }
-        />
+        >
+          <i />
+          <b />
+        </span>
       ))}
     </div>
   );
@@ -1803,8 +1806,14 @@ function WeatherStorm() {
       <div className="weather-thunder" aria-hidden="true" />
       <div className="weather-flash" aria-hidden="true" />
       <div className="weather-lightning" aria-hidden="true">
-        <span />
-        <span />
+        <svg viewBox="0 0 120 220" preserveAspectRatio="none">
+          <path d="M76 4 L34 88 L62 82 L28 216 L104 76 L72 84 Z" />
+          <path className="weather-lightning-branch" d="M58 96 L92 122 L70 128 L98 174" />
+        </svg>
+        <svg viewBox="0 0 120 220" preserveAspectRatio="none">
+          <path d="M64 0 L28 76 L54 72 L22 190 L96 66 L68 72 Z" />
+          <path className="weather-lightning-branch" d="M48 88 L82 110 L62 118 L84 156" />
+        </svg>
       </div>
     </>
   );
