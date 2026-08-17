@@ -1,5 +1,5 @@
-const DEFAULT_URL = "http://192.168.55.168:3000/";
-const LEGACY_URLS = new Set(["https://192.168.55.168/", "http://192.168.55.168/"]);
+const DEFAULT_URL = "http://192.168.55.168/";
+const LEGACY_URLS = new Set(["https://192.168.55.168/", "http://192.168.55.168:3000/"]);
 
 const input = document.getElementById("auraUrl");
 const saveButton = document.getElementById("save");

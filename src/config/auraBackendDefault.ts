@@ -94,6 +94,7 @@ function defaultHost(): string {
 function defaultPort(): number {
   if (typeof window !== "undefined" && window.location.port) {
     const parsed = Number.parseInt(window.location.port, 10);
+    if (parsed === 3000 && defaultHost() === "192.168.55.168") return defaultSsl() ? 443 : 80;
     if (Number.isInteger(parsed) && parsed > 0 && parsed <= 65535) return parsed;
   }
   return defaultSsl() ? 443 : 80;

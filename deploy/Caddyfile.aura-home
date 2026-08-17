@@ -3,7 +3,18 @@
 }
 
 http://192.168.55.168, http://aura.home {
-	redir https://{host}{uri} permanent
+	encode zstd gzip
+
+	header {
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+
+	handle_path /aura-backend* {
+		reverse_proxy 192.168.55.4:8100
+	}
+
+	reverse_proxy 127.0.0.1:3000
 }
 
 https://192.168.55.168, https://aura.home {
