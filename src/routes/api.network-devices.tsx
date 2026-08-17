@@ -1,12 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { execFile } from "node:child_process";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
-const CACHE_MS = 120_000;
 const PING_TIMEOUT_MS = 900;
 const MAX_PING_CONCURRENCY = 48;
 const DEFAULT_NETWORK = "192.168.55.0/24";
+const CACHE_FILE = process.env.AURA_NETWORK_CACHE_FILE
+  ?? join(process.cwd(), ".data", "network-devices-cache.json");
 
 interface NetworkDevice {
   ip: string;
@@ -38,17 +41,22 @@ export const Route = createFileRoute("/api/network-devices")({
         const url = new URL(request.url);
         const refresh = url.searchParams.get("refresh") === "1";
 
-        if (!refresh && cache && Date.now() - cache.at < CACHE_MS) {
-          return Response.json(cache.result, {
-            headers: { "cache-control": "private, max-age=60" },
-          });
+        if (!refresh) {
+          const cached = cache?.result ?? await readStoredScan();
+          if (cached) {
+            cache = { at: Date.now(), result: cached };
+            return Response.json(cached, {
+              headers: { "cache-control": "no-store" },
+            });
+          }
         }
 
         try {
           const result = await scanNetwork();
           cache = { at: Date.now(), result };
+          await storeScan(result);
           return Response.json(result, {
-            headers: { "cache-control": "private, max-age=60" },
+            headers: { "cache-control": "no-store" },
           });
         } catch (error) {
           return Response.json(
@@ -63,6 +71,22 @@ export const Route = createFileRoute("/api/network-devices")({
     },
   },
 });
+
+async function readStoredScan(): Promise<ScanResult | undefined> {
+  try {
+    const raw = await readFile(CACHE_FILE, "utf8");
+    const parsed = JSON.parse(raw) as ScanResult;
+    if (!parsed.scannedAt || !Array.isArray(parsed.devices)) return undefined;
+    return parsed;
+  } catch {
+    return undefined;
+  }
+}
+
+async function storeScan(result: ScanResult): Promise<void> {
+  await mkdir(dirname(CACHE_FILE), { recursive: true });
+  await writeFile(CACHE_FILE, JSON.stringify(result, null, 2), "utf8");
+}
 
 async function scanNetwork(): Promise<ScanResult> {
   const network = await detectNetwork();
